@@ -1,6 +1,27 @@
 import type { Product, Review } from "./types";
 import { slugify } from "./types";
 
+import imgPashmina from "@/assets/products/pashmina-ivory.jpg";
+import imgChikankari from "@/assets/products/chikankari-ivory.jpg";
+import imgEarrings from "@/assets/products/kundan-earrings.jpg";
+import imgFrock from "@/assets/products/kids-frock.jpg";
+import imgHairpins from "@/assets/products/hairpins.jpg";
+import imgSozni from "@/assets/products/sozni-burgundy.jpg";
+import imgBanarasi from "@/assets/products/banarasi-maroon.jpg";
+import imgBangles from "@/assets/products/bangles-red.jpg";
+
+const PRODUCT_IMAGES: Record<number, string> = {
+  1: imgPashmina,
+  2: imgChikankari,
+  3: imgEarrings,
+  4: imgFrock,
+  5: imgHairpins,
+  6: imgSozni,
+  7: imgBanarasi,
+  8: imgBangles,
+};
+
+
 const baseProducts: Omit<Product, "slug" | "stock" | "listed" | "images" | "createdAt">[] = [
   {
     id: 1, name: "Pashmina Weave Shawl", subtitle: "Ivory & Antique Gold",
