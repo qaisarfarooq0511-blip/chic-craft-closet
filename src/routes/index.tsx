@@ -5,6 +5,9 @@ import { ProductCard } from "@/components/storefront/ProductCard";
 import { CATEGORIES, categorySlug } from "@/lib/types";
 import { getProducts } from "@/lib/storage";
 import { STORE } from "@/lib/jsonld";
+import heroMain from "@/assets/hero-main.jpg";
+import heroShawl from "@/assets/products/sozni-burgundy.jpg";
+import heroFabric from "@/assets/products/banarasi-maroon.jpg";
 
 function subscribeStorage(cb: () => void) {
   window.addEventListener("storage", cb);
@@ -67,14 +70,14 @@ function Home() {
         </div>
         <div className="hero-right">
           <div className="hero-img-main">
-            <img src="https://loremflickr.com/900/1100/pashmina,shawl,kashmir?lock=901" alt="Featured Kashmiri shawl" loading="eager" />
+            <img src={heroMain} alt="Featured Kashmiri shawl" loading="eager" />
           </div>
           <div className="hero-img-row">
             <div className="hero-img-sm">
-              <img src="https://loremflickr.com/500/500/pashmina,shawl?lock=902" alt="Kashmiri shawl" loading="lazy" />
+              <img src={heroShawl} alt="Kashmiri shawl" loading="lazy" />
             </div>
             <div className="hero-img-sm">
-              <img src="https://loremflickr.com/500/500/chikankari,fabric,embroidery?lock=903" alt="Dress material" loading="lazy" />
+              <img src={heroFabric} alt="Dress material" loading="lazy" />
             </div>
           </div>
         </div>

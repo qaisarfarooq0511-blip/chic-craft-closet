@@ -1,6 +1,27 @@
 import type { Product, Review } from "./types";
 import { slugify } from "./types";
 
+import imgPashmina from "@/assets/products/pashmina-ivory.jpg";
+import imgChikankari from "@/assets/products/chikankari-ivory.jpg";
+import imgEarrings from "@/assets/products/kundan-earrings.jpg";
+import imgFrock from "@/assets/products/kids-frock.jpg";
+import imgHairpins from "@/assets/products/hairpins.jpg";
+import imgSozni from "@/assets/products/sozni-burgundy.jpg";
+import imgBanarasi from "@/assets/products/banarasi-maroon.jpg";
+import imgBangles from "@/assets/products/bangles-red.jpg";
+
+const PRODUCT_IMAGES: Record<number, string> = {
+  1: imgPashmina,
+  2: imgChikankari,
+  3: imgEarrings,
+  4: imgFrock,
+  5: imgHairpins,
+  6: imgSozni,
+  7: imgBanarasi,
+  8: imgBangles,
+};
+
+
 const baseProducts: Omit<Product, "slug" | "stock" | "listed" | "images" | "createdAt">[] = [
   {
     id: 1, name: "Pashmina Weave Shawl", subtitle: "Ivory & Antique Gold",
@@ -110,38 +131,17 @@ const baseProducts: Omit<Product, "slug" | "stock" | "listed" | "images" | "crea
   },
 ];
 
-// Curated dummy imagery per product using loremflickr (keyword-tagged Flickr
-// photos). `lock` keeps the same image stable across reloads.
-const keywordsFor = (type: string, category: string): string => {
-  const t = type.toLowerCase();
-  if (t === "pashmina" || t === "sozni" || category === "Kashmiri Shawls") return "pashmina,shawl,kashmir";
-  if (t === "chikankari") return "chikankari,fabric,embroidery";
-  if (t === "banarasi") return "banarasi,silk,saree";
-  if (category === "Dress Material") return "indian,fabric,textile";
-  if (t === "earrings") return "earrings,jewellery,indian";
-  if (t === "hairpins") return "hairpin,accessory,handmade";
-  if (t === "bangles") return "bangles,jewellery,indian";
-  if (category === "Kidswear") return "kids,ethnic,frock";
-  return "fabric,textile,handmade";
-};
-const imagesFor = (id: number, type: string, category: string): string[] => {
-  const kw = keywordsFor(type, category);
-  const base = id * 10;
-  return [
-    `https://loremflickr.com/900/1100/${kw}?lock=${base + 1}`,
-    `https://loremflickr.com/900/1100/${kw}?lock=${base + 2}`,
-    `https://loremflickr.com/900/1100/${kw}?lock=${base + 3}`,
-  ];
-};
-
-export const seedProducts: Product[] = baseProducts.map((p, i) => ({
-  ...p,
-  slug: `${slugify(p.name)}-${p.id}`,
-  stock: [12, 18, 30, 22, 40, 5, 14, 60][i] ?? 10,
-  listed: true,
-  images: imagesFor(p.id, p.type, p.category),
-  createdAt: Date.now() - (baseProducts.length - i) * 86400_000,
-}));
+export const seedProducts: Product[] = baseProducts.map((p, i) => {
+  const img = PRODUCT_IMAGES[p.id];
+  return {
+    ...p,
+    slug: `${slugify(p.name)}-${p.id}`,
+    stock: [12, 18, 30, 22, 40, 5, 14, 60][i] ?? 10,
+    listed: true,
+    images: img ? [img] : [],
+    createdAt: Date.now() - (baseProducts.length - i) * 86400_000,
+  };
+});
 
 export const seedReviews: Review[] = [
   { id: "r1", productId: 1, name: "Aisha K.", location: "Delhi", date: "12 Jun 2025", rating: 5, text: "Absolutely beautiful quality. The embroidery is so delicate and the fabric is incredibly soft. Gifted this to my mother — she was overjoyed.", status: "approved" },
