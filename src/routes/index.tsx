@@ -5,6 +5,9 @@ import { ProductCard } from "@/components/storefront/ProductCard";
 import { CATEGORIES, categorySlug } from "@/lib/types";
 import { getProducts } from "@/lib/storage";
 import { STORE } from "@/lib/jsonld";
+import heroMain from "@/assets/hero-main.jpg";
+import heroShawl from "@/assets/products/sozni-burgundy.jpg";
+import heroFabric from "@/assets/products/banarasi-maroon.jpg";
 
 function subscribeStorage(cb: () => void) {
   window.addEventListener("storage", cb);
