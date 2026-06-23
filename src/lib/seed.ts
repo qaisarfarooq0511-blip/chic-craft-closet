@@ -110,12 +110,23 @@ const baseProducts: Omit<Product, "slug" | "stock" | "listed" | "images" | "crea
   },
 ];
 
+// Curated dummy imagery per product (picsum.photos — stable, no external API key).
+// Seeds chosen so each product gets a consistent, distinct look across reloads.
+const imagesFor = (id: number): string[] => {
+  const base = id * 10;
+  return [
+    `https://picsum.photos/seed/yaawun-${base + 1}/900/1100`,
+    `https://picsum.photos/seed/yaawun-${base + 2}/900/1100`,
+    `https://picsum.photos/seed/yaawun-${base + 3}/900/1100`,
+  ];
+};
+
 export const seedProducts: Product[] = baseProducts.map((p, i) => ({
   ...p,
   slug: `${slugify(p.name)}-${p.id}`,
   stock: [12, 18, 30, 22, 40, 5, 14, 60][i] ?? 10,
   listed: true,
-  images: [],
+  images: imagesFor(p.id),
   createdAt: Date.now() - (baseProducts.length - i) * 86400_000,
 }));
 

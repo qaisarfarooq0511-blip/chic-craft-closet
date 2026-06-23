@@ -66,10 +66,16 @@ function Home() {
           </div>
         </div>
         <div className="hero-right">
-          <div className="hero-img-main"><span className="ph">Your hero product photo</span></div>
+          <div className="hero-img-main">
+            <img src="https://picsum.photos/seed/yaawun-hero-main/900/1100" alt="Featured Yaawun piece" loading="eager" />
+          </div>
           <div className="hero-img-row">
-            <div className="hero-img-sm"><span className="ph">Shawl</span></div>
-            <div className="hero-img-sm"><span className="ph">Fabric</span></div>
+            <div className="hero-img-sm">
+              <img src="https://picsum.photos/seed/yaawun-hero-shawl/500/500" alt="Kashmiri shawl" loading="lazy" />
+            </div>
+            <div className="hero-img-sm">
+              <img src="https://picsum.photos/seed/yaawun-hero-fabric/500/500" alt="Dress material" loading="lazy" />
+            </div>
           </div>
         </div>
       </section>
