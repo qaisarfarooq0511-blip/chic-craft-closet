@@ -28,7 +28,7 @@ function Checkout() {
   const toast = useToast();
   const navigate = useNavigate();
 
-  const [form, setForm] = useState({ name: "", phone: "", email: "", address: "", city: "", pincode: "", notes: "" });
+  const [form, setForm] = useState({ name: "", phone: "", address: "", city: "", pincode: "", notes: "" });
   const update = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
     setForm((f) => ({ ...f, [k]: e.target.value }));
 
