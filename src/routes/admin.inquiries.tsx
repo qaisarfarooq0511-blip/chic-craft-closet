@@ -38,7 +38,7 @@ function InquiriesAdmin() {
               <div className="form-label">{i.id} · {new Date(i.createdAt).toLocaleString()}</div>
               <div className="serif" style={{ fontSize: 20, color: "var(--ink)", marginTop: 2 }}>{i.customer.name}</div>
               <div style={{ fontSize: 12, color: "var(--ink2)", marginTop: 4, lineHeight: 1.7 }}>
-                {i.customer.phone} {i.customer.email && `· ${i.customer.email}`}<br />
+                {i.customer.phone}<br />
                 {i.customer.address}, {i.customer.city} — {i.customer.pincode}
                 {i.customer.notes && <><br /><em style={{ color: "var(--ink3)" }}>{i.customer.notes}</em></>}
               </div>

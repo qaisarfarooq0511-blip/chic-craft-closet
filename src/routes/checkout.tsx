@@ -28,7 +28,7 @@ function Checkout() {
   const toast = useToast();
   const navigate = useNavigate();
 
-  const [form, setForm] = useState({ name: "", phone: "", email: "", address: "", city: "", pincode: "", notes: "" });
+  const [form, setForm] = useState({ name: "", phone: "", address: "", city: "", pincode: "", notes: "" });
   const update = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
     setForm((f) => ({ ...f, [k]: e.target.value }));
 
@@ -41,7 +41,7 @@ function Checkout() {
     addInquiry({
       id: `INQ-${Date.now()}`,
       createdAt: Date.now(),
-      customer: form,
+      customer: { name: form.name, phone: form.phone, address: form.address, city: form.city, pincode: form.pincode, notes: form.notes },
       lines: lines.map((l) => {
         const p = products.find((x) => x.id === l.productId)!;
         return { productId: l.productId, name: p.name, qty: l.qty, price: p.price };
@@ -73,8 +73,7 @@ function Checkout() {
           <div className="admin-card">
             <div className="cart-sum-title">Delivery details</div>
             <div className="form-field"><label className="form-label">Full name *</label><input className="form-input" value={form.name} onChange={update("name")} required /></div>
-            <div className="form-field"><label className="form-label">Phone *</label><input className="form-input" value={form.phone} onChange={update("phone")} required /></div>
-            <div className="form-field"><label className="form-label">Email</label><input className="form-input" type="email" value={form.email} onChange={update("email")} /></div>
+            <div className="form-field"><label className="form-label">Mobile *</label><input className="form-input" type="tel" value={form.phone} onChange={update("phone")} required /></div>
             <div className="form-field"><label className="form-label">Address *</label><textarea className="form-textarea" value={form.address} onChange={update("address")} required /></div>
             <div className="form-field"><label className="form-label">City *</label><input className="form-input" value={form.city} onChange={update("city")} required /></div>
             <div className="form-field"><label className="form-label">PIN code *</label><input className="form-input" value={form.pincode} onChange={update("pincode")} required /></div>

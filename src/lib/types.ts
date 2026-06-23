@@ -67,7 +67,7 @@ export interface CartLine {
 export interface Inquiry {
   id: string;
   createdAt: number;
-  customer: { name: string; phone: string; email?: string; address: string; city: string; pincode: string; notes?: string };
+  customer: { name: string; phone: string; address: string; city: string; pincode: string; notes?: string };
   lines: { productId: number; name: string; qty: number; price: number }[];
   subtotal: number;
   delivery: number;
