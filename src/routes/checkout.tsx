@@ -73,8 +73,7 @@ function Checkout() {
           <div className="admin-card">
             <div className="cart-sum-title">Delivery details</div>
             <div className="form-field"><label className="form-label">Full name *</label><input className="form-input" value={form.name} onChange={update("name")} required /></div>
-            <div className="form-field"><label className="form-label">Phone *</label><input className="form-input" value={form.phone} onChange={update("phone")} required /></div>
-            <div className="form-field"><label className="form-label">Email</label><input className="form-input" type="email" value={form.email} onChange={update("email")} /></div>
+            <div className="form-field"><label className="form-label">Mobile *</label><input className="form-input" type="tel" value={form.phone} onChange={update("phone")} required /></div>
             <div className="form-field"><label className="form-label">Address *</label><textarea className="form-textarea" value={form.address} onChange={update("address")} required /></div>
             <div className="form-field"><label className="form-label">City *</label><input className="form-input" value={form.city} onChange={update("city")} required /></div>
             <div className="form-field"><label className="form-label">PIN code *</label><input className="form-input" value={form.pincode} onChange={update("pincode")} required /></div>
