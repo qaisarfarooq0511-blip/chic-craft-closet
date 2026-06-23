@@ -15,6 +15,7 @@ import { reportLovableError } from "../lib/lovable-error-reporting";
 import { CartProvider } from "@/lib/cart-context";
 import { ToastProvider } from "@/lib/toast";
 import { Topbar, Navbar, Footer } from "@/components/storefront/Chrome";
+import { ThemeProvider } from "@/lib/theme-context";
 import { organizationLd, websiteLd, STORE } from "@/lib/jsonld";
 
 function NotFoundComponent() {
@@ -116,13 +117,15 @@ function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   return (
     <QueryClientProvider client={queryClient}>
-      <ToastProvider>
-        <CartProvider>
-          <Chrome>
-            <Outlet />
-          </Chrome>
-        </CartProvider>
-      </ToastProvider>
+      <ThemeProvider>
+        <ToastProvider>
+          <CartProvider>
+            <Chrome>
+              <Outlet />
+            </Chrome>
+          </CartProvider>
+        </ToastProvider>
+      </ThemeProvider>
     </QueryClientProvider>
   );
 }
