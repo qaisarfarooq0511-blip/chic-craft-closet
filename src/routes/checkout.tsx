@@ -41,7 +41,7 @@ function Checkout() {
     addInquiry({
       id: `INQ-${Date.now()}`,
       createdAt: Date.now(),
-      customer: form,
+      customer: { name: form.name, phone: form.phone, address: form.address, city: form.city, pincode: form.pincode, notes: form.notes },
       lines: lines.map((l) => {
         const p = products.find((x) => x.id === l.productId)!;
         return { productId: l.productId, name: p.name, qty: l.qty, price: p.price };
