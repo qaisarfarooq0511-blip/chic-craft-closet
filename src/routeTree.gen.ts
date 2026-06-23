@@ -20,6 +20,7 @@ import { Route as ShopIndexRouteImport } from './routes/shop.index'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
 import { Route as ShopCategoryRouteImport } from './routes/shop.$category'
 import { Route as ProductSlugRouteImport } from './routes/product.$slug'
+import { Route as AdminThemeRouteImport } from './routes/admin.theme'
 import { Route as AdminReviewsRouteImport } from './routes/admin.reviews'
 import { Route as AdminInquiriesRouteImport } from './routes/admin.inquiries'
 import { Route as AdminProductsIndexRouteImport } from './routes/admin.products.index'
@@ -81,6 +82,11 @@ const ProductSlugRoute = ProductSlugRouteImport.update({
   path: '/product/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminThemeRoute = AdminThemeRouteImport.update({
+  id: '/theme',
+  path: '/theme',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminReviewsRoute = AdminReviewsRouteImport.update({
   id: '/reviews',
   path: '/reviews',
@@ -117,6 +123,7 @@ export interface FileRoutesByFullPath {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/admin/inquiries': typeof AdminInquiriesRoute
   '/admin/reviews': typeof AdminReviewsRoute
+  '/admin/theme': typeof AdminThemeRoute
   '/product/$slug': typeof ProductSlugRoute
   '/shop/$category': typeof ShopCategoryRoute
   '/admin/': typeof AdminIndexRoute
@@ -134,6 +141,7 @@ export interface FileRoutesByTo {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/admin/inquiries': typeof AdminInquiriesRoute
   '/admin/reviews': typeof AdminReviewsRoute
+  '/admin/theme': typeof AdminThemeRoute
   '/product/$slug': typeof ProductSlugRoute
   '/shop/$category': typeof ShopCategoryRoute
   '/admin': typeof AdminIndexRoute
@@ -153,6 +161,7 @@ export interface FileRoutesById {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/admin/inquiries': typeof AdminInquiriesRoute
   '/admin/reviews': typeof AdminReviewsRoute
+  '/admin/theme': typeof AdminThemeRoute
   '/product/$slug': typeof ProductSlugRoute
   '/shop/$category': typeof ShopCategoryRoute
   '/admin/': typeof AdminIndexRoute
@@ -173,6 +182,7 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/admin/inquiries'
     | '/admin/reviews'
+    | '/admin/theme'
     | '/product/$slug'
     | '/shop/$category'
     | '/admin/'
@@ -190,6 +200,7 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/admin/inquiries'
     | '/admin/reviews'
+    | '/admin/theme'
     | '/product/$slug'
     | '/shop/$category'
     | '/admin'
@@ -208,6 +219,7 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/admin/inquiries'
     | '/admin/reviews'
+    | '/admin/theme'
     | '/product/$slug'
     | '/shop/$category'
     | '/admin/'
@@ -309,6 +321,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProductSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/theme': {
+      id: '/admin/theme'
+      path: '/theme'
+      fullPath: '/admin/theme'
+      preLoaderRoute: typeof AdminThemeRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/reviews': {
       id: '/admin/reviews'
       path: '/reviews'
@@ -350,6 +369,7 @@ declare module '@tanstack/react-router' {
 interface AdminRouteChildren {
   AdminInquiriesRoute: typeof AdminInquiriesRoute
   AdminReviewsRoute: typeof AdminReviewsRoute
+  AdminThemeRoute: typeof AdminThemeRoute
   AdminIndexRoute: typeof AdminIndexRoute
   AdminProductsIdRoute: typeof AdminProductsIdRoute
   AdminProductsNewRoute: typeof AdminProductsNewRoute
@@ -359,6 +379,7 @@ interface AdminRouteChildren {
 const AdminRouteChildren: AdminRouteChildren = {
   AdminInquiriesRoute: AdminInquiriesRoute,
   AdminReviewsRoute: AdminReviewsRoute,
+  AdminThemeRoute: AdminThemeRoute,
   AdminIndexRoute: AdminIndexRoute,
   AdminProductsIdRoute: AdminProductsIdRoute,
   AdminProductsNewRoute: AdminProductsNewRoute,
