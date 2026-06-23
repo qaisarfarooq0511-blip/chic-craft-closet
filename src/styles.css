@@ -690,3 +690,11 @@
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition: none !important; animation: none !important; }
 }
+
+/* ─────────────────────────────────────────────────────────────
+   Section theme overrides (Hero / Reviews / Footer)
+   Driven by ThemeProvider via :root inline vars.
+   ───────────────────────────────────────────────────────────── */
+.hero         { background: var(--theme-hero-bg, var(--ink));    --gold2: var(--theme-hero-accent, #D4A843); }
+.reviews-dark { background: var(--theme-reviews-bg, var(--ink)); --gold2: var(--theme-reviews-accent, #D4A843); }
+.footer       { background: var(--theme-footer-bg, var(--ink));  --gold2: var(--theme-footer-accent, #D4A843); }

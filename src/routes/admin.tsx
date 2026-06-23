@@ -5,6 +5,7 @@ import {
   IconPackage,
   IconStar,
   IconReceipt,
+  IconPalette,
   IconLogout,
   IconExternalLink,
 } from "@tabler/icons-react";
@@ -74,6 +75,7 @@ function AdminShell() {
     { to: "/admin/products", label: "Products", icon: <IconPackage /> },
     { to: "/admin/reviews", label: "Reviews", icon: <IconStar /> },
     { to: "/admin/inquiries", label: "Orders", icon: <IconReceipt /> },
+    { to: "/admin/theme", label: "Theme", icon: <IconPalette /> },
   ];
 
   return (
