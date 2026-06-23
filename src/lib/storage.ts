@@ -7,7 +7,7 @@ const KEY = {
   cart: "yaawun:cart:v1",
   inquiries: "yaawun:inquiries:v1",
   auth: "yaawun:auth:v1",
-  seeded: "yaawun:seeded:v1",
+  seeded: "yaawun:seeded:v2",
 } as const;
 
 const isBrowser = () => typeof window !== "undefined";
