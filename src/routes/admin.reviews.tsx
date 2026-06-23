@@ -5,7 +5,7 @@ import { Stars } from "@/components/storefront/ProductCard";
 import { useToast } from "@/lib/toast";
 
 export const Route = createFileRoute("/admin/reviews")({
-  component: ReviewsAdmin;
+  component: ReviewsAdmin,
 });
 
 function ReviewsAdmin() {
