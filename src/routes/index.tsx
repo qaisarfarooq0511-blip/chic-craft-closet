@@ -67,14 +67,14 @@ function Home() {
         </div>
         <div className="hero-right">
           <div className="hero-img-main">
-            <img src="https://picsum.photos/seed/yaawun-hero-main/900/1100" alt="Featured Yaawun piece" loading="eager" />
+            <img src="https://loremflickr.com/900/1100/pashmina,shawl,kashmir?lock=901" alt="Featured Kashmiri shawl" loading="eager" />
           </div>
           <div className="hero-img-row">
             <div className="hero-img-sm">
-              <img src="https://picsum.photos/seed/yaawun-hero-shawl/500/500" alt="Kashmiri shawl" loading="lazy" />
+              <img src="https://loremflickr.com/500/500/pashmina,shawl?lock=902" alt="Kashmiri shawl" loading="lazy" />
             </div>
             <div className="hero-img-sm">
-              <img src="https://picsum.photos/seed/yaawun-hero-fabric/500/500" alt="Dress material" loading="lazy" />
+              <img src="https://loremflickr.com/500/500/chikankari,fabric,embroidery?lock=903" alt="Dress material" loading="lazy" />
             </div>
           </div>
         </div>
