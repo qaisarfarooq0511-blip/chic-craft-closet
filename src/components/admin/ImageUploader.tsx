@@ -116,7 +116,7 @@ export function ImageUploader({
             const isBusy = busy === i;
             return (
               <div key={i} className="image-thumb" style={{ position: "relative", outline: isMain ? "2px solid var(--gold)" : undefined, outlineOffset: 2 }}>
-                <img src={src} alt={`Photo ${i + 1}`} />
+                <img src={src} alt={`Photo ${i + 1}`} onClick={() => setPreview(i)} style={{ cursor: "zoom-in" }} />
                 {isBusy && (
                   <div style={{ position: "absolute", inset: 0, background: "rgba(255,255,255,.7)", display: "grid", placeItems: "center" }}>
                     <IconLoader2 className="spin" />
