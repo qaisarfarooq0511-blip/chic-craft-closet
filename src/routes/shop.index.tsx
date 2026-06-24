@@ -16,6 +16,7 @@ export function PLP({ category, query }: { category: Category | null; query?: st
   const [rating, setRating] = useState<RatingFilter>("any");
   const [sort, setSort] = useState<Sort>("featured");
   const [fabrics, setFabrics] = useState<string[]>([]);
+  const [filterOpen, setFilterOpen] = useState(false);
   const [cats, setCats] = useState(seedCategories);
   useEffect(() => {
     setCats(getCategoriesStore());
