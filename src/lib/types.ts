@@ -79,6 +79,7 @@ export interface Product {
   note?: string;                     // golden-box callout on PDP
   tags?: string[];                   // free-form tags for rule-based sections
   flags?: ProductFlag[];             // new / trending / featured
+  sizes?: string[];                  // optional size options (e.g. "0-3 Months")
   createdAt: number;
 }
 
