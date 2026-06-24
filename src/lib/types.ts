@@ -103,4 +103,4 @@ export const slugify = (s: string) =>
   s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 
 // Re-export extra types for convenience
-export type { HeroContent, CategoryRow, SectionRow, SectionRule } from "./types-extra";
+export type { HeroContent, CategoryRow, SectionRow, SectionRule, StaticPage } from "./types-extra";

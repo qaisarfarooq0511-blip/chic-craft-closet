@@ -2,8 +2,8 @@ import { Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { IconSearch, IconHeart, IconShoppingBag, IconMenu2, IconX } from "@tabler/icons-react";
 import { useCart } from "@/lib/cart-context";
-import { getCategoriesStore } from "@/lib/storage";
-import { seedCategories } from "@/lib/seed";
+import { getCategoriesStore, getPages } from "@/lib/storage";
+import { seedCategories, seedPages } from "@/lib/seed";
 
 function useCategoriesLive() {
   const [cats, setCats] = useState(seedCategories);
@@ -14,6 +14,17 @@ function useCategoriesLive() {
     return () => window.removeEventListener("storage", refresh);
   }, []);
   return cats;
+}
+
+function usePagesLive() {
+  const [pages, setPages] = useState(seedPages);
+  useEffect(() => {
+    setPages(getPages());
+    const refresh = () => setPages(getPages());
+    window.addEventListener("storage", refresh);
+    return () => window.removeEventListener("storage", refresh);
+  }, []);
+  return pages;
 }
 
 export function Topbar() {
@@ -72,6 +83,7 @@ export function Navbar() {
 
 export function Footer() {
   const cats = useCategoriesLive();
+  const pages = usePagesLive();
   return (
     <footer className="footer">
       <div className="footer-top">
@@ -87,13 +99,15 @@ export function Footer() {
           ))}
         </div>
         <div>
-          <div className="footer-col-title">Help</div>
-          <Link to="/contact" className="footer-link">Contact us</Link>
-          <Link to="/about" className="footer-link">About Yaawun</Link>
-          <Link to="/shop" className="footer-link">All products</Link>
+          <div className="footer-col-title">Information</div>
+          {pages.map((p) => (
+            <Link key={p.slug} to="/page/$slug" params={{ slug: p.slug }} className="footer-link">{p.title}</Link>
+          ))}
         </div>
         <div>
-          <div className="footer-col-title">Connect</div>
+          <div className="footer-col-title">Help</div>
+          <Link to="/contact" className="footer-link">Contact us</Link>
+          <Link to="/shop" className="footer-link">All products</Link>
           <a href="https://wa.me/" className="footer-link" target="_blank" rel="noreferrer">WhatsApp</a>
           <a href="https://instagram.com/" className="footer-link" target="_blank" rel="noreferrer">Instagram</a>
           <Link to="/admin" className="footer-link">Store admin</Link>

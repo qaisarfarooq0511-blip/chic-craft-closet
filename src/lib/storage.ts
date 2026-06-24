@@ -1,5 +1,5 @@
-import type { Product, Review, Inquiry, CartLine, HeroContent, CategoryRow, SectionRow } from "./types";
-import { seedProducts, seedReviews, seedCategories, seedHero, seedSections } from "./seed";
+import type { Product, Review, Inquiry, CartLine, HeroContent, CategoryRow, SectionRow, StaticPage } from "./types";
+import { seedProducts, seedReviews, seedCategories, seedHero, seedSections, seedPages } from "./seed";
 
 const KEY = {
   products: "yaawun:products:v1",
@@ -10,7 +10,8 @@ const KEY = {
   hero: "yaawun:hero:v1",
   categories: "yaawun:categories:v1",
   sections: "yaawun:sections:v1",
-  seeded: "yaawun:seeded:v5",
+  pages: "yaawun:pages:v1",
+  seeded: "yaawun:seeded:v6",
 } as const;
 
 const isBrowser = () => typeof window !== "undefined";
@@ -39,12 +40,19 @@ function write<T>(key: string, value: T) {
 
 export function ensureSeeded() {
   if (!isBrowser()) return;
-  if (localStorage.getItem(KEY.seeded)) return;
+  if (localStorage.getItem(KEY.seeded)) {
+    // Make sure pages exist even if user had a previous seed.
+    if (!localStorage.getItem(KEY.pages)) {
+      localStorage.setItem(KEY.pages, JSON.stringify(seedPages));
+    }
+    return;
+  }
   localStorage.setItem(KEY.products, JSON.stringify(seedProducts));
   localStorage.setItem(KEY.reviews, JSON.stringify(seedReviews));
   localStorage.setItem(KEY.hero, JSON.stringify(seedHero));
   localStorage.setItem(KEY.categories, JSON.stringify(seedCategories));
   localStorage.setItem(KEY.sections, JSON.stringify(seedSections));
+  localStorage.setItem(KEY.pages, JSON.stringify(seedPages));
   localStorage.setItem(KEY.seeded, "1");
 }
 
@@ -145,6 +153,24 @@ export const resolveSectionProducts = (s: SectionRow, products: Product[]): Prod
   else if (type === "tag") matches = listed.filter((p) => p.tags?.includes(value));
   return matches.slice(0, limit);
 };
+
+// Static pages
+export const getPages = (): StaticPage[] => {
+  ensureSeeded();
+  const list = read<StaticPage[]>(KEY.pages, seedPages);
+  return [...list].sort((a, b) => a.order - b.order);
+};
+export const getPage = (slug: string): StaticPage | undefined =>
+  getPages().find((p) => p.slug === slug);
+export const savePages = (pages: StaticPage[]) => write(KEY.pages, pages);
+export const upsertPage = (p: StaticPage) => {
+  const all = getPages();
+  const i = all.findIndex((x) => x.slug === p.slug);
+  if (i >= 0) all[i] = p; else all.push(p);
+  savePages(all);
+};
+export const deletePage = (slug: string) =>
+  savePages(getPages().filter((p) => p.slug !== slug));
 
 // Auth (placeholder, local only)
 export const ADMIN_EMAIL = "amiga.qaisar@gmail.com";
