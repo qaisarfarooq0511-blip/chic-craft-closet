@@ -62,6 +62,7 @@ function PDP() {
   const reviews = useMemo(() => (p ? getReviewsFor(p.id) : []), [p]);
   const [qty, setQty] = useState(1);
   const [thumb, setThumb] = useState(0);
+  const [size, setSize] = useState<string | null>(null);
   const { add } = useCart();
   const toast = useToast();
 
