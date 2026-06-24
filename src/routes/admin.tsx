@@ -12,6 +12,8 @@ import {
   IconCategory,
   IconLayoutGrid,
   IconFileText,
+  IconSettings,
+  IconUsers,
 } from "@tabler/icons-react";
 import { AuthProvider, useAuth } from "@/lib/auth-context";
 import { ADMIN_EMAIL, ADMIN_PASSWORD } from "@/lib/storage";
