@@ -70,6 +70,7 @@ export function Navbar() {
       <div className="nav-actions">
         <Link to="/shop" aria-label="Search products"><IconSearch /></Link>
         <Link to="/about" aria-label="Visit store"><IconHeart /></Link>
+        <AccountMenu />
         <Link to="/cart" className="cart-wrap" aria-label="Cart">
           <IconShoppingBag />
           {count > 0 && <span className="cart-dot" />}
@@ -79,6 +80,67 @@ export function Navbar() {
         </button>
       </div>
     </nav>
+  );
+}
+
+function AccountMenu() {
+  const { user, signOut } = useUserAuth();
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const onDoc = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, []);
+
+  if (!user) {
+    return (
+      <Link to="/auth" aria-label="Sign in" title="Sign in">
+        <IconUser />
+      </Link>
+    );
+  }
+
+  const initial = user.name.trim().charAt(0).toUpperCase() || "U";
+
+  return (
+    <div ref={ref} style={{ position: "relative" }}>
+      <button
+        onClick={() => setOpen((v) => !v)}
+        aria-label="Account menu"
+        style={{
+          width: 28, height: 28, borderRadius: "50%",
+          background: "var(--ink)", color: "#fff",
+          fontSize: 12, fontWeight: 500, border: "none", cursor: "pointer",
+          display: "grid", placeItems: "center",
+        }}
+      >
+        {initial}
+      </button>
+      {open && (
+        <div style={{
+          position: "absolute", right: 0, top: "calc(100% + 8px)",
+          background: "#fff", border: "1px solid var(--line)", borderRadius: 8,
+          minWidth: 200, boxShadow: "0 8px 24px rgba(0,0,0,0.08)", padding: 12, zIndex: 50,
+        }}>
+          <div style={{ fontSize: 13, color: "var(--ink)", fontWeight: 500 }}>{user.name}</div>
+          <div style={{ fontSize: 11, color: "var(--ink3)", marginBottom: 10 }}>{user.mobile}</div>
+          <button
+            onClick={() => { setOpen(false); signOut(); }}
+            style={{
+              width: "100%", textAlign: "left", padding: "8px 10px",
+              background: "var(--cream)", border: "1px solid var(--line)", borderRadius: 6,
+              fontSize: 12, color: "var(--ink)", cursor: "pointer",
+            }}
+          >
+            Sign out
+          </button>
+        </div>
+      )}
+    </div>
   );
 }
 
