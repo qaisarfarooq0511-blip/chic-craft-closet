@@ -36,6 +36,7 @@ function NewProduct() {
     items: [{ name: "", length: "", width: "", weight: "" }],
     includes: [],
     images: [],
+    hsnCode: null,
     createdAt: Date.now(),
   };
 

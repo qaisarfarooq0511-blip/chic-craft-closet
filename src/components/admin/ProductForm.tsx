@@ -274,3 +274,69 @@ export function ProductForm({ initial, onSave, submitLabel }: Props) {
     </form>
   );
 }
+
+function TaxSection({
+  price,
+  hsnCode,
+  hsnCodes,
+  onChange,
+}: {
+  price: number;
+  hsnCode: string | null;
+  hsnCodes: { code: string; description?: string; gstRate: number }[];
+  onChange: (code: string | null) => void;
+}) {
+  const selected = hsnCodes.find((h) => h.code === hsnCode) ?? null;
+  const breakup = useMemo(
+    () => (selected && price > 0 ? computeTaxBreakup(price, selected.gstRate) : null),
+    [selected, price],
+  );
+  return (
+    <div className="admin-card">
+      <div className="cart-sum-title" style={{ marginBottom: 4 }}>Tax information</div>
+      <p style={{ fontSize: 11, color: "var(--ink3)", marginBottom: 12 }}>
+        Sale price is treated as <strong>inclusive of GST</strong>. The tax breakup below is for your records and the customer invoice — it is never shown on storefront pricing.
+      </p>
+      <div className="form-field">
+        <label className="form-label">HSN code</label>
+        <select
+          className="form-select"
+          value={hsnCode ?? ""}
+          onChange={(e) => onChange(e.target.value || null)}
+        >
+          <option value="">— Select HSN code —</option>
+          {hsnCodes.map((h) => (
+            <option key={h.code} value={h.code}>
+              {h.code} — {h.description ?? "—"} ({h.gstRate}% GST)
+            </option>
+          ))}
+        </select>
+        {hsnCodes.length === 0 && (
+          <p style={{ fontSize: 11, color: "var(--ink3)", marginTop: 4 }}>
+            No HSN codes yet — add them in <Link to="/admin/config" style={{ textDecoration: "underline" }}>Configuration</Link>.
+          </p>
+        )}
+      </div>
+      {breakup && (
+        <div style={{ background: "var(--cream)", borderRadius: 8, padding: 12, fontSize: 12, color: "var(--ink2)", display: "grid", gap: 4 }}>
+          <Row label={`Taxable value (base)`} value={`₹${breakup.base.toFixed(2)}`} />
+          <Row label={`CGST @ ${(breakup.rate / 2).toFixed(2)}%`} value={`₹${breakup.cgst.toFixed(2)}`} />
+          <Row label={`SGST @ ${(breakup.rate / 2).toFixed(2)}%`} value={`₹${breakup.sgst.toFixed(2)}`} />
+          <Row label={`Total GST (${breakup.rate}%)`} value={`₹${breakup.gst.toFixed(2)}`} />
+          <div style={{ borderTop: "1px solid var(--line)", marginTop: 4, paddingTop: 4 }}>
+            <Row label="Price (inclusive)" value={`₹${breakup.total.toFixed(2)}`} bold />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Row({ label, value, bold }: { label: string; value: string; bold?: boolean }) {
+  return (
+    <div style={{ display: "flex", justifyContent: "space-between", fontWeight: bold ? 600 : 400 }}>
+      <span>{label}</span><span>{value}</span>
+    </div>
+  );
+}
+
