@@ -120,11 +120,13 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
         <ToastProvider>
-          <CartProvider>
-            <Chrome>
-              <Outlet />
-            </Chrome>
-          </CartProvider>
+          <UserAuthProvider>
+            <CartProvider>
+              <Chrome>
+                <Outlet />
+              </Chrome>
+            </CartProvider>
+          </UserAuthProvider>
         </ToastProvider>
       </ThemeProvider>
     </QueryClientProvider>
