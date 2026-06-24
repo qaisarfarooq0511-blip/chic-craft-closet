@@ -717,3 +717,13 @@
 }
 .size-chip:hover { border-color: var(--ink2); }
 .size-chip.sel { background: var(--ink); color: #fff; border-color: var(--ink); }
+
+/* Static page body (admin-controlled HTML content) */
+.static-page-body { max-width: 720px; margin-top: 18px; color: var(--ink2); font-size: 14px; line-height: 1.9; }
+.static-page-body p { margin: 0 0 14px; }
+.static-page-body h2 { font-family: var(--serif); font-weight: 300; font-size: 22px; color: var(--ink); margin: 32px 0 10px; }
+.static-page-body h3 { font-family: var(--serif); font-weight: 300; font-size: 18px; color: var(--ink); margin: 24px 0 8px; }
+.static-page-body ul, .static-page-body ol { margin: 0 0 14px; padding-left: 20px; }
+.static-page-body li { margin-bottom: 6px; }
+.static-page-body a { color: var(--ink); text-decoration: underline; }
+.static-page-body strong { color: var(--ink); font-weight: 500; }
