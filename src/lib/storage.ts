@@ -49,6 +49,8 @@ export interface HsnCode {
   gstRate: number; // total GST % (e.g. 5, 12, 18)
 }
 
+export interface FaqEntry { q: string; a: string }
+
 export interface AppConfig {
   badges: string[];
   fabrics: string[];
@@ -58,6 +60,7 @@ export interface AppConfig {
   sizes: string[];
   maxQtyPerItem: number;
   hsnCodes: HsnCode[];
+  globalFaqs: FaqEntry[];
 }
 
 export const DEFAULT_CONFIG: AppConfig = {
@@ -75,7 +78,15 @@ export const DEFAULT_CONFIG: AppConfig = {
     { code: "6209", description: "Babies' / kids' garments", gstRate: 12 },
     { code: "7117", description: "Imitation jewellery", gstRate: 18 },
   ],
+  globalFaqs: [
+    { q: "What are Yaawun's shipping timelines?", a: "Orders are processed within 1–2 business days and typically delivered within 3–7 business days across India. Free shipping on orders above ₹999." },
+    { q: "What is the return and exchange policy?", a: "We offer a 7-day return window from the date of delivery. Items must be unused, unwashed and returned with original packaging. Free return pickup is available across most pincodes." },
+    { q: "Are the prices inclusive of GST?", a: "Yes, all prices on Yaawun are inclusive of GST. A detailed tax invoice is available in your account once the order is placed." },
+    { q: "How do I find my size?", a: "Each product page lists fabric cut lengths (for unstitched sets) or finished garment sizes. For ready-to-wear pieces, refer to the size guide linked from the size selector." },
+    { q: "How should I care for my Yaawun pieces?", a: "Most natural fabric pieces are best dry-cleaned; care instructions are listed on every product page. For embroidered work, avoid moisture, store folded with muslin, and iron on low heat." },
+  ],
 };
+
 
 
 const isBrowser = () => typeof window !== "undefined";
@@ -273,6 +284,7 @@ export const getConfig = (): AppConfig => {
     sizes: stored.sizes ?? DEFAULT_CONFIG.sizes,
     maxQtyPerItem: stored.maxQtyPerItem ?? DEFAULT_CONFIG.maxQtyPerItem,
     hsnCodes: stored.hsnCodes ?? DEFAULT_CONFIG.hsnCodes,
+    globalFaqs: stored.globalFaqs ?? DEFAULT_CONFIG.globalFaqs,
   };
 };
 export const saveConfig = (c: AppConfig) => write(KEY.config, c);
