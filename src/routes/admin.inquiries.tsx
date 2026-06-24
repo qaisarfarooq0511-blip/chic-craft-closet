@@ -35,6 +35,16 @@ function InquiriesAdmin() {
       <h1 className="admin-h1">Orders</h1>
       <p className="admin-sub">Customer checkouts. Reach out on WhatsApp or phone to confirm and arrange delivery.</p>
 
+      {phone && (
+        <div className="admin-card" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10 }}>
+          <div style={{ fontSize: 13, color: "var(--ink2)" }}>
+            Filtered by customer{name ? `: ${name}` : ""} ({phone}) — {list.length} order{list.length === 1 ? "" : "s"}
+          </div>
+          <Link to="/admin/inquiries" className="btn-outline">Clear filter</Link>
+        </div>
+      )}
+
+
       {list.length === 0 && (
         <div className="admin-card" style={{ textAlign: "center", padding: 40, color: "var(--ink3)" }}>
           No orders yet.
