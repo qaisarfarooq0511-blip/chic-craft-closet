@@ -4,7 +4,7 @@ import { IconScissors, IconTruck, IconRefresh, IconShieldCheck, IconAlertCircle,
 import { getProductBySlug, getReviewsFor } from "@/lib/storage";
 import { useCart } from "@/lib/cart-context";
 import { useToast } from "@/lib/toast";
-import { Stars, fmt } from "@/components/storefront/ProductCard";
+import { Stars, fmt, WishlistButton } from "@/components/storefront/ProductCard";
 import { breadcrumbLd, productLd } from "@/lib/jsonld";
 import { categorySlug } from "@/lib/types";
 
