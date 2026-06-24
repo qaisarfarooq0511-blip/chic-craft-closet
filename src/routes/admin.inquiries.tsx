@@ -1,18 +1,28 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { getInquiries, updateInquiry } from "@/lib/storage";
+import { normalizeMobile } from "@/lib/user-auth";
 import { fmt } from "@/components/storefront/ProductCard";
 import { useToast } from "@/lib/toast";
 import type { Inquiry } from "@/lib/types";
 
 export const Route = createFileRoute("/admin/inquiries")({
+  validateSearch: (s: Record<string, unknown>) => ({
+    phone: typeof s.phone === "string" ? s.phone : undefined,
+    name: typeof s.name === "string" ? s.name : undefined,
+  }),
   component: InquiriesAdmin,
 });
 
 function InquiriesAdmin() {
+  const { phone, name } = Route.useSearch();
   const [, force] = useState(0);
   const toast = useToast();
-  const list = typeof window !== "undefined" ? getInquiries() : [];
+  const all = typeof window !== "undefined" ? getInquiries() : [];
+  const list = phone
+    ? all.filter((i) => normalizeMobile(i.customer.phone) === normalizeMobile(phone))
+    : all;
+
 
   const setStatus = (i: Inquiry, status: Inquiry["status"]) => {
     updateInquiry({ ...i, status });
@@ -24,6 +34,16 @@ function InquiriesAdmin() {
     <>
       <h1 className="admin-h1">Orders</h1>
       <p className="admin-sub">Customer checkouts. Reach out on WhatsApp or phone to confirm and arrange delivery.</p>
+
+      {phone && (
+        <div className="admin-card" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10 }}>
+          <div style={{ fontSize: 13, color: "var(--ink2)" }}>
+            Filtered by customer{name ? `: ${name}` : ""} ({phone}) — {list.length} order{list.length === 1 ? "" : "s"}
+          </div>
+          <Link to="/admin/inquiries" className="btn-outline">Clear filter</Link>
+        </div>
+      )}
+
 
       {list.length === 0 && (
         <div className="admin-card" style={{ textAlign: "center", padding: 40, color: "var(--ink3)" }}>

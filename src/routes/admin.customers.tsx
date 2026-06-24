@@ -1,5 +1,6 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
+
 import {
   getAllUsers,
   createUser,
@@ -21,10 +22,11 @@ export const Route = createFileRoute("/admin/customers")({
 function CustomersAdmin() {
   const [, force] = useState(0);
   const toast = useToast();
+  const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [editing, setEditing] = useState<AppUser | null>(null);
-  const [viewingOrders, setViewingOrders] = useState<AppUser | null>(null);
   const [adding, setAdding] = useState(false);
+
 
   const users = useMemo(() => {
     const all = getAllUsers();
@@ -36,7 +38,7 @@ function CustomersAdmin() {
       (u.email ?? "").toLowerCase().includes(q),
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [search, editing, adding, viewingOrders]);
+  }, [search, editing, adding]);
 
   const refresh = () => force((n) => n + 1);
 
@@ -87,9 +89,14 @@ function CustomersAdmin() {
                 </div>
               </div>
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                <button className="btn-outline" onClick={() => setViewingOrders(u)} disabled={orders.length === 0}>
+                <button
+                  className="btn-outline"
+                  onClick={() => navigate({ to: "/admin/inquiries", search: { phone: u.mobile, name: u.name } })}
+                  disabled={orders.length === 0}
+                >
                   View orders
                 </button>
+
                 <button
                   className="btn-outline"
                   onClick={() => {
@@ -132,16 +139,11 @@ function CustomersAdmin() {
           onAdded={() => { setAdding(false); refresh(); toast("Customer added"); }}
         />
       )}
-      {viewingOrders && (
-        <OrdersModal
-          user={viewingOrders}
-          orders={ordersFor(viewingOrders)}
-          onClose={() => setViewingOrders(null)}
-        />
-      )}
     </>
   );
 }
+
+
 
 function ModalShell({ children, onClose, title }: { children: React.ReactNode; onClose: () => void; title: string }) {
   return (
