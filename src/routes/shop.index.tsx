@@ -13,6 +13,7 @@ export function PLP({ category, query }: { category: Category | null; query?: st
   const [price, setPrice] = useState<PriceFilter>("all");
   const [rating, setRating] = useState<RatingFilter>("any");
   const [sort, setSort] = useState<Sort>("featured");
+  const [fabrics, setFabrics] = useState<string[]>([]);
   const [cats, setCats] = useState(seedCategories);
   useEffect(() => {
     setCats(getCategoriesStore());
@@ -20,6 +21,24 @@ export function PLP({ category, query }: { category: Category | null; query?: st
     window.addEventListener("storage", refresh);
     return () => window.removeEventListener("storage", refresh);
   }, []);
+
+  // Reset fabric selection when switching category
+  useEffect(() => { setFabrics([]); }, [category]);
+
+  const fabricOptions = useMemo(() => {
+    const base = getProducts().filter((p) => p.listed && (!category || p.category === category));
+    const set = new Map<string, number>();
+    base.forEach((p) => {
+      const f = (p.fabric || "").trim();
+      if (!f) return;
+      set.set(f, (set.get(f) ?? 0) + 1);
+    });
+    return Array.from(set.entries()).sort((a, b) => a[0].localeCompare(b[0]));
+  }, [category]);
+
+  const toggleFabric = (f: string) =>
+    setFabrics((prev) => (prev.includes(f) ? prev.filter((x) => x !== f) : [...prev, f]));
+
 
   const products = useMemo(() => {
     let list = getProducts().filter((p) => p.listed);
