@@ -22,12 +22,13 @@ const NAV: { to: string; label: string; icon: typeof IconUser; exact?: boolean }
 
 function AccountLayout() {
   const navigate = useNavigate();
-  const { user, signOut } = useUserAuth();
+  const { user, hydrated, signOut } = useUserAuth();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
 
   useEffect(() => {
-    if (!user) navigate({ to: "/auth", search: { redirect: pathname }, replace: true });
-  }, [user, navigate, pathname]);
+    if (hydrated && !user) navigate({ to: "/auth", search: { redirect: pathname }, replace: true });
+  }, [hydrated, user, navigate, pathname]);
+
 
 
   return (
