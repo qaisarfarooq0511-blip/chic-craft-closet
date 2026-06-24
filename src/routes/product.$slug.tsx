@@ -207,7 +207,8 @@ function PDP() {
               <span className="qty-label">Qty</span>
               <button type="button" className="qty-btn" onClick={() => setQty((q) => Math.max(1, q - 1))} aria-label="Decrease">−</button>
               <span className="qty-val">{qty}</span>
-              <button type="button" className="qty-btn" onClick={() => setQty((q) => q + 1)} aria-label="Increase">+</button>
+              <button type="button" className="qty-btn" onClick={() => setQty((q) => Math.min(maxQty, q + 1))} aria-label="Increase" disabled={qty >= maxQty}>+</button>
+              {qty >= maxQty && <span style={{ fontSize: 11, color: "var(--ink3)", marginLeft: 8 }}>Max {maxQty} per order</span>}
             </div>
             <button className="cta-primary" onClick={addAndToast} disabled={p.stock === 0}>Add to bag</button>
             <Link to="/cart" className="cta-gold-full" onClick={addAndToast} style={{ display: "inline-block", textAlign: "center" }}>Buy now</Link>
