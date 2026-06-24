@@ -280,7 +280,51 @@ function PDP() {
             )}
           </div>
         </div>
+
+        <FaqSection faqs={resolveFaqs(p.faqs)} />
       </div>
     </>
+  );
+}
+
+function FaqSection({ faqs }: { faqs: { q: string; a: string }[] }) {
+  const [open, setOpen] = useState<number | null>(0);
+  if (!faqs.length) return null;
+  return (
+    <section className="pdp-faqs" style={{ marginTop: 32, borderTop: "1px solid var(--line)", paddingTop: 24 }}>
+      <h2 className="serif" style={{ fontSize: 22, fontWeight: 400, color: "var(--ink)", marginBottom: 14 }}>
+        Frequently asked questions
+      </h2>
+      <div style={{ display: "grid", gap: 8 }}>
+        {faqs.map((f, i) => {
+          const isOpen = open === i;
+          return (
+            <div key={i} style={{ border: "1px solid var(--line)", borderRadius: 8, background: "#fff" }}>
+              <button
+                type="button"
+                onClick={() => setOpen(isOpen ? null : i)}
+                aria-expanded={isOpen}
+                style={{
+                  width: "100%", display: "flex", justifyContent: "space-between", alignItems: "center",
+                  padding: "14px 16px", background: "none", border: "none", cursor: "pointer",
+                  textAlign: "left", fontSize: 14, fontWeight: 500, color: "var(--ink)",
+                }}
+              >
+                <span>{f.q}</span>
+                <IconChevronDown
+                  size={18}
+                  style={{ transition: "transform .2s", transform: isOpen ? "rotate(180deg)" : "none", flexShrink: 0, marginLeft: 12 }}
+                />
+              </button>
+              {isOpen && (
+                <div style={{ padding: "0 16px 14px", fontSize: 13, color: "var(--ink2)", lineHeight: 1.6 }}>
+                  {f.a}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </section>
   );
 }
