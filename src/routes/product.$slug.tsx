@@ -156,6 +156,11 @@ function PDP() {
               <span className="pdp-price">{fmt(p.price)}</span>
               {p.was && (<><span className="pdp-was-price">{fmt(p.was)}</span><span className="pdp-off-badge">{off}% off</span></>)}
             </div>
+            {p.tldr && (
+              <p className="pdp-tldr" style={{ background: "var(--cream)", borderLeft: "3px solid var(--gold)", padding: "10px 14px", fontSize: 13, color: "var(--ink2)", borderRadius: 4, margin: "8px 0 14px" }}>
+                <strong style={{ color: "var(--ink)", marginRight: 6 }}>In short:</strong>{p.tldr}
+              </p>
+            )}
             <p className="pdp-desc">{p.desc}</p>
             {p.stock <= 5 && p.stock > 0 && (
               <div className="pdp-stock"><IconAlertCircle />Only {p.stock} left in stock</div>
