@@ -5,6 +5,7 @@ export type AppUser = {
   mobile: string; // E.164-ish, e.g. +919876543210
   name: string;
   email?: string;
+  newsletterOptIn?: boolean; // defaults to true when missing
   createdAt: number;
 };
 
