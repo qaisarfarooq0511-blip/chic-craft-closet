@@ -16,6 +16,7 @@ import { CartProvider } from "@/lib/cart-context";
 import { ToastProvider } from "@/lib/toast";
 import { Topbar, Navbar, Footer } from "@/components/storefront/Chrome";
 import { ThemeProvider } from "@/lib/theme-context";
+import { UserAuthProvider } from "@/lib/user-auth";
 import { organizationLd, websiteLd, STORE } from "@/lib/jsonld";
 
 function NotFoundComponent() {
