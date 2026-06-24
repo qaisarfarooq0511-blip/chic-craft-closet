@@ -3,6 +3,7 @@ import { useState, useSyncExternalStore } from "react";
 import { getProducts, upsertProduct, deleteProduct } from "@/lib/storage";
 import { fmt } from "@/components/storefront/ProductCard";
 import { useToast } from "@/lib/toast";
+import { exportRowsToXlsx } from "@/lib/xlsx-export";
 
 export const Route = createFileRoute("/admin/products/")({
   component: ProductsList,
