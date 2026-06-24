@@ -261,3 +261,15 @@ export const getConfig = (): AppConfig => {
 };
 export const saveConfig = (c: AppConfig) => write(KEY.config, c);
 
+// Coupons
+export const getCoupons = (): Coupon[] => read<Coupon[]>(KEY.coupons, []);
+export const saveCoupons = (list: Coupon[]) => write(KEY.coupons, list);
+export const upsertCoupon = (c: Coupon) => {
+  const all = getCoupons();
+  const i = all.findIndex((x) => x.id === c.id);
+  if (i >= 0) all[i] = c; else all.unshift(c);
+  saveCoupons(all);
+};
+export const deleteCoupon = (id: string) => saveCoupons(getCoupons().filter((c) => c.id !== id));
+
+
