@@ -105,7 +105,7 @@ export function PLP({ category, query }: { category: Category | null; query?: st
         </div>
       </div>
       <div className="plp-body">
-        <aside className="filter-col">
+        <aside id="filter-panel" className={`filter-col${filterOpen ? " show" : ""}`}>
           <div className="filter-sec">
             <div className="filter-title">Category</div>
             <Link to="/shop" className={`filter-opt${!category ? " sel" : ""}`}>
