@@ -24,6 +24,13 @@ export function PLP({ category, query }: { category: Category | null; query?: st
   const products = useMemo(() => {
     let list = getProducts().filter((p) => p.listed);
     if (category) list = list.filter((p) => p.category === category);
+    const q = (query ?? "").trim().toLowerCase();
+    if (q) {
+      list = list.filter((p) => {
+        const hay = `${p.name} ${p.subtitle ?? ""} ${p.desc ?? ""}`.toLowerCase();
+        return hay.includes(q);
+      });
+    }
     if (price === "under1000") list = list.filter((p) => p.price < 1000);
     else if (price === "1000-2500") list = list.filter((p) => p.price >= 1000 && p.price <= 2500);
     else if (price === "2500-5000") list = list.filter((p) => p.price > 2500 && p.price <= 5000);
@@ -34,9 +41,10 @@ export function PLP({ category, query }: { category: Category | null; query?: st
     else if (sort === "price-desc") list = [...list].sort((a, b) => b.price - a.price);
     else if (sort === "rating") list = [...list].sort((a, b) => b.rating - a.rating);
     return list;
-  }, [category, price, rating, sort]);
+  }, [category, price, rating, sort, query]);
 
-  const title = category ?? "All products";
+  const title = query ? `Results for "${query}"` : (category ?? "All products");
+
 
   return (
     <>
