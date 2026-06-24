@@ -41,9 +41,10 @@ function AccountLayout() {
         Manage your profile, orders, wishlist and saved addresses.
       </p>
 
-      <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 220px) 1fr", gap: 28, alignItems: "start" }}>
-        <aside style={{ position: "sticky", top: 80 }}>
+      <div className="account-grid">
+        <aside className="account-aside">
           <nav style={{
+
             background: "#fff", border: "1px solid var(--line)", borderRadius: 12,
             padding: 8, display: "grid", gap: 2,
           }}>
