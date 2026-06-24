@@ -106,14 +106,44 @@ function Checkout() {
     <div className="cart-wrap-page">
       <h1 className="cart-title">Checkout</h1>
       <div className="cart-body">
-        <form onSubmit={place}>
+        <form onSubmit={place} noValidate>
           <div className="admin-card">
             <div className="cart-sum-title">Delivery details</div>
-            <div className="form-field"><label className="form-label">Full name *</label><input className="form-input" value={form.name} onChange={update("name")} required /></div>
-            <div className="form-field"><label className="form-label">Mobile *</label><input className="form-input" type="tel" value={form.phone} onChange={update("phone")} required /></div>
-            <div className="form-field"><label className="form-label">Address *</label><textarea className="form-textarea" value={form.address} onChange={update("address")} required /></div>
-            <div className="form-field"><label className="form-label">City *</label><input className="form-input" value={form.city} onChange={update("city")} required /></div>
-            <div className="form-field"><label className="form-label">PIN code *</label><input className="form-input" value={form.pincode} onChange={update("pincode")} required /></div>
+            {!user && (
+              <div style={{
+                background: "var(--cream)", border: "1px solid var(--line)",
+                borderRadius: 8, padding: "10px 12px", fontSize: 12, color: "var(--ink2)", marginBottom: 14,
+              }}>
+                You're checking out as a guest. We'll create your account automatically using your mobile number so you can track this order later.
+              </div>
+            )}
+            <div className="form-field">
+              <label className="form-label">Full name *</label>
+              <input className="form-input" value={form.name} onChange={update("name")}
+                onBlur={() => setForm((f) => ({ ...f, name: f.name.trim() ? capitalizeName(f.name.trim()) : f.name }))} required />
+              {errors.name && <div style={{ color: "#b91c1c", fontSize: 12, marginTop: 4 }}>{errors.name}</div>}
+            </div>
+            <div className="form-field">
+              <label className="form-label">Mobile *</label>
+              <input className="form-input" type="tel" inputMode="tel" value={form.phone} onChange={update("phone")} required />
+              {errors.phone && <div style={{ color: "#b91c1c", fontSize: 12, marginTop: 4 }}>{errors.phone}</div>}
+            </div>
+            <div className="form-field">
+              <label className="form-label">Address *</label>
+              <textarea className="form-textarea" value={form.address} onChange={update("address")} required />
+              {errors.address && <div style={{ color: "#b91c1c", fontSize: 12, marginTop: 4 }}>{errors.address}</div>}
+            </div>
+            <div className="form-field">
+              <label className="form-label">City *</label>
+              <input className="form-input" value={form.city} onChange={update("city")} required />
+              {errors.city && <div style={{ color: "#b91c1c", fontSize: 12, marginTop: 4 }}>{errors.city}</div>}
+            </div>
+            <div className="form-field">
+              <label className="form-label">PIN code *</label>
+              <input className="form-input" inputMode="numeric" maxLength={6} value={form.pincode}
+                onChange={(e) => setForm((f) => ({ ...f, pincode: e.target.value.replace(/[^\d]/g, "").slice(0, 6) }))} required />
+              {errors.pincode && <div style={{ color: "#b91c1c", fontSize: 12, marginTop: 4 }}>{errors.pincode}</div>}
+            </div>
             <div className="form-field"><label className="form-label">Notes</label><textarea className="form-textarea" value={form.notes} onChange={update("notes")} placeholder="Any special instructions?" /></div>
           </div>
           <button type="submit" className="cart-cta">Place order</button>
