@@ -38,7 +38,7 @@ function CustomersAdmin() {
       (u.email ?? "").toLowerCase().includes(q),
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [search, editing, adding, viewingOrders]);
+  }, [search, editing, adding]);
 
   const refresh = () => force((n) => n + 1);
 
