@@ -672,7 +672,8 @@
   .plp-body { grid-template-columns: 1fr; }
   .filter-col { display: none; }
   .filter-col.show { display: block; padding: 1.25rem; border-right: none; border-bottom: 0.5px solid var(--b); }
-  .filter-toggle { display: inline-flex; align-items: center; gap: 6px; font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; padding: 7px 14px; border: 0.5px solid var(--b2); border-radius: var(--r); background: var(--cream); color: var(--ink2); cursor: pointer; transition: background .15s; }
+  .filter-toggle { display: inline-flex; }
+  .filter-toggle { align-items: center; gap: 6px; font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; padding: 7px 14px; border: 0.5px solid var(--b2); border-radius: var(--r); background: var(--cream); color: var(--ink2); cursor: pointer; transition: background .15s; }
   .filter-toggle:hover { background: var(--ink); color: var(--cream); border-color: var(--ink); }
   .pc-foot { flex-direction: column; align-items: center; gap: 6px; }
   .pc-atb { width: 100%; text-align: center; }
