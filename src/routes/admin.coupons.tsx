@@ -11,6 +11,7 @@ import {
   type PaymentMode,
 } from "@/lib/storage";
 import { useToast } from "@/lib/toast";
+import { exportRowsToXlsx } from "@/lib/xlsx-export";
 
 export const Route = createFileRoute("/admin/coupons")({
   component: CouponsAdmin,
