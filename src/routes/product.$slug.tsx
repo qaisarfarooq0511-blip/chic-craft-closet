@@ -79,7 +79,13 @@ function PDP() {
   const distrib = [0, 0, 0, 0, 0];
   reviews.forEach((r) => { distrib[r.rating - 1]++; });
 
-  const addAndToast = () => { add(p.id, qty); toast(`${p.name} added to bag`); setQty(1); };
+  const hasSizes = (p.sizes?.length ?? 0) > 0;
+  const addAndToast = () => {
+    if (hasSizes && !size) { toast("Please select a size"); return; }
+    add(p.id, qty);
+    toast(`${p.name}${size ? ` (${size})` : ""} added to bag`);
+    setQty(1);
+  };
 
   return (
     <>
