@@ -70,7 +70,7 @@ export function Navbar() {
       </div>
 
       <div className="nav-actions">
-        <Link to="/shop" aria-label="Search products"><IconSearch /></Link>
+        <SearchMenu />
         <Link to="/account/wishlist" aria-label="Wishlist"><IconHeart /></Link>
         <AccountMenu />
         <Link to="/cart" className="cart-wrap" aria-label="Cart">
