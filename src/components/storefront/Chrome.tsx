@@ -85,7 +85,128 @@ export function Navbar() {
   );
 }
 
+function SearchMenu() {
+  const [open, setOpen] = useState(false);
+  const [q, setQ] = useState("");
+  const ref = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const onDoc = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false); };
+    document.addEventListener("mousedown", onDoc);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDoc);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (open) setTimeout(() => inputRef.current?.focus(), 10);
+  }, [open]);
+
+  const results = useMemo<Product[]>(() => {
+    const term = q.trim().toLowerCase();
+    if (!term) return [];
+    return getProducts()
+      .filter((p) => p.listed)
+      .filter((p) => {
+        const hay = `${p.name} ${p.subtitle ?? ""} ${p.desc ?? ""}`.toLowerCase();
+        return hay.includes(term);
+      })
+      .slice(0, 8);
+  }, [q, open]);
+
+  const submit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const term = q.trim();
+    if (!term) return;
+    setOpen(false);
+    navigate({ to: "/shop", search: { q: term } as never });
+  };
+
+  const go = (slug: string) => {
+    setOpen(false);
+    setQ("");
+    navigate({ to: "/product/$slug", params: { slug } });
+  };
+
+  return (
+    <div ref={ref} style={{ position: "relative" }}>
+      <button
+        onClick={() => setOpen((v) => !v)}
+        aria-label="Search products"
+        style={{ background: "transparent", border: "none", padding: 0, cursor: "pointer", color: "inherit", display: "inline-flex" }}
+      >
+        <IconSearch />
+      </button>
+      {open && (
+        <div className="search-popover">
+          <form onSubmit={submit} style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            <IconSearch size={16} style={{ color: "var(--ink3)", flexShrink: 0 }} />
+            <input
+              ref={inputRef}
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder="Search shawls, dresses…"
+              className="search-input"
+            />
+            {q && (
+              <button type="button" onClick={() => setQ("")} aria-label="Clear" style={{ background: "transparent", border: "none", cursor: "pointer", color: "var(--ink3)", padding: 0, display: "inline-flex" }}>
+                <IconX size={16} />
+              </button>
+            )}
+          </form>
+          {q.trim() && (
+            <div style={{ marginTop: 10, maxHeight: 360, overflowY: "auto" }}>
+              {results.length === 0 ? (
+                <div style={{ fontSize: 12, color: "var(--ink3)", padding: "12px 4px" }}>No products match "{q}".</div>
+              ) : (
+                results.map((p) => (
+                  <button
+                    key={p.id}
+                    onClick={() => go(p.slug)}
+                    style={{
+                      display: "flex", alignItems: "center", gap: 10, width: "100%",
+                      padding: 8, background: "transparent", border: "none",
+                      borderRadius: 6, cursor: "pointer", textAlign: "left",
+                    }}
+                  >
+                    <div style={{ width: 40, height: 40, borderRadius: 6, background: p.bg || "var(--cream)", flexShrink: 0, overflow: "hidden" }}>
+                      {p.images?.[p.mainImageIndex ?? 0] && (
+                        <img src={p.images[p.mainImageIndex ?? 0]} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                      )}
+                    </div>
+                    <div style={{ minWidth: 0, flex: 1 }}>
+                      <div style={{ fontSize: 13, color: "var(--ink)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{p.name}</div>
+                      <div style={{ fontSize: 11, color: "var(--ink3)" }}>₹{p.price.toLocaleString("en-IN")}</div>
+                    </div>
+                  </button>
+                ))
+              )}
+              {results.length > 0 && (
+                <button
+                  type="button"
+                  onClick={submit as unknown as () => void}
+                  style={{ marginTop: 6, width: "100%", padding: 8, fontSize: 12, background: "var(--cream)", border: "1px solid var(--line)", borderRadius: 6, cursor: "pointer", color: "var(--ink)" }}
+                >
+                  See all results
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function AccountMenu() {
+
   const { user, signOut } = useUserAuth();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
