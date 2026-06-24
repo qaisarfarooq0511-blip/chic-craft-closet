@@ -1,9 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ImageUploader } from "./ImageUploader";
-import { getCategoriesStore, getConfig } from "@/lib/storage";
+import { getCategoriesStore, getConfig, computeTaxBreakup } from "@/lib/storage";
 import { type Product, type ProductItem, type ProductFlag, slugify } from "@/lib/types";
 import { useToast } from "@/lib/toast";
 import { Link } from "@tanstack/react-router";
+
 
 interface Props {
   initial: Product;
@@ -228,6 +229,14 @@ export function ProductForm({ initial, onSave, submitLabel }: Props) {
           <MultiChip options={config.careOptions} selected={careList} onChange={(v) => set("care", v.join(", "))} />
         </div>
       </div>
+
+      <TaxSection
+        price={p.price}
+        hsnCode={p.hsnCode ?? null}
+        hsnCodes={config.hsnCodes}
+        onChange={(code) => set("hsnCode", code)}
+      />
+
 
       <div className="admin-card">
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
