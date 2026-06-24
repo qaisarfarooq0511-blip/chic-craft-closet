@@ -1,0 +1,25 @@
+# Yaawun
+
+> Yaawun is a small-batch Indian women's clothing label crafting hand-finished kurta sets, sarees, and lounge essentials in breathable natural fabrics — cotton, mul, linen, and silk — with traditional embroidery techniques.
+
+Yaawun designs and sells ready-to-wear ethnic and fusion clothing for women, made in limited runs by Indian artisans. Each piece lists fabric composition, embroidery details, care instructions, and size guidance. Pricing is inclusive of GST; the store ships across India.
+
+## Shop
+- [All products](/shop): Browse the full catalogue across categories.
+- [Kurta sets](/shop/kurta-sets): Coordinated kurta, bottom and dupatta sets.
+- [Sarees](/shop/sarees): Handloom and lightweight everyday sarees.
+- [Suits](/shop/suits): Unstitched and ready-to-wear suit sets.
+- [Lounge & co-ords](/shop/lounge-and-co-ords): Soft cotton co-ord sets for home and travel.
+
+## Brand
+- [About Yaawun](/about): The story behind the label, our artisans, and how we make.
+- [Contact](/contact): Reach the studio for orders, sizing, or custom enquiries.
+
+## Help
+- [Shipping & returns](/page/shipping-returns): Delivery timelines, return window, exchange policy.
+- [Size guide](/page/size-guide): Measurements and fit guidance per garment type.
+- [Care instructions](/page/care): General care for natural fabrics and embroidered pieces.
+
+## Optional
+- [Privacy policy](/page/privacy): How we handle customer data.
+- [Terms of service](/page/terms): Purchase terms and conditions.
