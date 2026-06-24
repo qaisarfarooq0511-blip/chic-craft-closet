@@ -4,6 +4,7 @@ export type AppUser = {
   id: string;
   mobile: string; // E.164-ish, e.g. +919876543210
   name: string;
+  email?: string;
   createdAt: number;
 };
 
@@ -60,10 +61,27 @@ export function createUser(mobile: string, name: string): AppUser {
   return u;
 }
 
+export function updateUserRecord(id: string, patch: Partial<Pick<AppUser, "name" | "email">>): AppUser | null {
+  const users = readUsers();
+  const idx = users.findIndex((u) => u.id === id);
+  if (idx < 0) return null;
+  const updated: AppUser = {
+    ...users[idx],
+    ...(patch.name !== undefined ? { name: patch.name.trim() } : {}),
+    ...(patch.email !== undefined ? { email: patch.email.trim() || undefined } : {}),
+  };
+  users[idx] = updated;
+  writeUsers(users);
+  const session = readSession();
+  if (session && session.id === id) writeSession(updated);
+  return updated;
+}
+
 type Ctx = {
   user: AppUser | null;
   signIn: (u: AppUser) => void;
   signOut: () => void;
+  updateUser: (patch: Partial<Pick<AppUser, "name" | "email">>) => void;
 };
 
 const UserAuthContext = createContext<Ctx | null>(null);
@@ -82,9 +100,14 @@ export function UserAuthProvider({ children }: { children: ReactNode }) {
 
   const signIn = (u: AppUser) => { writeSession(u); setUser(u); };
   const signOut = () => { writeSession(null); setUser(null); };
+  const updateUser = (patch: Partial<Pick<AppUser, "name" | "email">>) => {
+    if (!user) return;
+    const next = updateUserRecord(user.id, patch);
+    if (next) setUser(next);
+  };
 
   return (
-    <UserAuthContext.Provider value={{ user, signIn, signOut }}>
+    <UserAuthContext.Provider value={{ user, signIn, signOut, updateUser }}>
       {children}
     </UserAuthContext.Provider>
   );

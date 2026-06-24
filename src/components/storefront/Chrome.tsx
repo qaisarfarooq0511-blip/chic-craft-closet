@@ -124,15 +124,29 @@ function AccountMenu() {
         <div style={{
           position: "absolute", right: 0, top: "calc(100% + 8px)",
           background: "#fff", border: "1px solid var(--line)", borderRadius: 8,
-          minWidth: 200, boxShadow: "0 8px 24px rgba(0,0,0,0.08)", padding: 12, zIndex: 50,
+          minWidth: 220, boxShadow: "0 8px 24px rgba(0,0,0,0.08)", padding: 12, zIndex: 50,
         }}>
           <div style={{ fontSize: 13, color: "var(--ink)", fontWeight: 500 }}>{user.name}</div>
-          <div style={{ fontSize: 11, color: "var(--ink3)", marginBottom: 10 }}>{user.mobile}</div>
+          <div style={{ fontSize: 11, color: "var(--ink3)" }}>{user.mobile}</div>
+          {user.email
+            ? <div style={{ fontSize: 11, color: "var(--ink3)", marginBottom: 10 }}>{user.email}</div>
+            : <div style={{ fontSize: 11, color: "var(--ink3)", fontStyle: "italic", marginBottom: 10 }}>No email added</div>}
+          <Link
+            to="/account"
+            onClick={() => setOpen(false)}
+            style={{
+              display: "block", textAlign: "left", padding: "8px 10px", marginBottom: 6,
+              background: "var(--cream)", border: "1px solid var(--line)", borderRadius: 6,
+              fontSize: 12, color: "var(--ink)", textDecoration: "none",
+            }}
+          >
+            My account
+          </Link>
           <button
             onClick={() => { setOpen(false); signOut(); }}
             style={{
               width: "100%", textAlign: "left", padding: "8px 10px",
-              background: "var(--cream)", border: "1px solid var(--line)", borderRadius: 6,
+              background: "transparent", border: "1px solid var(--line)", borderRadius: 6,
               fontSize: 12, color: "var(--ink)", cursor: "pointer",
             }}
           >
