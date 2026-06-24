@@ -1,5 +1,5 @@
-import { createFileRoute, useNavigate, useSearch, Link } from "@tanstack/react-router";
-import { useState } from "react";
+import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
 import { createUser, findUserByMobile, normalizeMobile, useUserAuth } from "@/lib/user-auth";
 
 type Search = { redirect?: string };
@@ -21,7 +21,7 @@ type Step = "mobile" | "otp" | "name";
 
 function AuthPage() {
   const navigate = useNavigate();
-  const search = useSearch({ from: "/auth" });
+  const search = Route.useSearch();
   const { user, signIn } = useUserAuth();
 
   const [step, setStep] = useState<Step>("mobile");
@@ -31,20 +31,19 @@ function AuthPage() {
   const [error, setError] = useState<string | null>(null);
   const [isNew, setIsNew] = useState(false);
 
-  if (user) {
-    // Already signed in — bounce away.
-    if (typeof window !== "undefined") {
-      const target = search.redirect && search.redirect.startsWith("/") ? search.redirect : "/";
-      window.location.replace(target);
-    }
-    return null;
-  }
+  const targetPath = search.redirect && search.redirect.startsWith("/") ? search.redirect : "/";
+
+  // If a session already exists when landing on /auth, bounce away — in an effect, not during render.
+  useEffect(() => {
+    if (user) navigate({ to: targetPath, replace: true });
+  }, [user, targetPath, navigate]);
 
   const goAfterAuth = (u: { id: string; mobile: string; name: string; createdAt: number }) => {
     signIn(u);
-    const target = search.redirect && search.redirect.startsWith("/") ? search.redirect : "/";
-    navigate({ to: target });
+    navigate({ to: targetPath, replace: true });
   };
+
+
 
   const submitMobile = (e: React.FormEvent) => {
     e.preventDefault();
