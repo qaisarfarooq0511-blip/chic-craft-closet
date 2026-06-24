@@ -180,6 +180,27 @@ function PDP() {
               ))}
             </div>
 
+            {hasSizes && (
+              <div className="size-row">
+                <div className="size-row-hd">
+                  <span className="size-label">Size</span>
+                  {size && <span className="size-selected">Selected: <strong>{size}</strong></span>}
+                </div>
+                <div className="size-options">
+                  {p.sizes!.map((s) => (
+                    <button
+                      key={s}
+                      type="button"
+                      onClick={() => setSize(s)}
+                      className={`size-chip${size === s ? " sel" : ""}`}
+                    >
+                      {s}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <div className="qty-row">
               <span className="qty-label">Qty</span>
               <button type="button" className="qty-btn" onClick={() => setQty((q) => Math.max(1, q - 1))} aria-label="Decrease">−</button>
