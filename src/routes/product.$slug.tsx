@@ -1,12 +1,19 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { IconScissors, IconTruck, IconRefresh, IconShieldCheck, IconAlertCircle, IconCircleCheck } from "@tabler/icons-react";
+import { IconScissors, IconTruck, IconRefresh, IconShieldCheck, IconAlertCircle, IconCircleCheck, IconChevronDown } from "@tabler/icons-react";
 import { getProductBySlug, getReviewsFor, getConfig } from "@/lib/storage";
 import { useCart } from "@/lib/cart-context";
 import { useToast } from "@/lib/toast";
 import { Stars, fmt, WishlistButton } from "@/components/storefront/ProductCard";
-import { breadcrumbLd, productLd, abs } from "@/lib/jsonld";
+import { breadcrumbLd, productLd, faqPageLd, abs } from "@/lib/jsonld";
 import { categorySlug } from "@/lib/types";
+
+const resolveFaqs = (productFaqs: { q: string; a: string }[] | undefined): { q: string; a: string }[] => {
+  const own = (productFaqs ?? []).filter((f) => f.q.trim() && f.a.trim());
+  if (own.length) return own;
+  if (typeof window === "undefined") return [];
+  return getConfig().globalFaqs.filter((f) => f.q.trim() && f.a.trim());
+};
 
 export const Route = createFileRoute("/product/$slug")({
   loader: ({ params }) => {
@@ -35,17 +42,23 @@ export const Route = createFileRoute("/product/$slug")({
       ],
       links: [{ rel: "canonical", href: abs(`/product/${params.slug}`) }],
       scripts: p
-        ? [
-            { type: "application/ld+json", children: JSON.stringify(productLd(p, reviews)) },
-            {
-              type: "application/ld+json",
-              children: JSON.stringify(breadcrumbLd([
-                { name: "Home", url: "/" },
-                { name: p.category, url: `/shop/${categorySlug(p.category)}` },
-                { name: p.name, url: `/product/${p.slug}` },
-              ])),
-            },
-          ]
+        ? (() => {
+            const faqs = resolveFaqs(p.faqs);
+            return [
+              { type: "application/ld+json", children: JSON.stringify(productLd(p, reviews)) },
+              {
+                type: "application/ld+json",
+                children: JSON.stringify(breadcrumbLd([
+                  { name: "Home", url: "/" },
+                  { name: p.category, url: `/shop/${categorySlug(p.category)}` },
+                  { name: p.name, url: `/product/${p.slug}` },
+                ])),
+              },
+              ...(faqs.length
+                ? [{ type: "application/ld+json", children: JSON.stringify(faqPageLd(faqs)) }]
+                : []),
+            ];
+          })()
         : [],
     };
   },
@@ -143,6 +156,11 @@ function PDP() {
               <span className="pdp-price">{fmt(p.price)}</span>
               {p.was && (<><span className="pdp-was-price">{fmt(p.was)}</span><span className="pdp-off-badge">{off}% off</span></>)}
             </div>
+            {p.tldr && (
+              <p className="pdp-tldr" style={{ background: "var(--cream)", borderLeft: "3px solid var(--gold)", padding: "10px 14px", fontSize: 13, color: "var(--ink2)", borderRadius: 4, margin: "8px 0 14px" }}>
+                <strong style={{ color: "var(--ink)", marginRight: 6 }}>In short:</strong>{p.tldr}
+              </p>
+            )}
             <p className="pdp-desc">{p.desc}</p>
             {p.stock <= 5 && p.stock > 0 && (
               <div className="pdp-stock"><IconAlertCircle />Only {p.stock} left in stock</div>
@@ -262,7 +280,51 @@ function PDP() {
             )}
           </div>
         </div>
+
+        <FaqSection faqs={resolveFaqs(p.faqs)} />
       </div>
     </>
+  );
+}
+
+function FaqSection({ faqs }: { faqs: { q: string; a: string }[] }) {
+  const [open, setOpen] = useState<number | null>(0);
+  if (!faqs.length) return null;
+  return (
+    <section className="pdp-faqs" style={{ marginTop: 32, borderTop: "1px solid var(--line)", paddingTop: 24 }}>
+      <h2 className="serif" style={{ fontSize: 22, fontWeight: 400, color: "var(--ink)", marginBottom: 14 }}>
+        Frequently asked questions
+      </h2>
+      <div style={{ display: "grid", gap: 8 }}>
+        {faqs.map((f, i) => {
+          const isOpen = open === i;
+          return (
+            <div key={i} style={{ border: "1px solid var(--line)", borderRadius: 8, background: "#fff" }}>
+              <button
+                type="button"
+                onClick={() => setOpen(isOpen ? null : i)}
+                aria-expanded={isOpen}
+                style={{
+                  width: "100%", display: "flex", justifyContent: "space-between", alignItems: "center",
+                  padding: "14px 16px", background: "none", border: "none", cursor: "pointer",
+                  textAlign: "left", fontSize: 14, fontWeight: 500, color: "var(--ink)",
+                }}
+              >
+                <span>{f.q}</span>
+                <IconChevronDown
+                  size={18}
+                  style={{ transition: "transform .2s", transform: isOpen ? "rotate(180deg)" : "none", flexShrink: 0, marginLeft: 12 }}
+                />
+              </button>
+              {isOpen && (
+                <div style={{ padding: "0 16px 14px", fontSize: 13, color: "var(--ink2)", lineHeight: 1.6 }}>
+                  {f.a}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </section>
   );
 }

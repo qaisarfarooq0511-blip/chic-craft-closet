@@ -81,6 +81,8 @@ export interface Product {
   flags?: ProductFlag[];             // new / trending / featured
   sizes?: string[];                  // optional size options (e.g. "0-3 Months")
   hsnCode?: string | null;           // HSN code for GST (price is inclusive of GST)
+  tldr?: string;                     // short 1-2 sentence summary for AEO / quick scan
+  faqs?: { q: string; a: string }[]; // per-product Q&A; falls back to global FAQs in config
   createdAt: number;
 }
 
