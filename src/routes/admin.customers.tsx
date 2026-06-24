@@ -143,9 +143,7 @@ function CustomersAdmin() {
   );
 }
 
-    </>
-  );
-}
+
 
 function ModalShell({ children, onClose, title }: { children: React.ReactNode; onClose: () => void; title: string }) {
   return (
