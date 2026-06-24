@@ -35,7 +35,7 @@ function AccountLayout() {
       <div style={{ marginBottom: 8 }}>
         <Link to="/" className="muted-link" style={{ fontSize: 12 }}>← Back to store</Link>
       </div>
-      <h1 className="serif" style={{ fontSize: 32, fontWeight: 400, marginBottom: 4 }}>Hi, {user.name.split(" ")[0]}</h1>
+      <h1 className="serif" style={{ fontSize: 32, fontWeight: 400, marginBottom: 4 }}>Hi, {user ? user.name.split(" ")[0] : ""}</h1>
       <p style={{ color: "var(--ink3)", marginBottom: 28, fontSize: 14 }}>
         Manage your profile, orders, wishlist and saved addresses.
       </p>
