@@ -22,7 +22,7 @@ function PageEditor() {
   if (!page) {
     return (
       <>
-        <Link to="/admin/pages" className="admin-back"><IconArrowLeft size={14} /> Back to pages</Link>
+        <Link to="/admin/pages" style={{ fontSize: 12, color: "var(--ink3)", display: "inline-flex", alignItems: "center", gap: 4, marginBottom: 10 }}><IconArrowLeft size={14} /> Back to pages</Link>
         <h1 className="admin-h1">Page not found</h1>
         <p className="admin-sub">No page exists with slug <code>{slug}</code>.</p>
       </>
@@ -39,7 +39,7 @@ function PageEditor() {
 
   return (
     <>
-      <Link to="/admin/pages" className="admin-back"><IconArrowLeft size={14} /> Back to pages</Link>
+      <Link to="/admin/pages" style={{ fontSize: 12, color: "var(--ink3)", display: "inline-flex", alignItems: "center", gap: 4, marginBottom: 10 }}><IconArrowLeft size={14} /> Back to pages</Link>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
         <h1 className="admin-h1" style={{ marginBottom: 0 }}>Edit page</h1>
         <Link
@@ -82,7 +82,10 @@ function PageEditor() {
 
         <div style={{ display: "flex", gap: 10 }}>
           <button className="cta-primary" onClick={save}>Save changes</button>
-          <button className="cta-secondary" onClick={() => navigate({ to: "/admin/pages" })}>Cancel</button>
+          <button
+            onClick={() => navigate({ to: "/admin/pages" })}
+            style={{ background: "none", border: "0.5px solid var(--b)", color: "var(--ink2)", padding: "10px 18px", borderRadius: 2, cursor: "pointer", fontSize: 12, letterSpacing: "0.08em", textTransform: "uppercase" }}
+          >Cancel</button>
         </div>
       </div>
     </>
