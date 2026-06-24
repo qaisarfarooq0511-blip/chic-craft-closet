@@ -1,16 +1,27 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { STORE } from "@/lib/jsonld";
+import { STORE, aboutPageLd, breadcrumbLd, abs } from "@/lib/jsonld";
 
 export const Route = createFileRoute("/about")({
-  head: () => ({
-    meta: [
-      { title: `About — ${STORE.name}` },
-      { name: "description", content: `${STORE.name} is your neighbourhood store, online. Curated fashion crafted with care.` },
-      { property: "og:title", content: `About — ${STORE.name}` },
-      { property: "og:url", content: "/about" },
-    ],
-    links: [{ rel: "canonical", href: "/about" }],
-  }),
+  head: () => {
+    const desc = `${STORE.name} is your neighbourhood store, online. Curated unstitched dress material, Kashmiri shawls, kidswear and accessories — crafted with care.`;
+    return {
+      meta: [
+        { title: `About — ${STORE.name}` },
+        { name: "description", content: desc },
+        { property: "og:title", content: `About — ${STORE.name}` },
+        { property: "og:description", content: desc },
+        { property: "og:url", content: abs("/about") },
+      ],
+      links: [{ rel: "canonical", href: abs("/about") }],
+      scripts: [
+        { type: "application/ld+json", children: JSON.stringify(aboutPageLd(desc)) },
+        { type: "application/ld+json", children: JSON.stringify(breadcrumbLd([
+          { name: "Home", url: "/" },
+          { name: "About", url: "/about" },
+        ])) },
+      ],
+    };
+  },
   component: About,
 });
 
