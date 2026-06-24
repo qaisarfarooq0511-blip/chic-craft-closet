@@ -75,15 +75,19 @@ function Checkout() {
     const account = findOrCreateUserByMobile(cleanPhone, cleanName);
     if (!user) signIn(account);
 
+    const orderLines = lines.map((l) => {
+      const p = products.find((x) => x.id === l.productId)!;
+      return { productId: l.productId, name: p.name, qty: l.qty, price: p.price, mrp: p.was ?? p.price };
+    });
+    const mrpTotal = orderLines.reduce((s, l) => s + (l.mrp ?? l.price) * l.qty, 0);
+    const discount = Math.max(0, mrpTotal - subtotal);
+
     addInquiry({
       id: `INQ-${Date.now()}`,
       createdAt: Date.now(),
       customer: { name: cleanName, phone: cleanPhone, address: form.address, city: form.city, pincode: form.pincode, notes: form.notes },
-      lines: lines.map((l) => {
-        const p = products.find((x) => x.id === l.productId)!;
-        return { productId: l.productId, name: p.name, qty: l.qty, price: p.price };
-      }),
-      subtotal, delivery, total,
+      lines: orderLines,
+      subtotal, mrpTotal, discount, couponCode: null, delivery, total,
       status: "new",
     });
     clear();
