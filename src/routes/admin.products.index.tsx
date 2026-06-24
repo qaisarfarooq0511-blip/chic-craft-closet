@@ -11,8 +11,8 @@ export const Route = createFileRoute("/admin/products/")({
 function useProductsTick() {
   return useSyncExternalStore(
     (cb) => { window.addEventListener("storage", cb); return () => window.removeEventListener("storage", cb); },
-    () => String(getProducts().length) + ":" + Date.now(),
-    () => "0",
+    () => getProducts().length,
+    () => 0,
   );
 }
 
