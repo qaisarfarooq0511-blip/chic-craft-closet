@@ -1,8 +1,9 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ProductCard } from "@/components/storefront/ProductCard";
-import { getProducts } from "@/lib/storage";
-import { CATEGORIES, type Category, categorySlug } from "@/lib/types";
+import { getProducts, getCategoriesStore } from "@/lib/storage";
+import { seedCategories } from "@/lib/seed";
+import type { Category } from "@/lib/types";
 
 type PriceFilter = "all" | "under1000" | "1000-2500" | "2500-5000" | "above5000";
 type RatingFilter = "any" | "4plus" | "3plus";
@@ -12,6 +13,13 @@ export function PLP({ category }: { category: Category | null }) {
   const [price, setPrice] = useState<PriceFilter>("all");
   const [rating, setRating] = useState<RatingFilter>("any");
   const [sort, setSort] = useState<Sort>("featured");
+  const [cats, setCats] = useState(seedCategories);
+  useEffect(() => {
+    setCats(getCategoriesStore());
+    const refresh = () => setCats(getCategoriesStore());
+    window.addEventListener("storage", refresh);
+    return () => window.removeEventListener("storage", refresh);
+  }, []);
 
   const products = useMemo(() => {
     let list = getProducts().filter((p) => p.listed);
@@ -59,9 +67,9 @@ export function PLP({ category }: { category: Category | null }) {
             <Link to="/shop" className={`filter-opt${!category ? " sel" : ""}`}>
               <span className="filter-check"><span className="filter-check-tick">✓</span></span>All categories
             </Link>
-            {CATEGORIES.map((c) => (
-              <Link key={c} to="/shop/$category" params={{ category: categorySlug(c) }} className={`filter-opt${category === c ? " sel" : ""}`}>
-                <span className="filter-check"><span className="filter-check-tick">✓</span></span>{c}
+            {cats.map((c) => (
+              <Link key={c.id} to="/shop/$category" params={{ category: c.slug }} className={`filter-opt${category === c.name ? " sel" : ""}`}>
+                <span className="filter-check"><span className="filter-check-tick">✓</span></span>{c.name}
               </Link>
             ))}
           </div>
