@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { IconFilter } from "@tabler/icons-react";
 import { useEffect, useMemo, useState } from "react";
 import { ProductCard } from "@/components/storefront/ProductCard";
 import { getProducts, getCategoriesStore } from "@/lib/storage";
