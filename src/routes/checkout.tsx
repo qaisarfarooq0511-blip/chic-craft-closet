@@ -1,10 +1,18 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { IconLock } from "@tabler/icons-react";
 import { useCart, cartSubtotal } from "@/lib/cart-context";
 import { getProducts, addInquiry } from "@/lib/storage";
 import { fmt } from "@/components/storefront/ProductCard";
 import { useToast } from "@/lib/toast";
+import {
+  capitalizeName,
+  findOrCreateUserByMobile,
+  normalizeMobile,
+  useUserAuth,
+  validateMobile,
+  validateName,
+} from "@/lib/user-auth";
 
 export const Route = createFileRoute("/checkout")({
   head: () => ({
@@ -27,21 +35,50 @@ function Checkout() {
   const total = subtotal + delivery;
   const toast = useToast();
   const navigate = useNavigate();
+  const { user, signIn } = useUserAuth();
 
   const [form, setForm] = useState({ name: "", phone: "", address: "", city: "", pincode: "", notes: "" });
+  const [errors, setErrors] = useState<Partial<Record<keyof typeof form, string>>>({});
+
+  // Pre-fill from signed-in user.
+  useEffect(() => {
+    if (user) setForm((f) => ({ ...f, name: f.name || user.name, phone: f.phone || user.mobile }));
+  }, [user]);
+
   const update = (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
     setForm((f) => ({ ...f, [k]: e.target.value }));
 
   const place = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.name || !form.phone || !form.address || !form.city || !form.pincode) {
-      toast("Please fill all required fields");
+    const nextErrors: Partial<Record<keyof typeof form, string>> = {};
+
+    const nameRes = validateName(form.name);
+    if (!nameRes.ok) nextErrors.name = nameRes.error;
+
+    const phoneRes = validateMobile(form.phone);
+    if (!phoneRes.ok) nextErrors.phone = phoneRes.error;
+
+    if (!form.address.trim()) nextErrors.address = "Address is required.";
+    if (!form.city.trim()) nextErrors.city = "City is required.";
+    if (!/^\d{6}$/.test(form.pincode.trim())) nextErrors.pincode = "Enter a valid 6-digit PIN code.";
+
+    setErrors(nextErrors);
+    if (Object.keys(nextErrors).length > 0) {
+      toast("Please fix the highlighted fields");
       return;
     }
+
+    const cleanName = nameRes.ok ? nameRes.value : capitalizeName(form.name);
+    const cleanPhone = phoneRes.ok ? phoneRes.value : normalizeMobile(form.phone);
+
+    // Silently create or fetch the customer's account by mobile and sign them in.
+    const account = findOrCreateUserByMobile(cleanPhone, cleanName);
+    if (!user) signIn(account);
+
     addInquiry({
       id: `INQ-${Date.now()}`,
       createdAt: Date.now(),
-      customer: { name: form.name, phone: form.phone, address: form.address, city: form.city, pincode: form.pincode, notes: form.notes },
+      customer: { name: cleanName, phone: cleanPhone, address: form.address, city: form.city, pincode: form.pincode, notes: form.notes },
       lines: lines.map((l) => {
         const p = products.find((x) => x.id === l.productId)!;
         return { productId: l.productId, name: p.name, qty: l.qty, price: p.price };
