@@ -14,7 +14,9 @@ import {
   IconFileText,
   IconSettings,
   IconUsers,
+  IconTicket,
 } from "@tabler/icons-react";
+
 import { AuthProvider, useAuth } from "@/lib/auth-context";
 import { ADMIN_EMAIL, ADMIN_PASSWORD } from "@/lib/storage";
 
