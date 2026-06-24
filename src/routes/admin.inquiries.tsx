@@ -142,11 +142,51 @@ function InquiriesAdmin() {
               <input className="form-input" type="number" min={0} value={fMax} onChange={(e) => setFMax(e.target.value)} />
             </FilterField>
           </div>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 12, color: "var(--ink3)" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 12, color: "var(--ink3)", gap: 10, flexWrap: "wrap" }}>
             <span>Showing {list.length} of {base.length} order{base.length === 1 ? "" : "s"}</span>
-            {activeFilters && (
-              <button type="button" className="btn-outline" onClick={clearFilters}>Clear filters</button>
-            )}
+            <div style={{ display: "flex", gap: 8 }}>
+              {activeFilters && (
+                <button type="button" className="btn-outline" onClick={clearFilters}>Clear filters</button>
+              )}
+              <button
+                type="button"
+                className="btn-outline"
+                onClick={() => {
+                  if (list.length === 0) { toast("Nothing to export"); return; }
+                  const rows = list.map((i) => {
+                    const mrpTotal = i.mrpTotal ?? i.lines.reduce((s, l) => s + (l.mrp ?? l.price) * l.qty, 0);
+                    const discount = i.discount ?? Math.max(0, mrpTotal - i.subtotal);
+                    return {
+                      "Order ID": i.id,
+                      Date: new Date(i.createdAt).toISOString(),
+                      Customer: i.customer.name,
+                      Mobile: i.customer.phone,
+                      City: i.customer.city,
+                      Pincode: i.customer.pincode,
+                      Items: i.lines.map((l) => `${l.name} ×${l.qty}`).join("; "),
+                      Qty: i.lines.reduce((s, l) => s + l.qty, 0),
+                      MRP: mrpTotal,
+                      Sale: i.subtotal,
+                      Discount: discount,
+                      Coupon: i.couponCode ?? "",
+                      Delivery: i.delivery,
+                      Final: i.total,
+                      Source: i.source ?? "",
+                      Status: i.status,
+                      "Shipping Partner": i.fulfillment?.partner ?? "",
+                      AWB: i.fulfillment?.awb ?? "",
+                      "Shipping Cost": i.fulfillment?.shippingCost ?? "",
+                      "Expected Delivery": i.fulfillment?.expectedDelivery ?? "",
+                      "Cancel Reason": i.cancellation?.reason ?? "",
+                    };
+                  });
+                  exportRowsToXlsx(rows, "Orders", "orders");
+                  toast("Orders exported");
+                }}
+              >
+                Export Excel
+              </button>
+            </div>
           </div>
         </div>
       )}
