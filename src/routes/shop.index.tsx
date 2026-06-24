@@ -13,6 +13,7 @@ export function PLP({ category, query }: { category: Category | null; query?: st
   const [price, setPrice] = useState<PriceFilter>("all");
   const [rating, setRating] = useState<RatingFilter>("any");
   const [sort, setSort] = useState<Sort>("featured");
+  const [fabrics, setFabrics] = useState<string[]>([]);
   const [cats, setCats] = useState(seedCategories);
   useEffect(() => {
     setCats(getCategoriesStore());
@@ -20,6 +21,24 @@ export function PLP({ category, query }: { category: Category | null; query?: st
     window.addEventListener("storage", refresh);
     return () => window.removeEventListener("storage", refresh);
   }, []);
+
+  // Reset fabric selection when switching category
+  useEffect(() => { setFabrics([]); }, [category]);
+
+  const fabricOptions = useMemo(() => {
+    const base = getProducts().filter((p) => p.listed && (!category || p.category === category));
+    const set = new Map<string, number>();
+    base.forEach((p) => {
+      const f = (p.fabric || "").trim();
+      if (!f) return;
+      set.set(f, (set.get(f) ?? 0) + 1);
+    });
+    return Array.from(set.entries()).sort((a, b) => a[0].localeCompare(b[0]));
+  }, [category]);
+
+  const toggleFabric = (f: string) =>
+    setFabrics((prev) => (prev.includes(f) ? prev.filter((x) => x !== f) : [...prev, f]));
+
 
   const products = useMemo(() => {
     let list = getProducts().filter((p) => p.listed);
@@ -37,11 +56,13 @@ export function PLP({ category, query }: { category: Category | null; query?: st
     else if (price === "above5000") list = list.filter((p) => p.price > 5000);
     if (rating === "4plus") list = list.filter((p) => p.rating >= 4);
     else if (rating === "3plus") list = list.filter((p) => p.rating >= 3);
+    if (fabrics.length) list = list.filter((p) => fabrics.includes((p.fabric || "").trim()));
     if (sort === "price-asc") list = [...list].sort((a, b) => a.price - b.price);
     else if (sort === "price-desc") list = [...list].sort((a, b) => b.price - a.price);
     else if (sort === "rating") list = [...list].sort((a, b) => b.rating - a.rating);
     return list;
-  }, [category, price, rating, sort, query]);
+  }, [category, price, rating, sort, query, fabrics]);
+
 
   const title = query ? `Results for "${query}"` : (category ?? "All products");
 
@@ -103,6 +124,37 @@ export function PLP({ category, query }: { category: Category | null; query?: st
               </button>
             ))}
           </div>
+          {fabricOptions.length > 0 && (
+            <div className="filter-sec">
+              <div className="filter-title" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span>Fabric</span>
+                {fabrics.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setFabrics([])}
+                    style={{ background: "transparent", border: "none", color: "var(--ink3)", fontSize: 11, cursor: "pointer", padding: 0 }}
+                  >
+                    Clear
+                  </button>
+                )}
+              </div>
+              {fabricOptions.map(([f, n]) => {
+                const sel = fabrics.includes(f);
+                return (
+                  <button
+                    key={f}
+                    type="button"
+                    className={`filter-opt${sel ? " sel" : ""}`}
+                    onClick={() => toggleFabric(f)}
+                  >
+                    <span className="filter-check"><span className="filter-check-tick">✓</span></span>
+                    {f} <span style={{ color: "var(--ink3)", marginLeft: 4 }}>({n})</span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
         </aside>
         <div className="plp-grid-wrap">
           {products.length ? (
