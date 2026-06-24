@@ -124,6 +124,37 @@ export function PLP({ category, query }: { category: Category | null; query?: st
               </button>
             ))}
           </div>
+          {fabricOptions.length > 0 && (
+            <div className="filter-sec">
+              <div className="filter-title" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span>Fabric</span>
+                {fabrics.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setFabrics([])}
+                    style={{ background: "transparent", border: "none", color: "var(--ink3)", fontSize: 11, cursor: "pointer", padding: 0 }}
+                  >
+                    Clear
+                  </button>
+                )}
+              </div>
+              {fabricOptions.map(([f, n]) => {
+                const sel = fabrics.includes(f);
+                return (
+                  <button
+                    key={f}
+                    type="button"
+                    className={`filter-opt${sel ? " sel" : ""}`}
+                    onClick={() => toggleFabric(f)}
+                  >
+                    <span className="filter-check"><span className="filter-check-tick">✓</span></span>
+                    {f} <span style={{ color: "var(--ink3)", marginLeft: 4 }}>({n})</span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
         </aside>
         <div className="plp-grid-wrap">
           {products.length ? (
