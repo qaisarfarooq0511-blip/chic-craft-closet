@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { createUser, findUserByMobile, normalizeMobile, useUserAuth } from "@/lib/user-auth";
+import { createUser, findUserByMobile, normalizeMobile, useUserAuth, validateMobile, validateName, capitalizeName } from "@/lib/user-auth";
 
 type Search = { redirect?: string };
 
@@ -48,9 +48,9 @@ function AuthPage() {
   const submitMobile = (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    const digits = mobile.replace(/[^\d]/g, "");
-    if (digits.length < 10) { setError("Enter a valid mobile number"); return; }
-    const existing = findUserByMobile(mobile);
+    const v = validateMobile(mobile);
+    if (!v.ok) { setError(v.error); return; }
+    const existing = findUserByMobile(v.value);
     setIsNew(!existing);
     setStep("otp");
   };
@@ -59,7 +59,6 @@ function AuthPage() {
     e.preventDefault();
     setError(null);
     if (!/^\d{6}$/.test(otp)) { setError("Enter the 6-digit code"); return; }
-    // Dev mode: any 6-digit code is accepted. Real OTP provider to be wired later.
     if (isNew) {
       setStep("name");
     } else {
@@ -71,8 +70,9 @@ function AuthPage() {
   const submitName = (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    if (name.trim().length < 2) { setError("Please enter your full name"); return; }
-    const u = createUser(mobile, name);
+    const v = validateName(name);
+    if (!v.ok) { setError(v.error); return; }
+    const u = createUser(mobile, v.value);
     goAfterAuth(u);
   };
 
@@ -145,6 +145,7 @@ function AuthPage() {
                 placeholder="Your name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
+                onBlur={() => setName((n) => (n.trim() ? capitalizeName(n.trim()) : n))}
                 style={inputStyle}
               />
             </label>

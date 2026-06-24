@@ -1,238 +1,84 @@
-import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { createFileRoute, Link, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
+import { useEffect } from "react";
+import { IconUser, IconShoppingBag, IconHeart, IconMapPin } from "@tabler/icons-react";
 import { useUserAuth } from "@/lib/user-auth";
 
 export const Route = createFileRoute("/account")({
   head: () => ({
     meta: [
       { title: "My Account — Yaawun" },
-      { name: "description", content: "Manage your Yaawun profile — name, mobile number and email." },
+      { name: "description", content: "Manage your Yaawun profile, orders, wishlist and saved addresses." },
     ],
   }),
-  component: AccountPage,
+  component: AccountLayout,
 });
 
-function AccountPage() {
+const NAV: { to: string; label: string; icon: typeof IconUser; exact?: boolean }[] = [
+  { to: "/account", label: "My Account", icon: IconUser, exact: true },
+  { to: "/account/orders", label: "My Orders", icon: IconShoppingBag },
+  { to: "/account/wishlist", label: "Wishlist", icon: IconHeart },
+  { to: "/account/addresses", label: "Address Book", icon: IconMapPin },
+];
+
+function AccountLayout() {
   const navigate = useNavigate();
-  const { user, updateUser, signOut } = useUserAuth();
+  const { user, signOut } = useUserAuth();
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
 
   useEffect(() => {
-    if (!user) navigate({ to: "/auth", search: { redirect: "/account" }, replace: true });
-  }, [user, navigate]);
-
-  const [editing, setEditing] = useState<"name" | "email" | null>(null);
-  const [nameDraft, setNameDraft] = useState("");
-  const [emailDraft, setEmailDraft] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [savedMsg, setSavedMsg] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!savedMsg) return;
-    const t = setTimeout(() => setSavedMsg(null), 2500);
-    return () => clearTimeout(t);
-  }, [savedMsg]);
+    if (!user) navigate({ to: "/auth", search: { redirect: pathname }, replace: true });
+  }, [user, navigate, pathname]);
 
   if (!user) return null;
 
-  const startEditName = () => { setNameDraft(user.name); setError(null); setEditing("name"); };
-  const startEditEmail = () => { setEmailDraft(user.email ?? ""); setError(null); setEditing("email"); };
-  const cancel = () => { setEditing(null); setError(null); };
-
-  const saveName = (e: React.FormEvent) => {
-    e.preventDefault();
-    const v = nameDraft.trim();
-    if (v.length < 2) { setError("Please enter your full name."); return; }
-    updateUser({ name: v });
-    setEditing(null);
-    setSavedMsg("Name updated");
-  };
-
-  const saveEmail = (e: React.FormEvent) => {
-    e.preventDefault();
-    const v = emailDraft.trim();
-    if (v && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) {
-      setError("Please enter a valid email address.");
-      return;
-    }
-    updateUser({ email: v });
-    setEditing(null);
-    setSavedMsg(v ? "Email updated" : "Email removed");
-  };
-
   return (
-    <main className="container" style={{ maxWidth: 640, padding: "48px 20px 80px" }}>
+    <main className="container" style={{ maxWidth: 980, padding: "40px 20px 80px" }}>
       <div style={{ marginBottom: 8 }}>
         <Link to="/" className="muted-link" style={{ fontSize: 12 }}>← Back to store</Link>
       </div>
-      <h1 style={{ fontSize: 32, marginBottom: 4 }}>My Account</h1>
+      <h1 className="serif" style={{ fontSize: 32, fontWeight: 400, marginBottom: 4 }}>Hi, {user.name.split(" ")[0]}</h1>
       <p style={{ color: "var(--ink3)", marginBottom: 28, fontSize: 14 }}>
-        Manage your profile details.
+        Manage your profile, orders, wishlist and saved addresses.
       </p>
 
-      {savedMsg && (
-        <div style={{
-          marginBottom: 16, padding: "10px 12px", borderRadius: 8,
-          background: "#eef7ee", border: "1px solid #cfe6cf", color: "#2e5d2e", fontSize: 13,
-        }}>{savedMsg}</div>
-      )}
+      <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 220px) 1fr", gap: 28, alignItems: "start" }}>
+        <aside style={{ position: "sticky", top: 80 }}>
+          <nav style={{
+            background: "#fff", border: "1px solid var(--line)", borderRadius: 12,
+            padding: 8, display: "grid", gap: 2,
+          }}>
+            {NAV.map(({ to, label, icon: Icon, exact }) => {
+              const active = exact ? pathname === to : pathname.startsWith(to);
+              return (
+                <Link
+                  key={to}
+                  to={to as "/account"}
+                  style={{
+                    display: "flex", alignItems: "center", gap: 10,
+                    padding: "10px 12px", borderRadius: 8, fontSize: 13,
+                    color: active ? "var(--ink)" : "var(--ink2)",
+                    background: active ? "var(--cream)" : "transparent",
+                    fontWeight: active ? 500 : 400,
+                    textDecoration: "none",
+                  }}
+                >
+                  <Icon size={16} />{label}
+                </Link>
+              );
+            })}
+          </nav>
+          <button onClick={signOut} style={{
+            marginTop: 12, width: "100%", padding: "10px 14px",
+            background: "transparent", color: "var(--ink)",
+            border: "1px solid var(--line)", borderRadius: 8,
+            fontSize: 13, cursor: "pointer",
+          }}>Sign out</button>
+        </aside>
 
-      <section style={cardStyle}>
-        <Row
-          label="Full name"
-          value={user.name}
-          editing={editing === "name"}
-          onEdit={startEditName}
-        >
-          <form onSubmit={saveName} style={formRow}>
-            <input
-              value={nameDraft}
-              onChange={(e) => setNameDraft(e.target.value)}
-              placeholder="Your full name"
-              autoFocus
-              style={inputStyle}
-            />
-            <div style={{ display: "flex", gap: 8 }}>
-              <button type="submit" style={primaryBtn}>Save</button>
-              <button type="button" onClick={cancel} style={ghostBtn}>Cancel</button>
-            </div>
-          </form>
-        </Row>
-
-        <Divider />
-
-        <Row
-          label="Mobile number"
-          value={user.mobile}
-          hint="Your registered mobile number cannot be changed."
-        />
-
-        <Divider />
-
-        <Row
-          label="Email address"
-          value={user.email || "Not added yet"}
-          muted={!user.email}
-          editing={editing === "email"}
-          onEdit={startEditEmail}
-          editLabel={user.email ? "Edit" : "Add email"}
-        >
-          <form onSubmit={saveEmail} style={formRow}>
-            <input
-              type="email"
-              value={emailDraft}
-              onChange={(e) => setEmailDraft(e.target.value)}
-              placeholder="you@example.com"
-              autoFocus
-              style={inputStyle}
-            />
-            <div style={{ display: "flex", gap: 8 }}>
-              <button type="submit" style={primaryBtn}>Save</button>
-              <button type="button" onClick={cancel} style={ghostBtn}>Cancel</button>
-            </div>
-          </form>
-        </Row>
-
-        {error && (
-          <div style={{ marginTop: 12, color: "#b03a2e", fontSize: 13 }}>{error}</div>
-        )}
-      </section>
-
-      <div style={{ marginTop: 24 }}>
-        <button onClick={signOut} style={{ ...ghostBtn, padding: "10px 16px" }}>Sign out</button>
+        <section style={{ minWidth: 0 }}>
+          <Outlet />
+        </section>
       </div>
     </main>
   );
 }
-
-function Row({
-  label, value, hint, muted, editing, onEdit, editLabel, children,
-}: {
-  label: string;
-  value: string;
-  hint?: string;
-  muted?: boolean;
-  editing?: boolean;
-  onEdit?: () => void;
-  editLabel?: string;
-  children?: React.ReactNode;
-}) {
-  return (
-    <div style={{ padding: "16px 0" }}>
-      <div style={{ fontSize: 12, color: "var(--ink3)", textTransform: "uppercase", letterSpacing: 0.6, marginBottom: 6 }}>
-        {label}
-      </div>
-      {editing ? (
-        children
-      ) : (
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
-          <div style={{ fontSize: 15, color: muted ? "var(--ink3)" : "var(--ink)", fontStyle: muted ? "italic" : "normal" }}>
-            {value}
-          </div>
-          {onEdit && (
-            <button onClick={onEdit} style={linkBtn}>{editLabel ?? "Edit"}</button>
-          )}
-        </div>
-      )}
-      {hint && !editing && (
-        <div style={{ fontSize: 12, color: "var(--ink3)", marginTop: 6 }}>{hint}</div>
-      )}
-    </div>
-  );
-}
-
-function Divider() {
-  return <div style={{ height: 1, background: "var(--line)" }} />;
-}
-
-const cardStyle: React.CSSProperties = {
-  background: "#fff",
-  border: "1px solid var(--line)",
-  borderRadius: 12,
-  padding: "8px 20px",
-};
-
-const formRow: React.CSSProperties = {
-  display: "flex", flexDirection: "column", gap: 10,
-};
-
-const inputStyle: React.CSSProperties = {
-  width: "100%",
-  padding: "10px 12px",
-  border: "1.5px solid #d4cfc7",
-  borderRadius: 8,
-  fontSize: 15,
-  background: "#fff",
-  color: "var(--ink)",
-  boxShadow: "inset 0 1px 2px rgba(0,0,0,0.03)",
-};
-
-const primaryBtn: React.CSSProperties = {
-  padding: "9px 16px",
-  background: "var(--ink)",
-  color: "#fff",
-  border: "none",
-  borderRadius: 8,
-  fontSize: 13,
-  cursor: "pointer",
-};
-
-const ghostBtn: React.CSSProperties = {
-  padding: "9px 14px",
-  background: "transparent",
-  color: "var(--ink)",
-  border: "1px solid var(--line)",
-  borderRadius: 8,
-  fontSize: 13,
-  cursor: "pointer",
-};
-
-const linkBtn: React.CSSProperties = {
-  background: "transparent",
-  border: "none",
-  color: "var(--ink)",
-  fontSize: 13,
-  cursor: "pointer",
-  textDecoration: "underline",
-  textUnderlineOffset: 3,
-  padding: 0,
-};
