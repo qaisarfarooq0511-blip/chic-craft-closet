@@ -148,4 +148,4 @@ function Home() {
   );
 }
 
-void categorySlug; // exported helper referenced elsewhere
+
