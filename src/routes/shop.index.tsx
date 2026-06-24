@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { ProductCard } from "@/components/storefront/ProductCard";
 import { getProducts, getCategoriesStore } from "@/lib/storage";
 import { seedCategories } from "@/lib/seed";
+import { breadcrumbLd, collectionPageLd, abs } from "@/lib/jsonld";
 import type { Category } from "@/lib/types";
 
 type PriceFilter = "all" | "under1000" | "1000-2500" | "2500-5000" | "above5000";
@@ -176,15 +177,38 @@ export const Route = createFileRoute("/shop/")({
   validateSearch: (search: Record<string, unknown>) => ({
     q: typeof search.q === "string" ? search.q : undefined,
   }),
-  head: () => ({
-    meta: [
-      { title: "Shop all — Yaawun" },
-      { name: "description", content: "Shop the full Yaawun collection — Kashmiri shawls, unstitched dress material, kidswear and accessories." },
-      { property: "og:title", content: "Shop all — Yaawun" },
-      { property: "og:url", content: "/shop" },
-    ],
-    links: [{ rel: "canonical", href: "/shop" }],
-  }),
+  head: () => {
+    const desc = "Shop the full Yaawun collection — Kashmiri shawls, unstitched dress material, kidswear and accessories.";
+    const products = typeof window !== "undefined" ? getProducts().filter((p) => p.listed) : [];
+    return {
+      meta: [
+        { title: "Shop all — Yaawun" },
+        { name: "description", content: desc },
+        { property: "og:title", content: "Shop all — Yaawun" },
+        { property: "og:description", content: desc },
+        { property: "og:url", content: abs("/shop") },
+      ],
+      links: [{ rel: "canonical", href: abs("/shop") }],
+      scripts: [
+        {
+          type: "application/ld+json",
+          children: JSON.stringify(breadcrumbLd([
+            { name: "Home", url: "/" },
+            { name: "Shop", url: "/shop" },
+          ])),
+        },
+        {
+          type: "application/ld+json",
+          children: JSON.stringify(collectionPageLd({
+            name: "Shop all — Yaawun",
+            description: desc,
+            url: "/shop",
+            products,
+          })),
+        },
+      ],
+    };
+  },
   component: ShopAllRoute,
 });
 
