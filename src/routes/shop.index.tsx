@@ -9,7 +9,7 @@ type PriceFilter = "all" | "under1000" | "1000-2500" | "2500-5000" | "above5000"
 type RatingFilter = "any" | "4plus" | "3plus";
 type Sort = "featured" | "price-asc" | "price-desc" | "rating";
 
-export function PLP({ category }: { category: Category | null }) {
+export function PLP({ category, query }: { category: Category | null; query?: string }) {
   const [price, setPrice] = useState<PriceFilter>("all");
   const [rating, setRating] = useState<RatingFilter>("any");
   const [sort, setSort] = useState<Sort>("featured");
