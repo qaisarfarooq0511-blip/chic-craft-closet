@@ -89,6 +89,7 @@ function Checkout() {
       lines: orderLines,
       subtotal, mrpTotal, discount, couponCode: null, delivery, total,
       status: "new",
+      source: "direct",
     });
     clear();
     toast("Order placed — we'll contact you shortly");

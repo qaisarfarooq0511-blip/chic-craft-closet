@@ -118,6 +118,7 @@ export interface Inquiry {
   delivery: number;
   total: number;              // final price charged
   status: "new" | "contacted" | "fulfilled" | "cancelled";
+  source?: string;            // acquisition source (e.g. "direct", "google", "instagram"); populated later via GA/UTM
   fulfillment?: InquiryFulfillment;
   cancellation?: InquiryCancellation;
 }

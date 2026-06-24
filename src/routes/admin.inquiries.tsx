@@ -78,6 +78,7 @@ function InquiriesAdmin() {
                 <th style={{ textAlign: "right" }}>Sale</th>
                 <th style={{ textAlign: "right" }}>Discount</th>
                 <th style={{ textAlign: "right" }}>Final</th>
+                <th>Source</th>
                 <th>Status</th>
                 <th style={{ textAlign: "right" }}>Actions</th>
               </tr>
@@ -107,6 +108,7 @@ function InquiriesAdmin() {
                       {i.couponCode && <div style={{ fontSize: 9, color: "var(--ink3)" }}>{i.couponCode}</div>}
                     </td>
                     <td style={{ textAlign: "right", fontSize: 13, fontWeight: 600 }}>{fmt(i.total)}</td>
+                    <td style={{ fontSize: 11, color: "var(--ink3)", textTransform: "capitalize" }}>{i.source ?? "—"}</td>
                     <td>
                       <StatusPill status={i.status} />
                     </td>
@@ -209,7 +211,7 @@ function ViewModal({ inquiry, onClose }: { inquiry: Inquiry; onClose: () => void
   return (
     <Modal title={`Order ${inquiry.id}`} onClose={onClose} maxWidth={620}>
       <div style={{ fontSize: 12, color: "var(--ink3)", marginBottom: 14 }}>
-        Placed {new Date(inquiry.createdAt).toLocaleString()} · <StatusPill status={inquiry.status} />
+        Placed {new Date(inquiry.createdAt).toLocaleString()} · <StatusPill status={inquiry.status} /> · Source: <span style={{ textTransform: "capitalize" }}>{inquiry.source ?? "—"}</span>
       </div>
 
       <SectionTitle>Customer</SectionTitle>
