@@ -39,3 +39,11 @@ export interface SectionRow {
   order: number;
   visible: boolean;
 }
+
+export interface StaticPage {
+  slug: string;               // url segment, e.g. "about-us"
+  title: string;              // page H1 + nav label
+  body: string;               // HTML or plain text (newlines preserved)
+  updatedAt: number;
+  order: number;
+}
