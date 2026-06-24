@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { IconFilter } from "@tabler/icons-react";
 import { useEffect, useMemo, useState } from "react";
 import { ProductCard } from "@/components/storefront/ProductCard";
 import { getProducts, getCategoriesStore } from "@/lib/storage";
@@ -15,6 +16,7 @@ export function PLP({ category, query }: { category: Category | null; query?: st
   const [rating, setRating] = useState<RatingFilter>("any");
   const [sort, setSort] = useState<Sort>("featured");
   const [fabrics, setFabrics] = useState<string[]>([]);
+  const [filterOpen, setFilterOpen] = useState(false);
   const [cats, setCats] = useState(seedCategories);
   useEffect(() => {
     setCats(getCategoriesStore());
@@ -83,15 +85,27 @@ export function PLP({ category, query }: { category: Category | null; query?: st
           <div className="plp-count">{products.length} piece{products.length === 1 ? "" : "s"}</div>
           <h1 className="plp-title">{title}</h1>
         </div>
-        <select className="plp-sort" value={sort} onChange={(e) => setSort(e.target.value as Sort)} aria-label="Sort products">
-          <option value="featured">Sort: Featured</option>
-          <option value="price-asc">Price: Low to high</option>
-          <option value="price-desc">Price: High to low</option>
-          <option value="rating">Top rated</option>
-        </select>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <button
+            type="button"
+            className="filter-toggle"
+            onClick={() => setFilterOpen((v) => !v)}
+            aria-expanded={filterOpen}
+            aria-controls="filter-panel"
+          >
+            <IconFilter size={14} />
+            Filters
+          </button>
+          <select className="plp-sort" value={sort} onChange={(e) => setSort(e.target.value as Sort)} aria-label="Sort products">
+            <option value="featured">Sort: Featured</option>
+            <option value="price-asc">Price: Low to high</option>
+            <option value="price-desc">Price: High to low</option>
+            <option value="rating">Top rated</option>
+          </select>
+        </div>
       </div>
       <div className="plp-body">
-        <aside className="filter-col">
+        <aside id="filter-panel" className={`filter-col${filterOpen ? " show" : ""}`}>
           <div className="filter-sec">
             <div className="filter-title">Category</div>
             <Link to="/shop" className={`filter-opt${!category ? " sel" : ""}`}>
