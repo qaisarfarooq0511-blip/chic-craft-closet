@@ -132,6 +132,16 @@ export function ProductForm({ initial, onSave, submitLabel }: Props) {
           <textarea className="form-textarea" value={p.desc} onChange={(e) => set("desc", e.target.value)} rows={4} />
         </div>
         <div className="form-field">
+          <label className="form-label">TL;DR / short summary <span style={{ color: "var(--ink3)", fontWeight: 400 }}>(1–2 sentences, used by AI search engines &amp; shown above the description)</span></label>
+          <textarea
+            className="form-textarea"
+            rows={2}
+            value={p.tldr ?? ""}
+            onChange={(e) => set("tldr", e.target.value)}
+            placeholder="e.g. Ivory pure pashmina shawl with hand-done sozni embroidery, woven in Kashmir."
+          />
+        </div>
+        <div className="form-field">
           <label className="form-label">Highlight note (golden box on product page)</label>
           <textarea
             className="form-textarea"
