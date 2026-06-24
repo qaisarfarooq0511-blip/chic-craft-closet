@@ -112,11 +112,19 @@ export const productLd = (p: Product, reviews: Review[]) => {
   const validUntil = new Date(Date.now() + 365 * 24 * 3600 * 1000)
     .toISOString()
     .slice(0, 10);
+  const additionalProperty = [
+    p.fabric && { "@type": "PropertyValue", name: "Fabric", value: p.fabric },
+    p.embroidery && { "@type": "PropertyValue", name: "Embroidery", value: p.embroidery },
+    p.care && { "@type": "PropertyValue", name: "Care", value: p.care },
+    p.type && { "@type": "PropertyValue", name: "Type", value: p.type },
+    p.sizes?.length && { "@type": "PropertyValue", name: "Sizes", value: p.sizes.join(", ") },
+    p.pieces && { "@type": "PropertyValue", name: "Pieces", value: String(p.pieces) },
+  ].filter(Boolean);
   return {
     "@context": "https://schema.org",
     "@type": "Product",
     name: `${p.name}${p.subtitle ? " — " + p.subtitle : ""}`,
-    description: p.desc,
+    description: p.tldr || p.desc,
     sku: `YWN-${p.id}`,
     mpn: `YWN-${p.id}`,
     category: p.category,
@@ -124,6 +132,7 @@ export const productLd = (p: Product, reviews: Review[]) => {
     image: p.images.length ? p.images.map(abs) : undefined,
     material: p.fabric || undefined,
     url,
+    additionalProperty: additionalProperty.length ? additionalProperty : undefined,
     offers: {
       "@type": "Offer",
       price: p.price,
