@@ -27,10 +27,52 @@ function InquiriesAdmin() {
   const [modal, setModal] = useState<ModalState>(null);
   const toast = useToast();
 
+  // Filters
+  const [fOrderId, setFOrderId] = useState("");
+  const [fDateFrom, setFDateFrom] = useState("");
+  const [fDateTo, setFDateTo] = useState("");
+  const [fProduct, setFProduct] = useState("");
+  const [fStatus, setFStatus] = useState<string>("");
+  const [fSource, setFSource] = useState<string>("");
+  const [fMin, setFMin] = useState("");
+  const [fMax, setFMax] = useState("");
+
   const all = typeof window !== "undefined" ? getInquiries() : [];
-  const list = useMemo(() => (
+  const base = useMemo(() => (
     phone ? all.filter((i) => normalizeMobile(i.customer.phone) === normalizeMobile(phone)) : all
   ), [all, phone]);
+
+  const sources = useMemo(() => {
+    const s = new Set<string>();
+    base.forEach((i) => { if (i.source) s.add(i.source); });
+    return Array.from(s).sort();
+  }, [base]);
+
+  const list = useMemo(() => {
+    const fromTs = fDateFrom ? new Date(fDateFrom + "T00:00:00").getTime() : null;
+    const toTs = fDateTo ? new Date(fDateTo + "T23:59:59").getTime() : null;
+    const min = fMin !== "" && Number.isFinite(Number(fMin)) ? Number(fMin) : null;
+    const max = fMax !== "" && Number.isFinite(Number(fMax)) ? Number(fMax) : null;
+    const oid = fOrderId.trim().toLowerCase();
+    const prod = fProduct.trim().toLowerCase();
+    return base.filter((i) => {
+      if (oid && !i.id.toLowerCase().includes(oid)) return false;
+      if (fromTs !== null && i.createdAt < fromTs) return false;
+      if (toTs !== null && i.createdAt > toTs) return false;
+      if (prod && !i.lines.some((l) => l.name.toLowerCase().includes(prod))) return false;
+      if (fStatus && i.status !== fStatus) return false;
+      if (fSource && (i.source ?? "") !== fSource) return false;
+      if (min !== null && i.total < min) return false;
+      if (max !== null && i.total > max) return false;
+      return true;
+    });
+  }, [base, fOrderId, fDateFrom, fDateTo, fProduct, fStatus, fSource, fMin, fMax]);
+
+  const activeFilters = !!(fOrderId || fDateFrom || fDateTo || fProduct || fStatus || fSource || fMin || fMax);
+  const clearFilters = () => {
+    setFOrderId(""); setFDateFrom(""); setFDateTo(""); setFProduct("");
+    setFStatus(""); setFSource(""); setFMin(""); setFMax("");
+  };
 
   const refresh = () => force((n) => n + 1);
 
@@ -56,15 +98,61 @@ function InquiriesAdmin() {
       {phone && (
         <div className="admin-card" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10 }}>
           <div style={{ fontSize: 13, color: "var(--ink2)" }}>
-            Filtered by customer{name ? `: ${name}` : ""} ({phone}) — {list.length} order{list.length === 1 ? "" : "s"}
+            Filtered by customer{name ? `: ${name}` : ""} ({phone}) — {base.length} order{base.length === 1 ? "" : "s"}
           </div>
-          <Link to="/admin/inquiries" className="btn-outline">Clear filter</Link>
+          <Link to="/admin/inquiries" className="btn-outline">Clear customer filter</Link>
+        </div>
+      )}
+
+      {base.length > 0 && (
+        <div className="admin-card" style={{ display: "grid", gap: 10 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 10 }}>
+            <FilterField label="Order ID">
+              <input className="form-input" value={fOrderId} onChange={(e) => setFOrderId(e.target.value)} placeholder="e.g. INQ-…" />
+            </FilterField>
+            <FilterField label="Date from">
+              <input className="form-input" type="date" value={fDateFrom} onChange={(e) => setFDateFrom(e.target.value)} />
+            </FilterField>
+            <FilterField label="Date to">
+              <input className="form-input" type="date" value={fDateTo} onChange={(e) => setFDateTo(e.target.value)} />
+            </FilterField>
+            <FilterField label="Product title">
+              <input className="form-input" value={fProduct} onChange={(e) => setFProduct(e.target.value)} placeholder="Contains…" />
+            </FilterField>
+            <FilterField label="Status">
+              <select className="form-select" value={fStatus} onChange={(e) => setFStatus(e.target.value)}>
+                <option value="">All</option>
+                <option value="new">new</option>
+                <option value="contacted">contacted</option>
+                <option value="fulfilled">fulfilled</option>
+                <option value="cancelled">cancelled</option>
+              </select>
+            </FilterField>
+            <FilterField label="Source">
+              <select className="form-select" value={fSource} onChange={(e) => setFSource(e.target.value)}>
+                <option value="">All</option>
+                {sources.map((s) => <option key={s} value={s}>{s}</option>)}
+              </select>
+            </FilterField>
+            <FilterField label="Final ≥ (₹)">
+              <input className="form-input" type="number" min={0} value={fMin} onChange={(e) => setFMin(e.target.value)} />
+            </FilterField>
+            <FilterField label="Final ≤ (₹)">
+              <input className="form-input" type="number" min={0} value={fMax} onChange={(e) => setFMax(e.target.value)} />
+            </FilterField>
+          </div>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 12, color: "var(--ink3)" }}>
+            <span>Showing {list.length} of {base.length} order{base.length === 1 ? "" : "s"}</span>
+            {activeFilters && (
+              <button type="button" className="btn-outline" onClick={clearFilters}>Clear filters</button>
+            )}
+          </div>
         </div>
       )}
 
       {list.length === 0 ? (
         <div className="admin-card" style={{ textAlign: "center", padding: 40, color: "var(--ink3)" }}>
-          No orders yet.
+          {base.length === 0 ? "No orders yet." : "No orders match the current filters."}
         </div>
       ) : (
         <div className="admin-card" style={{ padding: 0, overflowX: "auto" }}>
