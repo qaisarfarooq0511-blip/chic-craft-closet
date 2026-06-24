@@ -22,10 +22,11 @@ export const Route = createFileRoute("/admin/customers")({
 function CustomersAdmin() {
   const [, force] = useState(0);
   const toast = useToast();
+  const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [editing, setEditing] = useState<AppUser | null>(null);
-  const [viewingOrders, setViewingOrders] = useState<AppUser | null>(null);
   const [adding, setAdding] = useState(false);
+
 
   const users = useMemo(() => {
     const all = getAllUsers();
