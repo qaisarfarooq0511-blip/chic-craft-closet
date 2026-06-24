@@ -20,9 +20,13 @@ import { Route as ShopIndexRouteImport } from './routes/shop.index'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
 import { Route as ShopCategoryRouteImport } from './routes/shop.$category'
 import { Route as ProductSlugRouteImport } from './routes/product.$slug'
+import { Route as ApiEnhanceImageRouteImport } from './routes/api/enhance-image'
 import { Route as AdminThemeRouteImport } from './routes/admin.theme'
+import { Route as AdminSectionsRouteImport } from './routes/admin.sections'
 import { Route as AdminReviewsRouteImport } from './routes/admin.reviews'
 import { Route as AdminInquiriesRouteImport } from './routes/admin.inquiries'
+import { Route as AdminHeroRouteImport } from './routes/admin.hero'
+import { Route as AdminCategoriesRouteImport } from './routes/admin.categories'
 import { Route as AdminProductsIndexRouteImport } from './routes/admin.products.index'
 import { Route as AdminProductsNewRouteImport } from './routes/admin.products.new'
 import { Route as AdminProductsIdRouteImport } from './routes/admin.products.$id'
@@ -82,9 +86,19 @@ const ProductSlugRoute = ProductSlugRouteImport.update({
   path: '/product/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiEnhanceImageRoute = ApiEnhanceImageRouteImport.update({
+  id: '/api/enhance-image',
+  path: '/api/enhance-image',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminThemeRoute = AdminThemeRouteImport.update({
   id: '/theme',
   path: '/theme',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminSectionsRoute = AdminSectionsRouteImport.update({
+  id: '/sections',
+  path: '/sections',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminReviewsRoute = AdminReviewsRouteImport.update({
@@ -95,6 +109,16 @@ const AdminReviewsRoute = AdminReviewsRouteImport.update({
 const AdminInquiriesRoute = AdminInquiriesRouteImport.update({
   id: '/inquiries',
   path: '/inquiries',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminHeroRoute = AdminHeroRouteImport.update({
+  id: '/hero',
+  path: '/hero',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminCategoriesRoute = AdminCategoriesRouteImport.update({
+  id: '/categories',
+  path: '/categories',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminProductsIndexRoute = AdminProductsIndexRouteImport.update({
@@ -121,9 +145,13 @@ export interface FileRoutesByFullPath {
   '/checkout': typeof CheckoutRoute
   '/contact': typeof ContactRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/admin/categories': typeof AdminCategoriesRoute
+  '/admin/hero': typeof AdminHeroRoute
   '/admin/inquiries': typeof AdminInquiriesRoute
   '/admin/reviews': typeof AdminReviewsRoute
+  '/admin/sections': typeof AdminSectionsRoute
   '/admin/theme': typeof AdminThemeRoute
+  '/api/enhance-image': typeof ApiEnhanceImageRoute
   '/product/$slug': typeof ProductSlugRoute
   '/shop/$category': typeof ShopCategoryRoute
   '/admin/': typeof AdminIndexRoute
@@ -139,9 +167,13 @@ export interface FileRoutesByTo {
   '/checkout': typeof CheckoutRoute
   '/contact': typeof ContactRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/admin/categories': typeof AdminCategoriesRoute
+  '/admin/hero': typeof AdminHeroRoute
   '/admin/inquiries': typeof AdminInquiriesRoute
   '/admin/reviews': typeof AdminReviewsRoute
+  '/admin/sections': typeof AdminSectionsRoute
   '/admin/theme': typeof AdminThemeRoute
+  '/api/enhance-image': typeof ApiEnhanceImageRoute
   '/product/$slug': typeof ProductSlugRoute
   '/shop/$category': typeof ShopCategoryRoute
   '/admin': typeof AdminIndexRoute
@@ -159,9 +191,13 @@ export interface FileRoutesById {
   '/checkout': typeof CheckoutRoute
   '/contact': typeof ContactRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/admin/categories': typeof AdminCategoriesRoute
+  '/admin/hero': typeof AdminHeroRoute
   '/admin/inquiries': typeof AdminInquiriesRoute
   '/admin/reviews': typeof AdminReviewsRoute
+  '/admin/sections': typeof AdminSectionsRoute
   '/admin/theme': typeof AdminThemeRoute
+  '/api/enhance-image': typeof ApiEnhanceImageRoute
   '/product/$slug': typeof ProductSlugRoute
   '/shop/$category': typeof ShopCategoryRoute
   '/admin/': typeof AdminIndexRoute
@@ -180,9 +216,13 @@ export interface FileRouteTypes {
     | '/checkout'
     | '/contact'
     | '/sitemap.xml'
+    | '/admin/categories'
+    | '/admin/hero'
     | '/admin/inquiries'
     | '/admin/reviews'
+    | '/admin/sections'
     | '/admin/theme'
+    | '/api/enhance-image'
     | '/product/$slug'
     | '/shop/$category'
     | '/admin/'
@@ -198,9 +238,13 @@ export interface FileRouteTypes {
     | '/checkout'
     | '/contact'
     | '/sitemap.xml'
+    | '/admin/categories'
+    | '/admin/hero'
     | '/admin/inquiries'
     | '/admin/reviews'
+    | '/admin/sections'
     | '/admin/theme'
+    | '/api/enhance-image'
     | '/product/$slug'
     | '/shop/$category'
     | '/admin'
@@ -217,9 +261,13 @@ export interface FileRouteTypes {
     | '/checkout'
     | '/contact'
     | '/sitemap.xml'
+    | '/admin/categories'
+    | '/admin/hero'
     | '/admin/inquiries'
     | '/admin/reviews'
+    | '/admin/sections'
     | '/admin/theme'
+    | '/api/enhance-image'
     | '/product/$slug'
     | '/shop/$category'
     | '/admin/'
@@ -237,6 +285,7 @@ export interface RootRouteChildren {
   CheckoutRoute: typeof CheckoutRoute
   ContactRoute: typeof ContactRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
+  ApiEnhanceImageRoute: typeof ApiEnhanceImageRoute
   ProductSlugRoute: typeof ProductSlugRoute
   ShopCategoryRoute: typeof ShopCategoryRoute
   ShopIndexRoute: typeof ShopIndexRoute
@@ -321,11 +370,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProductSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/enhance-image': {
+      id: '/api/enhance-image'
+      path: '/api/enhance-image'
+      fullPath: '/api/enhance-image'
+      preLoaderRoute: typeof ApiEnhanceImageRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin/theme': {
       id: '/admin/theme'
       path: '/theme'
       fullPath: '/admin/theme'
       preLoaderRoute: typeof AdminThemeRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/sections': {
+      id: '/admin/sections'
+      path: '/sections'
+      fullPath: '/admin/sections'
+      preLoaderRoute: typeof AdminSectionsRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/reviews': {
@@ -340,6 +403,20 @@ declare module '@tanstack/react-router' {
       path: '/inquiries'
       fullPath: '/admin/inquiries'
       preLoaderRoute: typeof AdminInquiriesRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/hero': {
+      id: '/admin/hero'
+      path: '/hero'
+      fullPath: '/admin/hero'
+      preLoaderRoute: typeof AdminHeroRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/categories': {
+      id: '/admin/categories'
+      path: '/categories'
+      fullPath: '/admin/categories'
+      preLoaderRoute: typeof AdminCategoriesRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/products/': {
@@ -367,8 +444,11 @@ declare module '@tanstack/react-router' {
 }
 
 interface AdminRouteChildren {
+  AdminCategoriesRoute: typeof AdminCategoriesRoute
+  AdminHeroRoute: typeof AdminHeroRoute
   AdminInquiriesRoute: typeof AdminInquiriesRoute
   AdminReviewsRoute: typeof AdminReviewsRoute
+  AdminSectionsRoute: typeof AdminSectionsRoute
   AdminThemeRoute: typeof AdminThemeRoute
   AdminIndexRoute: typeof AdminIndexRoute
   AdminProductsIdRoute: typeof AdminProductsIdRoute
@@ -377,8 +457,11 @@ interface AdminRouteChildren {
 }
 
 const AdminRouteChildren: AdminRouteChildren = {
+  AdminCategoriesRoute: AdminCategoriesRoute,
+  AdminHeroRoute: AdminHeroRoute,
   AdminInquiriesRoute: AdminInquiriesRoute,
   AdminReviewsRoute: AdminReviewsRoute,
+  AdminSectionsRoute: AdminSectionsRoute,
   AdminThemeRoute: AdminThemeRoute,
   AdminIndexRoute: AdminIndexRoute,
   AdminProductsIdRoute: AdminProductsIdRoute,
@@ -396,6 +479,7 @@ const rootRouteChildren: RootRouteChildren = {
   CheckoutRoute: CheckoutRoute,
   ContactRoute: ContactRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
+  ApiEnhanceImageRoute: ApiEnhanceImageRoute,
   ProductSlugRoute: ProductSlugRoute,
   ShopCategoryRoute: ShopCategoryRoute,
   ShopIndexRoute: ShopIndexRoute,
@@ -403,13 +487,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

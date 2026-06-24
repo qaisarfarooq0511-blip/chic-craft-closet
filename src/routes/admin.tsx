@@ -8,6 +8,9 @@ import {
   IconPalette,
   IconLogout,
   IconExternalLink,
+  IconPhoto,
+  IconCategory,
+  IconLayoutGrid,
 } from "@tabler/icons-react";
 import { AuthProvider, useAuth } from "@/lib/auth-context";
 import { ADMIN_EMAIL, ADMIN_PASSWORD } from "@/lib/storage";
@@ -72,6 +75,9 @@ function AdminShell() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const links = [
     { to: "/admin", label: "Dashboard", icon: <IconLayoutDashboard />, exact: true },
+    { to: "/admin/hero", label: "Hero banner", icon: <IconPhoto /> },
+    { to: "/admin/categories", label: "Categories", icon: <IconCategory /> },
+    { to: "/admin/sections", label: "Sections", icon: <IconLayoutGrid /> },
     { to: "/admin/products", label: "Products", icon: <IconPackage /> },
     { to: "/admin/reviews", label: "Reviews", icon: <IconStar /> },
     { to: "/admin/inquiries", label: "Orders", icon: <IconReceipt /> },

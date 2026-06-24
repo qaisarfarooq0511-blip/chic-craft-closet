@@ -137,10 +137,10 @@ function PDP() {
             )}
             {p.stock === 0 && <div className="pdp-stock"><IconAlertCircle />Currently out of stock</div>}
 
-            {p.isUnstitched && (
+            {(p.note || p.isUnstitched) && (
               <div className="callout-strip">
                 <IconScissors />
-                <span>This is an unstitched set. Dimensions below show fabric cut lengths — take these to your tailor for stitching.</span>
+                <span>{p.note || "This is an unstitched set. Dimensions below show fabric cut lengths — take these to your tailor for stitching."}</span>
               </div>
             )}
 
