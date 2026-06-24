@@ -12,13 +12,19 @@ export type Category = string;
 export const categorySlug = (c: string) =>
   c.toLowerCase().replace(/&/g, "and").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 
-// Looks up a slug against the live categories store (with fallback to defaults during SSR).
-import type { CategoryRow } from "./types-extra";
-
-export const categoryFromSlug = (slug: string, list?: { slug: string; name: string }[]): Category | null => {
-  if (list && list.length) {
-    const m = list.find((c) => c.slug === slug);
-    return m ? m.name : null;
+// Resolves a slug to a category name. On the client we consult the live
+// categories store (so admin-created categories work); on the server we fall
+// back to the default CATEGORIES seed.
+export const categoryFromSlug = (slug: string): Category | null => {
+  if (typeof window !== "undefined") {
+    try {
+      const raw = localStorage.getItem("yaawun:categories:v1");
+      if (raw) {
+        const list = JSON.parse(raw) as { slug: string; name: string }[];
+        const m = list.find((c) => c.slug === slug);
+        if (m) return m.name;
+      }
+    } catch { /* ignore */ }
   }
   const m = CATEGORIES.find((c) => categorySlug(c) === slug);
   return m ?? null;
