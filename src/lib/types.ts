@@ -80,6 +80,7 @@ export interface Product {
   tags?: string[];                   // free-form tags for rule-based sections
   flags?: ProductFlag[];             // new / trending / featured
   sizes?: string[];                  // optional size options (e.g. "0-3 Months")
+  hsnCode?: string | null;           // HSN code for GST (price is inclusive of GST)
   createdAt: number;
 }
 
