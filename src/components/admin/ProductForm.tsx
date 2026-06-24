@@ -61,12 +61,12 @@ function MultiChip({
 }
 
 export function ProductForm({ initial, onSave, submitLabel }: Props) {
-  const [p, setP] = useState<Product>({ ...initial, mainImageIndex: initial.mainImageIndex ?? 0, tags: initial.tags ?? [], flags: initial.flags ?? [], sizes: initial.sizes ?? [] });
+  const [p, setP] = useState<Product>({ ...initial, mainImageIndex: initial.mainImageIndex ?? 0, tags: initial.tags ?? [], flags: initial.flags ?? [], sizes: initial.sizes ?? [], faqs: initial.faqs ?? [] });
   const toast = useToast();
   const [cats, setCats] = useState(getCategoriesStore());
   const [config, setConfig] = useState(getConfig());
 
-  useEffect(() => { setP({ ...initial, mainImageIndex: initial.mainImageIndex ?? 0, tags: initial.tags ?? [], flags: initial.flags ?? [], sizes: initial.sizes ?? [] }); }, [initial]);
+  useEffect(() => { setP({ ...initial, mainImageIndex: initial.mainImageIndex ?? 0, tags: initial.tags ?? [], flags: initial.flags ?? [], sizes: initial.sizes ?? [], faqs: initial.faqs ?? [] }); }, [initial]);
   useEffect(() => {
     const refresh = () => { setCats(getCategoriesStore()); setConfig(getConfig()); };
     window.addEventListener("storage", refresh);
