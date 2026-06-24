@@ -20,6 +20,7 @@ import { Route as ShopIndexRouteImport } from './routes/shop.index'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
 import { Route as ShopCategoryRouteImport } from './routes/shop.$category'
 import { Route as ProductSlugRouteImport } from './routes/product.$slug'
+import { Route as PageSlugRouteImport } from './routes/page.$slug'
 import { Route as ApiEnhanceImageRouteImport } from './routes/api/enhance-image'
 import { Route as AdminThemeRouteImport } from './routes/admin.theme'
 import { Route as AdminSectionsRouteImport } from './routes/admin.sections'
@@ -28,8 +29,10 @@ import { Route as AdminInquiriesRouteImport } from './routes/admin.inquiries'
 import { Route as AdminHeroRouteImport } from './routes/admin.hero'
 import { Route as AdminCategoriesRouteImport } from './routes/admin.categories'
 import { Route as AdminProductsIndexRouteImport } from './routes/admin.products.index'
+import { Route as AdminPagesIndexRouteImport } from './routes/admin.pages.index'
 import { Route as AdminProductsNewRouteImport } from './routes/admin.products.new'
 import { Route as AdminProductsIdRouteImport } from './routes/admin.products.$id'
+import { Route as AdminPagesSlugRouteImport } from './routes/admin.pages.$slug'
 
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
   id: '/sitemap.xml',
@@ -86,6 +89,11 @@ const ProductSlugRoute = ProductSlugRouteImport.update({
   path: '/product/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PageSlugRoute = PageSlugRouteImport.update({
+  id: '/page/$slug',
+  path: '/page/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiEnhanceImageRoute = ApiEnhanceImageRouteImport.update({
   id: '/api/enhance-image',
   path: '/api/enhance-image',
@@ -126,6 +134,11 @@ const AdminProductsIndexRoute = AdminProductsIndexRouteImport.update({
   path: '/products/',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminPagesIndexRoute = AdminPagesIndexRouteImport.update({
+  id: '/pages/',
+  path: '/pages/',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminProductsNewRoute = AdminProductsNewRouteImport.update({
   id: '/products/new',
   path: '/products/new',
@@ -134,6 +147,11 @@ const AdminProductsNewRoute = AdminProductsNewRouteImport.update({
 const AdminProductsIdRoute = AdminProductsIdRouteImport.update({
   id: '/products/$id',
   path: '/products/$id',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminPagesSlugRoute = AdminPagesSlugRouteImport.update({
+  id: '/pages/$slug',
+  path: '/pages/$slug',
   getParentRoute: () => AdminRoute,
 } as any)
 
@@ -152,12 +170,15 @@ export interface FileRoutesByFullPath {
   '/admin/sections': typeof AdminSectionsRoute
   '/admin/theme': typeof AdminThemeRoute
   '/api/enhance-image': typeof ApiEnhanceImageRoute
+  '/page/$slug': typeof PageSlugRoute
   '/product/$slug': typeof ProductSlugRoute
   '/shop/$category': typeof ShopCategoryRoute
   '/admin/': typeof AdminIndexRoute
   '/shop/': typeof ShopIndexRoute
+  '/admin/pages/$slug': typeof AdminPagesSlugRoute
   '/admin/products/$id': typeof AdminProductsIdRoute
   '/admin/products/new': typeof AdminProductsNewRoute
+  '/admin/pages/': typeof AdminPagesIndexRoute
   '/admin/products/': typeof AdminProductsIndexRoute
 }
 export interface FileRoutesByTo {
@@ -174,12 +195,15 @@ export interface FileRoutesByTo {
   '/admin/sections': typeof AdminSectionsRoute
   '/admin/theme': typeof AdminThemeRoute
   '/api/enhance-image': typeof ApiEnhanceImageRoute
+  '/page/$slug': typeof PageSlugRoute
   '/product/$slug': typeof ProductSlugRoute
   '/shop/$category': typeof ShopCategoryRoute
   '/admin': typeof AdminIndexRoute
   '/shop': typeof ShopIndexRoute
+  '/admin/pages/$slug': typeof AdminPagesSlugRoute
   '/admin/products/$id': typeof AdminProductsIdRoute
   '/admin/products/new': typeof AdminProductsNewRoute
+  '/admin/pages': typeof AdminPagesIndexRoute
   '/admin/products': typeof AdminProductsIndexRoute
 }
 export interface FileRoutesById {
@@ -198,12 +222,15 @@ export interface FileRoutesById {
   '/admin/sections': typeof AdminSectionsRoute
   '/admin/theme': typeof AdminThemeRoute
   '/api/enhance-image': typeof ApiEnhanceImageRoute
+  '/page/$slug': typeof PageSlugRoute
   '/product/$slug': typeof ProductSlugRoute
   '/shop/$category': typeof ShopCategoryRoute
   '/admin/': typeof AdminIndexRoute
   '/shop/': typeof ShopIndexRoute
+  '/admin/pages/$slug': typeof AdminPagesSlugRoute
   '/admin/products/$id': typeof AdminProductsIdRoute
   '/admin/products/new': typeof AdminProductsNewRoute
+  '/admin/pages/': typeof AdminPagesIndexRoute
   '/admin/products/': typeof AdminProductsIndexRoute
 }
 export interface FileRouteTypes {
@@ -223,12 +250,15 @@ export interface FileRouteTypes {
     | '/admin/sections'
     | '/admin/theme'
     | '/api/enhance-image'
+    | '/page/$slug'
     | '/product/$slug'
     | '/shop/$category'
     | '/admin/'
     | '/shop/'
+    | '/admin/pages/$slug'
     | '/admin/products/$id'
     | '/admin/products/new'
+    | '/admin/pages/'
     | '/admin/products/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -245,12 +275,15 @@ export interface FileRouteTypes {
     | '/admin/sections'
     | '/admin/theme'
     | '/api/enhance-image'
+    | '/page/$slug'
     | '/product/$slug'
     | '/shop/$category'
     | '/admin'
     | '/shop'
+    | '/admin/pages/$slug'
     | '/admin/products/$id'
     | '/admin/products/new'
+    | '/admin/pages'
     | '/admin/products'
   id:
     | '__root__'
@@ -268,12 +301,15 @@ export interface FileRouteTypes {
     | '/admin/sections'
     | '/admin/theme'
     | '/api/enhance-image'
+    | '/page/$slug'
     | '/product/$slug'
     | '/shop/$category'
     | '/admin/'
     | '/shop/'
+    | '/admin/pages/$slug'
     | '/admin/products/$id'
     | '/admin/products/new'
+    | '/admin/pages/'
     | '/admin/products/'
   fileRoutesById: FileRoutesById
 }
@@ -286,6 +322,7 @@ export interface RootRouteChildren {
   ContactRoute: typeof ContactRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   ApiEnhanceImageRoute: typeof ApiEnhanceImageRoute
+  PageSlugRoute: typeof PageSlugRoute
   ProductSlugRoute: typeof ProductSlugRoute
   ShopCategoryRoute: typeof ShopCategoryRoute
   ShopIndexRoute: typeof ShopIndexRoute
@@ -370,6 +407,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProductSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/page/$slug': {
+      id: '/page/$slug'
+      path: '/page/$slug'
+      fullPath: '/page/$slug'
+      preLoaderRoute: typeof PageSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/enhance-image': {
       id: '/api/enhance-image'
       path: '/api/enhance-image'
@@ -426,6 +470,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminProductsIndexRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/pages/': {
+      id: '/admin/pages/'
+      path: '/pages'
+      fullPath: '/admin/pages/'
+      preLoaderRoute: typeof AdminPagesIndexRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/products/new': {
       id: '/admin/products/new'
       path: '/products/new'
@@ -440,6 +491,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminProductsIdRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/pages/$slug': {
+      id: '/admin/pages/$slug'
+      path: '/pages/$slug'
+      fullPath: '/admin/pages/$slug'
+      preLoaderRoute: typeof AdminPagesSlugRouteImport
+      parentRoute: typeof AdminRoute
+    }
   }
 }
 
@@ -451,8 +509,10 @@ interface AdminRouteChildren {
   AdminSectionsRoute: typeof AdminSectionsRoute
   AdminThemeRoute: typeof AdminThemeRoute
   AdminIndexRoute: typeof AdminIndexRoute
+  AdminPagesSlugRoute: typeof AdminPagesSlugRoute
   AdminProductsIdRoute: typeof AdminProductsIdRoute
   AdminProductsNewRoute: typeof AdminProductsNewRoute
+  AdminPagesIndexRoute: typeof AdminPagesIndexRoute
   AdminProductsIndexRoute: typeof AdminProductsIndexRoute
 }
 
@@ -464,8 +524,10 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminSectionsRoute: AdminSectionsRoute,
   AdminThemeRoute: AdminThemeRoute,
   AdminIndexRoute: AdminIndexRoute,
+  AdminPagesSlugRoute: AdminPagesSlugRoute,
   AdminProductsIdRoute: AdminProductsIdRoute,
   AdminProductsNewRoute: AdminProductsNewRoute,
+  AdminPagesIndexRoute: AdminPagesIndexRoute,
   AdminProductsIndexRoute: AdminProductsIndexRoute,
 }
 
@@ -480,6 +542,7 @@ const rootRouteChildren: RootRouteChildren = {
   ContactRoute: ContactRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   ApiEnhanceImageRoute: ApiEnhanceImageRoute,
+  PageSlugRoute: PageSlugRoute,
   ProductSlugRoute: ProductSlugRoute,
   ShopCategoryRoute: ShopCategoryRoute,
   ShopIndexRoute: ShopIndexRoute,
