@@ -12,6 +12,7 @@ const KEY = {
   sections: "yaawun:sections:v1",
   pages: "yaawun:pages:v1",
   seeded: "yaawun:seeded:v6",
+  pagesSeed: "yaawun:pages-seed:v2",
 } as const;
 
 const isBrowser = () => typeof window !== "undefined";
