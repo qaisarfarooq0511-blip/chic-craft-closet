@@ -1,17 +1,28 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { IconBrandWhatsapp, IconMail, IconPhone, IconMapPin } from "@tabler/icons-react";
-import { STORE } from "@/lib/jsonld";
+import { STORE, contactPageLd, breadcrumbLd, abs } from "@/lib/jsonld";
 
 export const Route = createFileRoute("/contact")({
-  head: () => ({
-    meta: [
-      { title: `Contact — ${STORE.name}` },
-      { name: "description", content: `Get in touch with ${STORE.name}. We're here to help on WhatsApp, phone or in store.` },
-      { property: "og:title", content: `Contact — ${STORE.name}` },
-      { property: "og:url", content: "/contact" },
-    ],
-    links: [{ rel: "canonical", href: "/contact" }],
-  }),
+  head: () => {
+    const desc = `Get in touch with ${STORE.name}. We're here to help on WhatsApp, phone, email or in store.`;
+    return {
+      meta: [
+        { title: `Contact — ${STORE.name}` },
+        { name: "description", content: desc },
+        { property: "og:title", content: `Contact — ${STORE.name}` },
+        { property: "og:description", content: desc },
+        { property: "og:url", content: abs("/contact") },
+      ],
+      links: [{ rel: "canonical", href: abs("/contact") }],
+      scripts: [
+        { type: "application/ld+json", children: JSON.stringify(contactPageLd()) },
+        { type: "application/ld+json", children: JSON.stringify(breadcrumbLd([
+          { name: "Home", url: "/" },
+          { name: "Contact", url: "/contact" },
+        ])) },
+      ],
+    };
+  },
   component: Contact,
 });
 

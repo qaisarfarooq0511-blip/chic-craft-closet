@@ -1,7 +1,7 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { PLP } from "./shop.index";
 import { categoryFromSlug } from "@/lib/types";
-import { breadcrumbLd, itemListLd } from "@/lib/jsonld";
+import { breadcrumbLd, collectionPageLd, abs } from "@/lib/jsonld";
 import { getProducts } from "@/lib/storage";
 
 export const Route = createFileRoute("/shop/$category")({
@@ -12,28 +12,37 @@ export const Route = createFileRoute("/shop/$category")({
   },
   head: ({ params }) => {
     const cat = categoryFromSlug(params.category) ?? "Shop";
+    const url = `/shop/${params.category}`;
+    const desc = `Browse ${cat.toLowerCase()} at Yaawun. Curated pieces, crafted with care.`;
+    const products = (typeof window !== "undefined" ? getProducts() : []).filter(
+      (p) => p.category === cat && p.listed,
+    );
     return {
       meta: [
         { title: `${cat} — Yaawun` },
-        { name: "description", content: `Browse ${cat.toLowerCase()} at Yaawun. Curated pieces, crafted with care.` },
+        { name: "description", content: desc },
         { property: "og:title", content: `${cat} — Yaawun` },
-        { property: "og:url", content: `/shop/${params.category}` },
+        { property: "og:description", content: desc },
+        { property: "og:url", content: abs(url) },
       ],
-      links: [{ rel: "canonical", href: `/shop/${params.category}` }],
+      links: [{ rel: "canonical", href: abs(url) }],
       scripts: [
         {
           type: "application/ld+json",
           children: JSON.stringify(breadcrumbLd([
             { name: "Home", url: "/" },
             { name: "Shop", url: "/shop" },
-            { name: cat, url: `/shop/${params.category}` },
+            { name: cat, url },
           ])),
         },
         {
           type: "application/ld+json",
-          children: JSON.stringify(itemListLd(
-            (typeof window !== "undefined" ? getProducts() : []).filter((p) => p.category === cat && p.listed),
-          )),
+          children: JSON.stringify(collectionPageLd({
+            name: `${cat} — Yaawun`,
+            description: desc,
+            url,
+            products,
+          })),
         },
       ],
     };

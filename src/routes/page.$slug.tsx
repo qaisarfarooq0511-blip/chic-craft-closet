@@ -2,7 +2,7 @@ import { createFileRoute, notFound, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { getPage } from "@/lib/storage";
 import type { StaticPage } from "@/lib/types";
-import { STORE } from "@/lib/jsonld";
+import { STORE, breadcrumbLd, abs } from "@/lib/jsonld";
 
 export const Route = createFileRoute("/page/$slug")({
   head: ({ params }) => {
@@ -13,9 +13,16 @@ export const Route = createFileRoute("/page/$slug")({
         { title: `${pretty} — ${STORE.name}` },
         { name: "description", content: `${pretty} — ${STORE.name}` },
         { property: "og:title", content: `${pretty} — ${STORE.name}` },
-        { property: "og:url", content: `/page/${slug}` },
+        { property: "og:description", content: `${pretty} — ${STORE.name}` },
+        { property: "og:url", content: abs(`/page/${slug}`) },
       ],
-      links: [{ rel: "canonical", href: `/page/${slug}` }],
+      links: [{ rel: "canonical", href: abs(`/page/${slug}`) }],
+      scripts: [
+        { type: "application/ld+json", children: JSON.stringify(breadcrumbLd([
+          { name: "Home", url: "/" },
+          { name: pretty, url: `/page/${slug}` },
+        ])) },
+      ],
     };
   },
   component: StaticPageView,

@@ -5,7 +5,7 @@ import { ProductCard } from "@/components/storefront/ProductCard";
 // (legacy categorySlug helper no longer needed here — categories come from the live store)
 import { getProducts, getHero, getCategoriesStore, getSections, resolveSectionProducts } from "@/lib/storage";
 import { seedHero, seedCategories, seedSections } from "@/lib/seed";
-import { STORE } from "@/lib/jsonld";
+import { STORE, itemListLd, abs } from "@/lib/jsonld";
 
 let tick = 0;
 const listeners = new Set<() => void>();
@@ -22,16 +22,24 @@ function useStoreTick() {
 }
 
 export const Route = createFileRoute("/")({
-  head: () => ({
-    meta: [
-      { title: `${STORE.name} — Crafted with care · Kashmiri shawls, dress material, kidswear & accessories` },
-      { name: "description", content: STORE.description },
-      { property: "og:title", content: `${STORE.name} — Crafted with care` },
-      { property: "og:description", content: STORE.description },
-      { property: "og:url", content: "/" },
-    ],
-    links: [{ rel: "canonical", href: "/" }],
-  }),
+  head: () => {
+    const featured = typeof window !== "undefined"
+      ? getProducts().filter((p) => p.listed).slice(0, 12)
+      : [];
+    return {
+      meta: [
+        { title: `${STORE.name} — Crafted with care · Kashmiri shawls, dress material, kidswear & accessories` },
+        { name: "description", content: STORE.description },
+        { property: "og:title", content: `${STORE.name} — Crafted with care` },
+        { property: "og:description", content: STORE.description },
+        { property: "og:url", content: abs("/") },
+      ],
+      links: [{ rel: "canonical", href: abs("/") }],
+      scripts: featured.length
+        ? [{ type: "application/ld+json", children: JSON.stringify(itemListLd(featured)) }]
+        : [],
+    };
+  },
   component: Home,
 });
 
