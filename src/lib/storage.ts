@@ -1,5 +1,5 @@
-import type { Product, Review, Inquiry, CartLine } from "./types";
-import { seedProducts, seedReviews } from "./seed";
+import type { Product, Review, Inquiry, CartLine, HeroContent, CategoryRow, SectionRow } from "./types";
+import { seedProducts, seedReviews, seedCategories, seedHero, seedSections } from "./seed";
 
 const KEY = {
   products: "yaawun:products:v1",
@@ -7,7 +7,10 @@ const KEY = {
   cart: "yaawun:cart:v1",
   inquiries: "yaawun:inquiries:v1",
   auth: "yaawun:auth:v1",
-  seeded: "yaawun:seeded:v4",
+  hero: "yaawun:hero:v1",
+  categories: "yaawun:categories:v1",
+  sections: "yaawun:sections:v1",
+  seeded: "yaawun:seeded:v5",
 } as const;
 
 const isBrowser = () => typeof window !== "undefined";
@@ -27,6 +30,8 @@ function write<T>(key: string, value: T) {
   if (!isBrowser()) return;
   try {
     localStorage.setItem(key, JSON.stringify(value));
+    // Manually fire storage event for same-tab listeners.
+    window.dispatchEvent(new StorageEvent("storage", { key }));
   } catch (e) {
     console.warn("storage write failed", key, e);
   }
@@ -35,8 +40,11 @@ function write<T>(key: string, value: T) {
 export function ensureSeeded() {
   if (!isBrowser()) return;
   if (localStorage.getItem(KEY.seeded)) return;
-  write(KEY.products, seedProducts);
-  write(KEY.reviews, seedReviews);
+  localStorage.setItem(KEY.products, JSON.stringify(seedProducts));
+  localStorage.setItem(KEY.reviews, JSON.stringify(seedReviews));
+  localStorage.setItem(KEY.hero, JSON.stringify(seedHero));
+  localStorage.setItem(KEY.categories, JSON.stringify(seedCategories));
+  localStorage.setItem(KEY.sections, JSON.stringify(seedSections));
   localStorage.setItem(KEY.seeded, "1");
 }
 
@@ -77,12 +85,66 @@ export const deleteReview = (id: string) => saveReviews(getReviews().filter((r) 
 export const getCart = (): CartLine[] => read<CartLine[]>(KEY.cart, []);
 export const saveCart = (lines: CartLine[]) => write(KEY.cart, lines);
 
-// Inquiries (orders)
+// Inquiries
 export const getInquiries = (): Inquiry[] => read<Inquiry[]>(KEY.inquiries, []);
 export const saveInquiries = (i: Inquiry[]) => write(KEY.inquiries, i);
 export const addInquiry = (i: Inquiry) => saveInquiries([i, ...getInquiries()]);
 export const updateInquiry = (i: Inquiry) =>
   saveInquiries(getInquiries().map((x) => (x.id === i.id ? i : x)));
+
+// Hero
+export const getHero = (): HeroContent => {
+  ensureSeeded();
+  return read<HeroContent>(KEY.hero, seedHero);
+};
+export const saveHero = (h: HeroContent) => write(KEY.hero, h);
+
+// Categories
+export const getCategoriesStore = (): CategoryRow[] => {
+  ensureSeeded();
+  const list = read<CategoryRow[]>(KEY.categories, seedCategories);
+  return [...list].sort((a, b) => a.order - b.order);
+};
+export const saveCategories = (cats: CategoryRow[]) => write(KEY.categories, cats);
+export const upsertCategory = (c: CategoryRow) => {
+  const all = getCategoriesStore();
+  const i = all.findIndex((x) => x.id === c.id);
+  if (i >= 0) all[i] = c; else all.push(c);
+  saveCategories(all);
+};
+export const deleteCategory = (id: string) => saveCategories(getCategoriesStore().filter((c) => c.id !== id));
+
+// Sections
+export const getSections = (): SectionRow[] => {
+  ensureSeeded();
+  const list = read<SectionRow[]>(KEY.sections, seedSections);
+  return [...list].sort((a, b) => a.order - b.order);
+};
+export const saveSections = (s: SectionRow[]) => write(KEY.sections, s);
+export const upsertSection = (s: SectionRow) => {
+  const all = getSections();
+  const i = all.findIndex((x) => x.id === s.id);
+  if (i >= 0) all[i] = s; else all.push(s);
+  saveSections(all);
+};
+export const deleteSection = (id: string) => saveSections(getSections().filter((s) => s.id !== id));
+
+// Resolve a section's products at render time.
+export const resolveSectionProducts = (s: SectionRow, products: Product[]): Product[] => {
+  const limit = s.limit ?? 6;
+  const listed = products.filter((p) => p.listed);
+  if (s.mode === "manual") {
+    const ids = s.productIds ?? [];
+    return ids.map((id) => listed.find((p) => p.id === id)).filter(Boolean).slice(0, limit) as Product[];
+  }
+  if (!s.rule) return listed.slice(0, limit);
+  const { type, value } = s.rule;
+  let matches: Product[] = [];
+  if (type === "category") matches = listed.filter((p) => p.category === value);
+  else if (type === "flag") matches = listed.filter((p) => p.flags?.includes(value as "new" | "trending" | "featured"));
+  else if (type === "tag") matches = listed.filter((p) => p.tags?.includes(value));
+  return matches.slice(0, limit);
+};
 
 // Auth (placeholder, local only)
 export const ADMIN_EMAIL = "amiga.qaisar@gmail.com";
