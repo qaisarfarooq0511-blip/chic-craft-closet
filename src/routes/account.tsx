@@ -13,12 +13,12 @@ export const Route = createFileRoute("/account")({
   component: AccountLayout,
 });
 
-const NAV = [
+const NAV: { to: string; label: string; icon: typeof IconUser; exact?: boolean }[] = [
   { to: "/account", label: "My Account", icon: IconUser, exact: true },
   { to: "/account/orders", label: "My Orders", icon: IconShoppingBag },
   { to: "/account/wishlist", label: "Wishlist", icon: IconHeart },
   { to: "/account/addresses", label: "Address Book", icon: IconMapPin },
-] as const;
+];
 
 function AccountLayout() {
   const navigate = useNavigate();
