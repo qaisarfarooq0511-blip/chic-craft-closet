@@ -1,8 +1,51 @@
-import { Link } from "@tanstack/react-router";
-import { IconHeart } from "@tabler/icons-react";
+import { Link, useNavigate } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
+import { IconHeart, IconHeartFilled } from "@tabler/icons-react";
 import type { Product } from "@/lib/types";
 import { useCart } from "@/lib/cart-context";
 import { useToast } from "@/lib/toast";
+import { getWishlist, toggleWishlist, useUserAuth } from "@/lib/user-auth";
+
+export function WishlistButton({ productId, productName, className = "pc-wishlist" }: { productId: number; productName?: string; className?: string }) {
+  const { user } = useUserAuth();
+  const toast = useToast();
+  const navigate = useNavigate();
+  const [saved, setSaved] = useState(false);
+
+  useEffect(() => {
+    if (!user) { setSaved(false); return; }
+    const refresh = () => setSaved(getWishlist(user.id).includes(productId));
+    refresh();
+    window.addEventListener("storage", refresh);
+    return () => window.removeEventListener("storage", refresh);
+  }, [user, productId]);
+
+  const onClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!user) {
+      toast("Please sign in to save to wishlist");
+      navigate({ to: "/auth" });
+      return;
+    }
+    const next = toggleWishlist(user.id, productId);
+    const isSaved = next.includes(productId);
+    setSaved(isSaved);
+    toast(isSaved ? `${productName ?? "Item"} added to wishlist` : `${productName ?? "Item"} removed from wishlist`);
+  };
+
+  return (
+    <button
+      type="button"
+      className={`${className}${saved ? " is-saved" : ""}`}
+      aria-label={saved ? "Remove from wishlist" : "Add to wishlist"}
+      aria-pressed={saved}
+      onClick={onClick}
+    >
+      {saved ? <IconHeartFilled style={{ color: "#c0392b" }} /> : <IconHeart />}
+    </button>
+  );
+}
 
 export function Stars({ rating, size = 12 }: { rating: number; size?: number }) {
   const rounded = Math.round(rating);
@@ -33,13 +76,8 @@ export function ProductCard({ p }: { p: Product }) {
         {p.badge && (
           <span className={`pc-badge${p.badge === "Sale" || p.badge === "Limited" ? " rust" : ""}`}>{p.badge}</span>
         )}
-        <button
-          className="pc-wishlist"
-          aria-label="Add to wishlist"
-          onClick={(e) => { e.preventDefault(); e.stopPropagation(); toast("Saved for later"); }}
-        >
-          <IconHeart />
-        </button>
+        <WishlistButton productId={p.id} productName={p.name} />
+
       </div>
       <div className="pc-info">
         <div className="pc-cat">{p.category}</div>
