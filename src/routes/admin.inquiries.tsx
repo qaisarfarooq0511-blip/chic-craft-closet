@@ -459,6 +459,15 @@ function FulfillModal({ inquiry, onClose, onSubmit }: { inquiry: Inquiry; onClos
   );
 }
 
+function FilterField({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="form-field" style={{ margin: 0 }}>
+      <label className="form-label" style={{ fontSize: 11 }}>{label}</label>
+      {children}
+    </div>
+  );
+}
+
 /* ──────────── Cancel Modal ──────────── */
 function CancelModal({ inquiry, onClose, onSubmit }: { inquiry: Inquiry; onClose: () => void; onSubmit: (d: InquiryCancellation) => void }) {
   const cfg = getConfig();
