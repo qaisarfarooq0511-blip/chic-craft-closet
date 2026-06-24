@@ -154,6 +154,18 @@ export function ProductForm({ initial, onSave, submitLabel }: Props) {
             placeholder="pashmina, ivory, festive"
           />
         </div>
+        <div className="form-field">
+          <label className="form-label">Sizes (comma-separated — leave blank if not applicable)</label>
+          <input
+            className="form-input"
+            value={(p.sizes ?? []).join(", ")}
+            onChange={(e) => set("sizes", e.target.value.split(",").map((t) => t.trim()).filter(Boolean))}
+            placeholder="0-3 Months, 3-6 Months, 6-12 Months, 12-18 Months"
+          />
+          <p style={{ fontSize: 11, color: "var(--ink3)", marginTop: 4 }}>
+            If sizes are provided, customers must pick one before adding to bag. Great for kidswear age ranges, suit sizes, etc.
+          </p>
+        </div>
       </div>
 
       <div className="admin-card">
