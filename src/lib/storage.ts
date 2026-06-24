@@ -11,9 +11,30 @@ const KEY = {
   categories: "yaawun:categories:v1",
   sections: "yaawun:sections:v1",
   pages: "yaawun:pages:v1",
+  config: "yaawun:config:v1",
   seeded: "yaawun:seeded:v6",
   pagesSeed: "yaawun:pages-seed:v2",
 } as const;
+
+export interface AppConfig {
+  badges: string[];
+  fabrics: string[];
+  embroideries: string[];
+  careOptions: string[];
+  tags: string[];
+  sizes: string[];
+  maxQtyPerItem: number;
+}
+
+export const DEFAULT_CONFIG: AppConfig = {
+  badges: ["New in", "Bestseller", "Sale", "Limited"],
+  fabrics: ["Pure Pashmina", "Pure cotton", "Soft cotton", "Silk", "Linen", "Wool", "Brass base"],
+  embroideries: ["Sozni hand-done", "Hand chikankari", "Kundan setting", "Machine floral", "Zardozi", "Aari"],
+  careOptions: ["Dry clean only", "Hand wash cold", "Machine wash 30°C", "Avoid moisture", "Iron on low"],
+  tags: ["pashmina", "ivory", "chikankari", "cotton", "earrings", "kundan", "festive", "bridal", "casual"],
+  sizes: ["XS", "S", "M", "L", "XL", "XXL", "Free Size", "0-3 Months", "3-6 Months", "6-12 Months", "12-18 Months", "2-4 yrs", "4-8 yrs"],
+  maxQtyPerItem: 10,
+};
 
 const isBrowser = () => typeof window !== "undefined";
 
@@ -197,3 +218,19 @@ export const setAuth = (a: { email: string } | null) => {
   if (a) write(KEY.auth, a);
   else if (isBrowser()) localStorage.removeItem(KEY.auth);
 };
+
+// App config (admin-managed option lists + global limits).
+export const getConfig = (): AppConfig => {
+  const stored = read<Partial<AppConfig>>(KEY.config, {});
+  return {
+    badges: stored.badges ?? DEFAULT_CONFIG.badges,
+    fabrics: stored.fabrics ?? DEFAULT_CONFIG.fabrics,
+    embroideries: stored.embroideries ?? DEFAULT_CONFIG.embroideries,
+    careOptions: stored.careOptions ?? DEFAULT_CONFIG.careOptions,
+    tags: stored.tags ?? DEFAULT_CONFIG.tags,
+    sizes: stored.sizes ?? DEFAULT_CONFIG.sizes,
+    maxQtyPerItem: stored.maxQtyPerItem ?? DEFAULT_CONFIG.maxQtyPerItem,
+  };
+};
+export const saveConfig = (c: AppConfig) => write(KEY.config, c);
+

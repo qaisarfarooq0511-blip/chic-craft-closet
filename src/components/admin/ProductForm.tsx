@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { ImageUploader } from "./ImageUploader";
-import { getCategoriesStore } from "@/lib/storage";
+import { getCategoriesStore, getConfig } from "@/lib/storage";
 import { type Product, type ProductItem, type ProductFlag, slugify } from "@/lib/types";
 import { useToast } from "@/lib/toast";
+import { Link } from "@tanstack/react-router";
 
 interface Props {
   initial: Product;
@@ -16,16 +17,57 @@ const FLAGS: { value: ProductFlag; label: string }[] = [
   { value: "featured", label: "Featured" },
 ];
 
+const splitCSV = (s: string): string[] =>
+  s ? s.split(/,\s*/).map((x) => x.trim()).filter(Boolean) : [];
+
+function MultiChip({
+  options,
+  selected,
+  onChange,
+}: {
+  options: string[];
+  selected: string[];
+  onChange: (next: string[]) => void;
+}) {
+  const toggle = (v: string) => {
+    onChange(selected.includes(v) ? selected.filter((x) => x !== v) : [...selected, v]);
+  };
+  if (options.length === 0) {
+    return (
+      <p style={{ fontSize: 11, color: "var(--ink3)" }}>
+        No options yet — add some in <Link to="/admin/config" style={{ textDecoration: "underline" }}>Configuration</Link>.
+      </p>
+    );
+  }
+  return (
+    <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+      {options.map((v) => {
+        const on = selected.includes(v);
+        return (
+          <button
+            key={v}
+            type="button"
+            onClick={() => toggle(v)}
+            className={on ? "btn-ink" : "btn-outline"}
+            style={{ fontSize: 11, padding: "5px 10px" }}
+          >
+            {on ? "✓ " : ""}{v}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 export function ProductForm({ initial, onSave, submitLabel }: Props) {
   const [p, setP] = useState<Product>({ ...initial, mainImageIndex: initial.mainImageIndex ?? 0, tags: initial.tags ?? [], flags: initial.flags ?? [], sizes: initial.sizes ?? [] });
-  const [sizesText, setSizesText] = useState((initial.sizes ?? []).join(", "));
   const toast = useToast();
   const [cats, setCats] = useState(getCategoriesStore());
+  const [config, setConfig] = useState(getConfig());
 
   useEffect(() => { setP({ ...initial, mainImageIndex: initial.mainImageIndex ?? 0, tags: initial.tags ?? [], flags: initial.flags ?? [], sizes: initial.sizes ?? [] }); }, [initial]);
-  useEffect(() => { setSizesText((initial.sizes ?? []).join(", ")); }, [initial]);
   useEffect(() => {
-    const refresh = () => setCats(getCategoriesStore());
+    const refresh = () => { setCats(getCategoriesStore()); setConfig(getConfig()); };
     window.addEventListener("storage", refresh);
     return () => window.removeEventListener("storage", refresh);
   }, []);
@@ -42,22 +84,23 @@ export function ProductForm({ initial, onSave, submitLabel }: Props) {
     set("flags", have ? p.flags!.filter((x) => x !== f) : [...(p.flags ?? []), f]);
   };
 
+  // Multi-select state derived from existing comma-joined fields
+  const fabricList = splitCSV(p.fabric);
+  const embroideryList = splitCSV(p.embroidery);
+  const careList = splitCSV(p.care);
+
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!p.name.trim()) { toast("Please add a product name"); return; }
     if (p.price <= 0) { toast("Please set a sale price"); return; }
-    // If a non-zero main image is selected, swap it to index 0 so the
-    // storefront's "first image" rendering picks it up.
     let images = p.images;
     if ((p.mainImageIndex ?? 0) > 0 && images.length > 1) {
       const idx = p.mainImageIndex!;
       images = [images[idx], ...images.filter((_, i) => i !== idx)];
     }
-    const sizes = sizesText.split(",").map((t) => t.trim()).filter(Boolean);
     onSave({
       ...p,
       images,
-      sizes,
       mainImageIndex: 0,
       slug: `${slugify(p.name)}-${p.id}`,
       pieces: p.items.length || 1,
@@ -126,10 +169,7 @@ export function ProductForm({ initial, onSave, submitLabel }: Props) {
           <div className="form-field"><label className="form-label">Corner badge</label>
             <select className="form-select" value={p.badge ?? ""} onChange={(e) => set("badge", e.target.value || null)}>
               <option value="">No badge</option>
-              <option value="New in">New in</option>
-              <option value="Bestseller">Bestseller</option>
-              <option value="Sale">Sale</option>
-              <option value="Limited">Limited</option>
+              {config.badges.map((b) => <option key={b} value={b}>{b}</option>)}
             </select>
           </div>
         </div>
@@ -150,25 +190,14 @@ export function ProductForm({ initial, onSave, submitLabel }: Props) {
           </div>
         </div>
         <div className="form-field">
-          <label className="form-label">Tags (comma-separated)</label>
-          <input
-            className="form-input"
-            value={(p.tags ?? []).join(", ")}
-            onChange={(e) => set("tags", e.target.value.split(",").map((t) => t.trim()).filter(Boolean))}
-            placeholder="pashmina, ivory, festive"
-          />
+          <label className="form-label">Tags (multi-select)</label>
+          <MultiChip options={config.tags} selected={p.tags ?? []} onChange={(v) => set("tags", v)} />
         </div>
         <div className="form-field">
-          <label className="form-label">Sizes (comma-separated — leave blank if not applicable)</label>
-          <input
-            className="form-input"
-            value={sizesText}
-            onChange={(e) => setSizesText(e.target.value)}
-            onBlur={() => set("sizes", sizesText.split(",").map((t) => t.trim()).filter(Boolean))}
-            placeholder="0-3 Months, 3-6 Months, 6-12 Months, 12-18 Months"
-          />
+          <label className="form-label">Sizes (multi-select — leave blank if not applicable)</label>
+          <MultiChip options={config.sizes} selected={p.sizes ?? []} onChange={(v) => set("sizes", v)} />
           <p style={{ fontSize: 11, color: "var(--ink3)", marginTop: 4 }}>
-            If sizes are provided, customers must pick one before adding to bag. Great for kidswear age ranges, suit sizes, etc.
+            If sizes are selected, customers must pick one before adding to bag.
           </p>
         </div>
       </div>
@@ -186,10 +215,17 @@ export function ProductForm({ initial, onSave, submitLabel }: Props) {
 
       <div className="admin-card">
         <div className="cart-sum-title" style={{ marginBottom: 14 }}>Fabric &amp; care</div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 14 }}>
-          <div className="form-field"><label className="form-label">Fabric</label><input className="form-input" value={p.fabric} onChange={(e) => set("fabric", e.target.value)} /></div>
-          <div className="form-field"><label className="form-label">Embroidery</label><input className="form-input" value={p.embroidery} onChange={(e) => set("embroidery", e.target.value)} /></div>
-          <div className="form-field"><label className="form-label">Care</label><input className="form-input" value={p.care} onChange={(e) => set("care", e.target.value)} /></div>
+        <div className="form-field">
+          <label className="form-label">Fabric (multi-select)</label>
+          <MultiChip options={config.fabrics} selected={fabricList} onChange={(v) => set("fabric", v.join(", "))} />
+        </div>
+        <div className="form-field">
+          <label className="form-label">Embroidery (multi-select)</label>
+          <MultiChip options={config.embroideries} selected={embroideryList} onChange={(v) => set("embroidery", v.join(", "))} />
+        </div>
+        <div className="form-field">
+          <label className="form-label">Care (multi-select)</label>
+          <MultiChip options={config.careOptions} selected={careList} onChange={(v) => set("care", v.join(", "))} />
         </div>
       </div>
 

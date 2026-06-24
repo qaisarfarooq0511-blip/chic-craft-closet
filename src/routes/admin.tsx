@@ -12,6 +12,8 @@ import {
   IconCategory,
   IconLayoutGrid,
   IconFileText,
+  IconSettings,
+  IconUsers,
 } from "@tabler/icons-react";
 import { AuthProvider, useAuth } from "@/lib/auth-context";
 import { ADMIN_EMAIL, ADMIN_PASSWORD } from "@/lib/storage";
@@ -83,6 +85,8 @@ function AdminShell() {
     { to: "/admin/pages", label: "Static pages", icon: <IconFileText /> },
     { to: "/admin/reviews", label: "Reviews", icon: <IconStar /> },
     { to: "/admin/inquiries", label: "Orders", icon: <IconReceipt /> },
+    { to: "/admin/customers", label: "Customers", icon: <IconUsers /> },
+    { to: "/admin/config", label: "Configuration", icon: <IconSettings /> },
     { to: "/admin/theme", label: "Theme", icon: <IconPalette /> },
   ];
 

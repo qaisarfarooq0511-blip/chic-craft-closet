@@ -5,6 +5,7 @@ export type AppUser = {
   mobile: string; // E.164-ish, e.g. +919876543210
   name: string;
   email?: string;
+  newsletterOptIn?: boolean; // defaults to true when missing
   createdAt: number;
 };
 
@@ -117,6 +118,7 @@ export function createUser(mobile: string, name: string, email?: string): AppUse
     mobile: normalizeMobile(mobile),
     name: capitalizeName(name.trim()),
     email: email?.trim() || undefined,
+    newsletterOptIn: true,
     createdAt: Date.now(),
   };
   users.push(u);
@@ -131,7 +133,10 @@ export function findOrCreateUserByMobile(mobile: string, name: string): AppUser 
   return createUser(mobile, name);
 }
 
-export function updateUserRecord(id: string, patch: Partial<Pick<AppUser, "name" | "email">>): AppUser | null {
+export function updateUserRecord(
+  id: string,
+  patch: Partial<Pick<AppUser, "name" | "email" | "newsletterOptIn" | "mobile">>,
+): AppUser | null {
   const users = readUsers();
   const idx = users.findIndex((u) => u.id === id);
   if (idx < 0) return null;
@@ -139,12 +144,22 @@ export function updateUserRecord(id: string, patch: Partial<Pick<AppUser, "name"
     ...users[idx],
     ...(patch.name !== undefined ? { name: capitalizeName(patch.name.trim()) } : {}),
     ...(patch.email !== undefined ? { email: patch.email.trim() || undefined } : {}),
+    ...(patch.mobile !== undefined ? { mobile: normalizeMobile(patch.mobile) } : {}),
+    ...(patch.newsletterOptIn !== undefined ? { newsletterOptIn: patch.newsletterOptIn } : {}),
   };
   users[idx] = updated;
   writeUsers(users);
   const session = readSession();
   if (session && session.id === id) writeSession(updated);
   return updated;
+}
+
+// Admin helpers
+export function getAllUsers(): AppUser[] {
+  return [...readUsers()].sort((a, b) => b.createdAt - a.createdAt);
+}
+export function deleteUserRecord(id: string) {
+  writeUsers(readUsers().filter((u) => u.id !== id));
 }
 
 // ---------------- addresses ----------------

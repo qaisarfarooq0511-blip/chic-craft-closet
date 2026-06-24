@@ -1,7 +1,7 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { IconScissors, IconTruck, IconRefresh, IconShieldCheck, IconAlertCircle, IconCircleCheck } from "@tabler/icons-react";
-import { getProductBySlug, getReviewsFor } from "@/lib/storage";
+import { getProductBySlug, getReviewsFor, getConfig } from "@/lib/storage";
 import { useCart } from "@/lib/cart-context";
 import { useToast } from "@/lib/toast";
 import { Stars, fmt, WishlistButton } from "@/components/storefront/ProductCard";
@@ -80,6 +80,7 @@ function PDP() {
   reviews.forEach((r) => { distrib[r.rating - 1]++; });
 
   const hasSizes = (p.sizes?.length ?? 0) > 0;
+  const maxQty = Math.min(getConfig().maxQtyPerItem, p.stock || Number.MAX_SAFE_INTEGER);
   const addAndToast = () => {
     if (hasSizes && !size) { toast("Please select a size"); return; }
     add(p.id, qty);
@@ -206,7 +207,8 @@ function PDP() {
               <span className="qty-label">Qty</span>
               <button type="button" className="qty-btn" onClick={() => setQty((q) => Math.max(1, q - 1))} aria-label="Decrease">−</button>
               <span className="qty-val">{qty}</span>
-              <button type="button" className="qty-btn" onClick={() => setQty((q) => q + 1)} aria-label="Increase">+</button>
+              <button type="button" className="qty-btn" onClick={() => setQty((q) => Math.min(maxQty, q + 1))} aria-label="Increase" disabled={qty >= maxQty}>+</button>
+              {qty >= maxQty && <span style={{ fontSize: 11, color: "var(--ink3)", marginLeft: 8 }}>Max {maxQty} per order</span>}
             </div>
             <button className="cta-primary" onClick={addAndToast} disabled={p.stock === 0}>Add to bag</button>
             <Link to="/cart" className="cta-gold-full" onClick={addAndToast} style={{ display: "inline-block", textAlign: "center" }}>Buy now</Link>

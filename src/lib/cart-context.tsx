@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
 import type { CartLine } from "./types";
-import { getCart, saveCart, getProducts } from "./storage";
+import { getCart, saveCart, getProducts, getConfig } from "./storage";
 
 interface CartContextValue {
   lines: CartLine[];
@@ -25,17 +25,19 @@ export function CartProvider({ children }: { children: ReactNode }) {
   }, [lines]);
 
   const add = useCallback((productId: number, qty = 1) => {
+    const max = getConfig().maxQtyPerItem;
     setLines((prev) => {
       const existing = prev.find((l) => l.productId === productId);
-      if (existing) return prev.map((l) => (l.productId === productId ? { ...l, qty: l.qty + qty } : l));
-      return [...prev, { productId, qty }];
+      if (existing) return prev.map((l) => (l.productId === productId ? { ...l, qty: Math.min(max, l.qty + qty) } : l));
+      return [...prev, { productId, qty: Math.min(max, qty) }];
     });
   }, []);
 
   const update = useCallback((productId: number, qty: number) => {
+    const max = getConfig().maxQtyPerItem;
     setLines((prev) =>
       prev
-        .map((l) => (l.productId === productId ? { ...l, qty: Math.max(1, qty) } : l))
+        .map((l) => (l.productId === productId ? { ...l, qty: Math.min(max, Math.max(1, qty)) } : l))
         .filter((l) => l.qty > 0),
     );
   }, []);
