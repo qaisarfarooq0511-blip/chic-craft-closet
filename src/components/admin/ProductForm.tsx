@@ -18,10 +18,12 @@ const FLAGS: { value: ProductFlag; label: string }[] = [
 
 export function ProductForm({ initial, onSave, submitLabel }: Props) {
   const [p, setP] = useState<Product>({ ...initial, mainImageIndex: initial.mainImageIndex ?? 0, tags: initial.tags ?? [], flags: initial.flags ?? [], sizes: initial.sizes ?? [] });
+  const [sizesText, setSizesText] = useState((initial.sizes ?? []).join(", "));
   const toast = useToast();
   const [cats, setCats] = useState(getCategoriesStore());
 
   useEffect(() => { setP({ ...initial, mainImageIndex: initial.mainImageIndex ?? 0, tags: initial.tags ?? [], flags: initial.flags ?? [], sizes: initial.sizes ?? [] }); }, [initial]);
+  useEffect(() => { setSizesText((initial.sizes ?? []).join(", ")); }, [initial]);
   useEffect(() => {
     const refresh = () => setCats(getCategoriesStore());
     window.addEventListener("storage", refresh);
@@ -51,9 +53,11 @@ export function ProductForm({ initial, onSave, submitLabel }: Props) {
       const idx = p.mainImageIndex!;
       images = [images[idx], ...images.filter((_, i) => i !== idx)];
     }
+    const sizes = sizesText.split(",").map((t) => t.trim()).filter(Boolean);
     onSave({
       ...p,
       images,
+      sizes,
       mainImageIndex: 0,
       slug: `${slugify(p.name)}-${p.id}`,
       pieces: p.items.length || 1,
@@ -158,8 +162,9 @@ export function ProductForm({ initial, onSave, submitLabel }: Props) {
           <label className="form-label">Sizes (comma-separated — leave blank if not applicable)</label>
           <input
             className="form-input"
-            value={(p.sizes ?? []).join(", ")}
-            onChange={(e) => set("sizes", e.target.value.split(",").map((t) => t.trim()).filter(Boolean))}
+            value={sizesText}
+            onChange={(e) => setSizesText(e.target.value)}
+            onBlur={() => set("sizes", sizesText.split(",").map((t) => t.trim()).filter(Boolean))}
             placeholder="0-3 Months, 3-6 Months, 6-12 Months, 12-18 Months"
           />
           <p style={{ fontSize: 11, color: "var(--ink3)", marginTop: 4 }}>
