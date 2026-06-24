@@ -52,7 +52,7 @@ function AccountLayout() {
               return (
                 <Link
                   key={to}
-                  to={to}
+                  to={to as "/account"}
                   style={{
                     display: "flex", alignItems: "center", gap: 10,
                     padding: "10px 12px", borderRadius: 8, fontSize: 13,
