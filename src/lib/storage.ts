@@ -218,3 +218,19 @@ export const setAuth = (a: { email: string } | null) => {
   if (a) write(KEY.auth, a);
   else if (isBrowser()) localStorage.removeItem(KEY.auth);
 };
+
+// App config (admin-managed option lists + global limits).
+export const getConfig = (): AppConfig => {
+  const stored = read<Partial<AppConfig>>(KEY.config, {});
+  return {
+    badges: stored.badges ?? DEFAULT_CONFIG.badges,
+    fabrics: stored.fabrics ?? DEFAULT_CONFIG.fabrics,
+    embroideries: stored.embroideries ?? DEFAULT_CONFIG.embroideries,
+    careOptions: stored.careOptions ?? DEFAULT_CONFIG.careOptions,
+    tags: stored.tags ?? DEFAULT_CONFIG.tags,
+    sizes: stored.sizes ?? DEFAULT_CONFIG.sizes,
+    maxQtyPerItem: stored.maxQtyPerItem ?? DEFAULT_CONFIG.maxQtyPerItem,
+  };
+};
+export const saveConfig = (c: AppConfig) => write(KEY.config, c);
+
