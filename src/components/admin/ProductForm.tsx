@@ -160,8 +160,9 @@ export function ProductForm({ initial, onSave, submitLabel }: Props) {
           <label className="form-label">Sizes (comma-separated — leave blank if not applicable)</label>
           <input
             className="form-input"
-            value={(p.sizes ?? []).join(", ")}
-            onChange={(e) => set("sizes", e.target.value.split(",").map((t) => t.trim()).filter(Boolean))}
+            value={sizesText}
+            onChange={(e) => setSizesText(e.target.value)}
+            onBlur={() => set("sizes", sizesText.split(",").map((t) => t.trim()).filter(Boolean))}
             placeholder="0-3 Months, 3-6 Months, 6-12 Months, 12-18 Months"
           />
           <p style={{ fontSize: 11, color: "var(--ink3)", marginTop: 4 }}>
