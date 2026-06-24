@@ -12,9 +12,36 @@ const KEY = {
   sections: "yaawun:sections:v1",
   pages: "yaawun:pages:v1",
   config: "yaawun:config:v1",
+  coupons: "yaawun:coupons:v1",
   seeded: "yaawun:seeded:v6",
   pagesSeed: "yaawun:pages-seed:v2",
 } as const;
+
+export type CouponDiscountType = "percent" | "flat";
+export type PaymentMode = "cod" | "upi" | "card" | "netbanking" | "wallet";
+
+export interface Coupon {
+  id: string;
+  code: string;                       // stored uppercase
+  description?: string;
+  discountType: CouponDiscountType;
+  amount: number;                     // percent (1-100) or flat (₹)
+  maxDiscountCap?: number | null;     // only for percent
+  minOrderValue?: number | null;
+  globalUsageLimit?: number | null;   // total uses across all users
+  perUserLimit?: number | null;
+  usedCount: number;
+  includedCategories: string[];       // empty = all
+  excludedCategories: string[];
+  includedProductIds: number[];       // empty = all
+  excludedProductIds: number[];
+  paymentModes: PaymentMode[];        // empty = all
+  startsAt: number;                   // epoch ms
+  expiresAt: number;                  // epoch ms
+  active: boolean;
+  createdAt: number;
+}
+
 
 export interface AppConfig {
   badges: string[];
@@ -233,4 +260,16 @@ export const getConfig = (): AppConfig => {
   };
 };
 export const saveConfig = (c: AppConfig) => write(KEY.config, c);
+
+// Coupons
+export const getCoupons = (): Coupon[] => read<Coupon[]>(KEY.coupons, []);
+export const saveCoupons = (list: Coupon[]) => write(KEY.coupons, list);
+export const upsertCoupon = (c: Coupon) => {
+  const all = getCoupons();
+  const i = all.findIndex((x) => x.id === c.id);
+  if (i >= 0) all[i] = c; else all.unshift(c);
+  saveCoupons(all);
+};
+export const deleteCoupon = (id: string) => saveCoupons(getCoupons().filter((c) => c.id !== id));
+
 
