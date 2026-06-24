@@ -43,6 +43,12 @@ export interface Coupon {
 }
 
 
+export interface HsnCode {
+  code: string;
+  description?: string;
+  gstRate: number; // total GST % (e.g. 5, 12, 18)
+}
+
 export interface AppConfig {
   badges: string[];
   fabrics: string[];
@@ -51,6 +57,7 @@ export interface AppConfig {
   tags: string[];
   sizes: string[];
   maxQtyPerItem: number;
+  hsnCodes: HsnCode[];
 }
 
 export const DEFAULT_CONFIG: AppConfig = {
@@ -61,7 +68,15 @@ export const DEFAULT_CONFIG: AppConfig = {
   tags: ["pashmina", "ivory", "chikankari", "cotton", "earrings", "kundan", "festive", "bridal", "casual"],
   sizes: ["XS", "S", "M", "L", "XL", "XXL", "Free Size", "0-3 Months", "3-6 Months", "6-12 Months", "12-18 Months", "2-4 yrs", "4-8 yrs"],
   maxQtyPerItem: 10,
+  hsnCodes: [
+    { code: "6214", description: "Shawls, scarves, mufflers (textile)", gstRate: 5 },
+    { code: "5208", description: "Cotton woven fabrics", gstRate: 5 },
+    { code: "6204", description: "Women's apparel (stitched)", gstRate: 12 },
+    { code: "6209", description: "Babies' / kids' garments", gstRate: 12 },
+    { code: "7117", description: "Imitation jewellery", gstRate: 18 },
+  ],
 };
+
 
 const isBrowser = () => typeof window !== "undefined";
 
@@ -257,9 +272,27 @@ export const getConfig = (): AppConfig => {
     tags: stored.tags ?? DEFAULT_CONFIG.tags,
     sizes: stored.sizes ?? DEFAULT_CONFIG.sizes,
     maxQtyPerItem: stored.maxQtyPerItem ?? DEFAULT_CONFIG.maxQtyPerItem,
+    hsnCodes: stored.hsnCodes ?? DEFAULT_CONFIG.hsnCodes,
   };
 };
 export const saveConfig = (c: AppConfig) => write(KEY.config, c);
+
+// Tax helper — prices are GST-inclusive.
+export const computeTaxBreakup = (priceInclusive: number, gstRate: number) => {
+  const base = priceInclusive / (1 + gstRate / 100);
+  const gst = priceInclusive - base;
+  return {
+    base: Math.round(base * 100) / 100,
+    gst: Math.round(gst * 100) / 100,
+    cgst: Math.round((gst / 2) * 100) / 100,
+    sgst: Math.round((gst / 2) * 100) / 100,
+    igst: Math.round(gst * 100) / 100,
+    rate: gstRate,
+    total: priceInclusive,
+  };
+};
+
+
 
 // Coupons
 export const getCoupons = (): Coupon[] => read<Coupon[]>(KEY.coupons, []);
