@@ -698,3 +698,7 @@
 .hero         { background: var(--theme-hero-bg, var(--ink));    --gold2: var(--theme-hero-accent, #D4A843); }
 .reviews-dark { background: var(--theme-reviews-bg, var(--ink)); --gold2: var(--theme-reviews-accent, #D4A843); }
 .footer       { background: var(--theme-footer-bg, var(--ink));  --gold2: var(--theme-footer-accent, #D4A843); }
+
+/* AI uploader busy spinner */
+.spin { animation: spin 1s linear infinite; }
+@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
