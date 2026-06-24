@@ -702,3 +702,18 @@
 /* AI uploader busy spinner */
 .spin { animation: spin 1s linear infinite; }
 @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+/* PDP size picker */
+.size-row { margin: 18px 0 14px; }
+.size-row-hd { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 8px; }
+.size-label { font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink2); }
+.size-selected { font-size: 12px; color: var(--ink3); }
+.size-selected strong { color: var(--ink); font-weight: 500; }
+.size-options { display: flex; flex-wrap: wrap; gap: 8px; }
+.size-chip {
+  background: #fff; border: 1px solid var(--b); color: var(--ink);
+  padding: 8px 14px; font-size: 12px; border-radius: 999px; cursor: pointer;
+  transition: all .15s ease; font-family: inherit;
+}
+.size-chip:hover { border-color: var(--ink2); }
+.size-chip.sel { background: var(--ink); color: #fff; border-color: var(--ink); }

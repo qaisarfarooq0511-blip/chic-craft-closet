@@ -62,6 +62,7 @@ function PDP() {
   const reviews = useMemo(() => (p ? getReviewsFor(p.id) : []), [p]);
   const [qty, setQty] = useState(1);
   const [thumb, setThumb] = useState(0);
+  const [size, setSize] = useState<string | null>(null);
   const { add } = useCart();
   const toast = useToast();
 
@@ -78,7 +79,13 @@ function PDP() {
   const distrib = [0, 0, 0, 0, 0];
   reviews.forEach((r) => { distrib[r.rating - 1]++; });
 
-  const addAndToast = () => { add(p.id, qty); toast(`${p.name} added to bag`); setQty(1); };
+  const hasSizes = (p.sizes?.length ?? 0) > 0;
+  const addAndToast = () => {
+    if (hasSizes && !size) { toast("Please select a size"); return; }
+    add(p.id, qty);
+    toast(`${p.name}${size ? ` (${size})` : ""} added to bag`);
+    setQty(1);
+  };
 
   return (
     <>
@@ -172,6 +179,27 @@ function PDP() {
                 <div key={i} className="incl-item"><span className="incl-dot" />{inc}</div>
               ))}
             </div>
+
+            {hasSizes && (
+              <div className="size-row">
+                <div className="size-row-hd">
+                  <span className="size-label">Size</span>
+                  {size && <span className="size-selected">Selected: <strong>{size}</strong></span>}
+                </div>
+                <div className="size-options">
+                  {p.sizes!.map((s) => (
+                    <button
+                      key={s}
+                      type="button"
+                      onClick={() => setSize(s)}
+                      className={`size-chip${size === s ? " sel" : ""}`}
+                    >
+                      {s}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <div className="qty-row">
               <span className="qty-label">Qty</span>
