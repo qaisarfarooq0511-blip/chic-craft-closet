@@ -107,4 +107,4 @@ export function Footer() {
   );
 }
 
-void CATEGORIES; void categorySlug; // legacy exports retained for type compatibility
+
