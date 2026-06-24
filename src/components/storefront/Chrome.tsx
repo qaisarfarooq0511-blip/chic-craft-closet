@@ -2,7 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { IconSearch, IconHeart, IconShoppingBag, IconMenu2, IconX } from "@tabler/icons-react";
 import { useCart } from "@/lib/cart-context";
-import { CATEGORIES, categorySlug } from "@/lib/types";
+import { useCart } from "@/lib/cart-context";
 import { getCategoriesStore } from "@/lib/storage";
 import { seedCategories } from "@/lib/seed";
 

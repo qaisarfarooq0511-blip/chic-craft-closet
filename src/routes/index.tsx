@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { IconTruck, IconShieldCheck, IconRefresh, IconBrandWhatsapp } from "@tabler/icons-react";
 import { ProductCard } from "@/components/storefront/ProductCard";
-import { categorySlug } from "@/lib/types";
+// (legacy categorySlug helper no longer needed here — categories come from the live store)
 import { getProducts, getHero, getCategoriesStore, getSections, resolveSectionProducts } from "@/lib/storage";
 import { seedHero, seedCategories, seedSections } from "@/lib/seed";
 import { STORE } from "@/lib/jsonld";
