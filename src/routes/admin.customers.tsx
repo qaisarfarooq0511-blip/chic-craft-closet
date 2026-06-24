@@ -139,13 +139,10 @@ function CustomersAdmin() {
           onAdded={() => { setAdding(false); refresh(); toast("Customer added"); }}
         />
       )}
-      {viewingOrders && (
-        <OrdersModal
-          user={viewingOrders}
-          orders={ordersFor(viewingOrders)}
-          onClose={() => setViewingOrders(null)}
-        />
-      )}
+    </>
+  );
+}
+
     </>
   );
 }
