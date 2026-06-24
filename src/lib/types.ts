@@ -91,15 +91,35 @@ export interface CartLine {
   qty: number;
 }
 
+export interface InquiryFulfillment {
+  partner: string;            // shipping partner (from config)
+  awb: string;                // AWB / tracking number
+  shippingCost: number;       // cost incurred by merchant
+  expectedDelivery: string;   // ISO date (yyyy-mm-dd)
+  trackingLink?: string;
+  fulfilledAt: number;
+}
+
+export interface InquiryCancellation {
+  reason: string;             // reason (from config)
+  note?: string;
+  cancelledAt: number;
+}
+
 export interface Inquiry {
   id: string;
   createdAt: number;
   customer: { name: string; phone: string; address: string; city: string; pincode: string; notes?: string };
-  lines: { productId: number; name: string; qty: number; price: number }[];
-  subtotal: number;
+  lines: { productId: number; name: string; qty: number; price: number; mrp?: number }[];
+  subtotal: number;           // sum of sale price * qty
+  mrpTotal?: number;          // sum of MRP * qty (pre-discount)
+  discount?: number;          // total discount applied (mrpTotal - subtotal + coupon)
+  couponCode?: string | null;
   delivery: number;
-  total: number;
+  total: number;              // final price charged
   status: "new" | "contacted" | "fulfilled" | "cancelled";
+  fulfillment?: InquiryFulfillment;
+  cancellation?: InquiryCancellation;
 }
 
 export const slugify = (s: string) =>

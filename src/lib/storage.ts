@@ -58,6 +58,8 @@ export interface AppConfig {
   careOptions: string[];
   tags: string[];
   sizes: string[];
+  shippingPartners: string[];
+  cancellationReasons: string[];
   maxQtyPerItem: number;
   hsnCodes: HsnCode[];
   globalFaqs: FaqEntry[];
