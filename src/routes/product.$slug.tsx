@@ -97,12 +97,13 @@ function PDP() {
       <div className="pdp-wrap">
         <div className="pdp-body">
           <div className="pdp-gallery">
-            <div className="pdp-img-main" style={{ background: p.bg }}>
+            <div className="pdp-img-main" style={{ background: p.bg, position: "relative" }}>
               {gallery[thumb] ? (
                 <img src={gallery[thumb]} alt={p.name} />
               ) : (
                 <span className="ph">{p.name}</span>
               )}
+              <WishlistButton productId={p.id} productName={p.name} className="pc-wishlist pdp-wishlist" />
             </div>
             <div className="pdp-thumbs">
               {(gallery.length ? gallery : [p.bg, "#E8DFD0", "#F2EDE4"]).slice(0, 4).map((g, i) => (
