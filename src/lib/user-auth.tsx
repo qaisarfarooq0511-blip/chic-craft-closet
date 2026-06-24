@@ -217,11 +217,23 @@ type Ctx = {
 
 const UserAuthContext = createContext<Ctx | null>(null);
 
+type UserAuthCtx = {
+  user: AppUser | null;
+  hydrated: boolean;
+  signIn: (u: AppUser) => void;
+  signOut: () => void;
+  updateUser: (patch: Partial<Pick<AppUser, "name" | "email">>) => void;
+};
+
+const UserAuthContext = createContext<UserAuthCtx | null>(null);
+
 export function UserAuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AppUser | null>(null);
+  const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
     setUser(readSession());
+    setHydrated(true);
     const refresh = (e: StorageEvent) => {
       if (!e.key || e.key === SESSION_KEY) setUser(readSession());
     };
@@ -238,11 +250,12 @@ export function UserAuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <UserAuthContext.Provider value={{ user, signIn, signOut, updateUser }}>
+    <UserAuthContext.Provider value={{ user, hydrated, signIn, signOut, updateUser }}>
       {children}
     </UserAuthContext.Provider>
   );
 }
+
 
 export function useUserAuth() {
   const ctx = useContext(UserAuthContext);
