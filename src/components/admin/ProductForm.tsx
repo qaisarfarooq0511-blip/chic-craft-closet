@@ -280,8 +280,38 @@ export function ProductForm({ initial, onSave, submitLabel }: Props) {
         />
       </div>
 
+      <div className="admin-card">
+        <div className="cart-sum-title" style={{ marginBottom: 4 }}>FAQs (product-specific)</div>
+        <p style={{ fontSize: 11, color: "var(--ink3)", marginBottom: 12 }}>
+          Add question-and-answer pairs specific to this product. These appear on the product page and as <code>FAQPage</code> structured data for AI search engines. If left empty, the global FAQs from <Link to="/admin/config" style={{ textDecoration: "underline" }}>Configuration</Link> are shown instead.
+        </p>
+        <FaqListEditor value={p.faqs ?? []} onChange={(v) => set("faqs", v)} />
+      </div>
+
       <button type="submit" className="cta-primary">{submitLabel}</button>
     </form>
+  );
+}
+
+function FaqListEditor({ value, onChange }: { value: { q: string; a: string }[]; onChange: (v: { q: string; a: string }[]) => void }) {
+  const update = (i: number, patch: Partial<{ q: string; a: string }>) =>
+    onChange(value.map((row, idx) => (idx === i ? { ...row, ...patch } : row)));
+  const remove = (i: number) => onChange(value.filter((_, idx) => idx !== i));
+  const add = () => onChange([...value, { q: "", a: "" }]);
+  return (
+    <div style={{ display: "grid", gap: 10 }}>
+      {value.map((row, i) => (
+        <div key={i} style={{ border: "1px solid var(--line)", borderRadius: 8, padding: 12, display: "grid", gap: 8 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <span className="form-label" style={{ margin: 0 }}>Q&amp;A #{i + 1}</span>
+            <button type="button" className="btn-text-rust" onClick={() => remove(i)} style={{ fontSize: 12 }}>Remove</button>
+          </div>
+          <input className="form-input" placeholder="Question" value={row.q} onChange={(e) => update(i, { q: e.target.value })} />
+          <textarea className="form-textarea" rows={2} placeholder="Answer" value={row.a} onChange={(e) => update(i, { a: e.target.value })} />
+        </div>
+      ))}
+      <button type="button" className="btn-outline" onClick={add} style={{ alignSelf: "start" }}>+ Add FAQ</button>
+    </div>
   );
 }
 
