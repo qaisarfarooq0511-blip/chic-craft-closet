@@ -1,4 +1,4 @@
-import type { Product, Review, HeroContent, CategoryRow, SectionRow } from "./types";
+import type { Product, Review, HeroContent, CategoryRow, SectionRow, StaticPage } from "./types";
 import { CATEGORIES, slugify, categorySlug } from "./types";
 
 import imgPashmina from "@/assets/products/pashmina-ivory.jpg";
@@ -211,5 +211,57 @@ export const seedSections: SectionRow[] = [
     limit: 6,
     order: 0,
     visible: true,
+  },
+];
+
+const now = Date.now();
+const pageBody = (intro: string, body: string) =>
+  `<p>${intro}</p>\n\n${body}`;
+
+export const seedPages: StaticPage[] = [
+  {
+    slug: "about-us",
+    title: "About Us",
+    order: 0,
+    updatedAt: now,
+    body: pageBody(
+      "Yaawun began as a small neighbourhood store curating fabrics, shawls, kidswear and accessories for the women of our community.",
+      "<p>Every piece is chosen by hand, photographed by hand and packed by hand. We launched online so the same care could reach women across India.</p>\n<h2>Our promise</h2>\n<p>Quality fabrics, fair prices and personal service — the way our regulars have known us for years.</p>",
+    ),
+  },
+  {
+    slug: "terms-of-use",
+    title: "Terms of Use",
+    order: 1,
+    updatedAt: now,
+    body: "<p>By using the Yaawun website you agree to use it for lawful, personal, non-commercial purposes only. Content, images and product photography belong to Yaawun and may not be copied without permission.</p>\n<h2>Account & conduct</h2>\n<p>You are responsible for any activity on your account. Please do not attempt to disrupt the site, scrape content or misuse the contact forms.</p>\n<h2>Changes</h2>\n<p>We may update these terms at any time. Continued use of the site means you accept the updated terms.</p>",
+  },
+  {
+    slug: "privacy-policy",
+    title: "Privacy Policy",
+    order: 2,
+    updatedAt: now,
+    body: "<p>We collect only the information needed to fulfil your order — name, phone, delivery address and items selected. We never sell or share your details with third parties for marketing.</p>\n<h2>How we use your data</h2>\n<p>Order confirmation, delivery coordination and customer support over WhatsApp or phone.</p>\n<h2>Contact</h2>\n<p>For any privacy request, write to us via the contact page.</p>",
+  },
+  {
+    slug: "terms-and-conditions",
+    title: "Terms & Conditions",
+    order: 3,
+    updatedAt: now,
+    body: "<p>All orders placed on Yaawun are subject to product availability and confirmation by our team.</p>\n<h2>Pricing</h2>\n<p>Prices are in INR and inclusive of applicable taxes. Delivery charges, if any, are shown at checkout.</p>\n<h2>Payment</h2>\n<p>We support Cash on Delivery and online payment options where available.</p>\n<h2>Shipping</h2>\n<p>Orders are typically dispatched within 2–4 working days. Delivery timelines vary by location.</p>",
+  },
+  {
+    slug: "returns-refunds-cancellation",
+    title: "Returns, Refunds & Cancellation",
+    order: 4,
+    updatedAt: now,
+    body: "<h2>Cancellation</h2>\n<p>Orders may be cancelled free of charge before dispatch. Once dispatched, an order cannot be cancelled.</p>\n<h2>Returns</h2>\n<p>We accept returns within 7 days of delivery for unused items in original packaging, except for unstitched fabrics that have been cut, kidswear with hygiene seals removed, and earrings.</p>\n<h2>Refunds</h2>\n<p>Approved refunds are processed within 5–7 working days to the original payment method, or as store credit for COD orders.</p>",
+  },
+  {
+    slug: "faqs",
+    title: "FAQ's",
+    order: 5,
+    updatedAt: now,
+    body: "<h2>How do I place an order?</h2>\n<p>Add items to your bag and complete checkout. You'll receive a WhatsApp confirmation from our team.</p>\n<h2>Do you offer Cash on Delivery?</h2>\n<p>Yes, COD is available across most of India.</p>\n<h2>How long does delivery take?</h2>\n<p>Typically 4–7 working days depending on your location.</p>\n<h2>Can I exchange a size?</h2>\n<p>Yes — please contact us within 7 days of delivery and we'll help arrange an exchange where possible.</p>",
   },
 ];
