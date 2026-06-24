@@ -12,6 +12,7 @@ const KEY = {
   sections: "yaawun:sections:v1",
   pages: "yaawun:pages:v1",
   seeded: "yaawun:seeded:v6",
+  pagesSeed: "yaawun:pages-seed:v2",
 } as const;
 
 const isBrowser = () => typeof window !== "undefined";
@@ -154,9 +155,25 @@ export const resolveSectionProducts = (s: SectionRow, products: Product[]): Prod
   return matches.slice(0, limit);
 };
 
+function migratePages() {
+  if (!isBrowser()) return;
+  if (localStorage.getItem(KEY.pagesSeed) === "1") return;
+  const existing = read<StaticPage[]>(KEY.pages, []);
+  const merged = seedPages.map((sp) => {
+    const existingPage = existing.find((ep) => ep.slug === sp.slug);
+    return existingPage ? { ...existingPage, body: sp.body, updatedAt: Date.now() } : sp;
+  });
+  const existingSlugs = new Set(existing.map((ep) => ep.slug));
+  const newPages = seedPages.filter((sp) => !existingSlugs.has(sp.slug));
+  const result = [...merged, ...newPages].sort((a, b) => a.order - b.order);
+  write(KEY.pages, result);
+  localStorage.setItem(KEY.pagesSeed, "1");
+}
+
 // Static pages
 export const getPages = (): StaticPage[] => {
   ensureSeeded();
+  migratePages();
   const list = read<StaticPage[]>(KEY.pages, seedPages);
   return [...list].sort((a, b) => a.order - b.order);
 };
