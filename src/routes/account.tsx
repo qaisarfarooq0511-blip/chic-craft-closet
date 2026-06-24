@@ -29,7 +29,6 @@ function AccountLayout() {
     if (!user) navigate({ to: "/auth", search: { redirect: pathname }, replace: true });
   }, [user, navigate, pathname]);
 
-  if (!user) return null;
 
   return (
     <main className="container" style={{ maxWidth: 980, padding: "40px 20px 80px" }}>
