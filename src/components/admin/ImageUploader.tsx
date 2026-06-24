@@ -33,6 +33,7 @@ export function ImageUploader({
 }: Props) {
   const toast = useToast();
   const [busy, setBusy] = useState<number | "all" | null>(null);
+  const [preview, setPreview] = useState<number | null>(null);
 
   const t: TargetSize = typeof target === "string" ? TARGETS[target] : target;
 
