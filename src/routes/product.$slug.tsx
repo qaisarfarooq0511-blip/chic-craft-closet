@@ -1,7 +1,7 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { IconScissors, IconTruck, IconRefresh, IconShieldCheck, IconAlertCircle, IconCircleCheck } from "@tabler/icons-react";
-import { getProductBySlug, getReviewsFor } from "@/lib/storage";
+import { getProductBySlug, getReviewsFor, getConfig } from "@/lib/storage";
 import { useCart } from "@/lib/cart-context";
 import { useToast } from "@/lib/toast";
 import { Stars, fmt, WishlistButton } from "@/components/storefront/ProductCard";
