@@ -5,6 +5,7 @@ import { getInquiries, updateInquiry, getConfig } from "@/lib/storage";
 import { normalizeMobile } from "@/lib/user-auth";
 import { fmt } from "@/components/storefront/ProductCard";
 import { useToast } from "@/lib/toast";
+import { exportRowsToXlsx } from "@/lib/xlsx-export";
 import type { Inquiry, InquiryFulfillment, InquiryCancellation } from "@/lib/types";
 
 export const Route = createFileRoute("/admin/inquiries")({
