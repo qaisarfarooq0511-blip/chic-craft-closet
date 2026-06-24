@@ -76,13 +76,8 @@ export function ProductCard({ p }: { p: Product }) {
         {p.badge && (
           <span className={`pc-badge${p.badge === "Sale" || p.badge === "Limited" ? " rust" : ""}`}>{p.badge}</span>
         )}
-        <button
-          className="pc-wishlist"
-          aria-label="Add to wishlist"
-          onClick={(e) => { e.preventDefault(); e.stopPropagation(); toast("Saved for later"); }}
-        >
-          <IconHeart />
-        </button>
+        <WishlistButton productId={p.id} productName={p.name} />
+
       </div>
       <div className="pc-info">
         <div className="pc-cat">{p.category}</div>
