@@ -727,3 +727,6 @@
 .static-page-body li { margin-bottom: 6px; }
 .static-page-body a { color: var(--ink); text-decoration: underline; }
 .static-page-body strong { color: var(--ink); font-weight: 500; }
+.static-page-body table { width: 100%; border-collapse: collapse; margin: 0 0 14px; font-size: 13px; }
+.static-page-body th, .static-page-body td { border: 1px solid var(--b); padding: 8px 12px; text-align: left; }
+.static-page-body th { background: var(--cream2); font-weight: 500; color: var(--ink); }
