@@ -156,6 +156,31 @@ export function ImageUploader({
           })}
         </div>
       )}
+
+      {preview !== null && value[preview] && (
+        <div
+          onClick={() => setPreview(null)}
+          style={{
+            position: "fixed", inset: 0, background: "rgba(0,0,0,.85)", zIndex: 9999,
+            display: "grid", placeItems: "center", padding: 24, cursor: "zoom-out",
+          }}
+        >
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); setPreview(null); }}
+            aria-label="Close preview"
+            style={{ position: "absolute", top: 16, right: 16, background: "rgba(255,255,255,.95)", border: "none", borderRadius: 999, width: 36, height: 36, display: "grid", placeItems: "center", cursor: "pointer" }}
+          >
+            <IconX />
+          </button>
+          <img
+            src={value[preview]}
+            alt={`Photo ${preview + 1} preview`}
+            onClick={(e) => e.stopPropagation()}
+            style={{ maxWidth: "90vw", maxHeight: "90vh", objectFit: "contain", boxShadow: "0 20px 60px rgba(0,0,0,.5)", cursor: "default" }}
+          />
+        </div>
+      )}
     </div>
   );
 }
