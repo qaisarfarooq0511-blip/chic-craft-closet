@@ -121,6 +121,9 @@ export function PLP({ category, query }: { category: Category | null; query?: st
 }
 
 export const Route = createFileRoute("/shop/")({
+  validateSearch: (search: Record<string, unknown>) => ({
+    q: typeof search.q === "string" ? search.q : undefined,
+  }),
   head: () => ({
     meta: [
       { title: "Shop all — Yaawun" },
@@ -130,5 +133,11 @@ export const Route = createFileRoute("/shop/")({
     ],
     links: [{ rel: "canonical", href: "/shop" }],
   }),
-  component: () => <PLP category={null} />,
+  component: ShopAllRoute,
 });
+
+function ShopAllRoute() {
+  const { q } = Route.useSearch();
+  return <PLP category={null} query={q} />;
+}
+
