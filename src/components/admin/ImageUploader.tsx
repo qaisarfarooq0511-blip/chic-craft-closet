@@ -33,6 +33,7 @@ export function ImageUploader({
 }: Props) {
   const toast = useToast();
   const [busy, setBusy] = useState<number | "all" | null>(null);
+  const [preview, setPreview] = useState<number | null>(null);
 
   const t: TargetSize = typeof target === "string" ? TARGETS[target] : target;
 
@@ -115,7 +116,7 @@ export function ImageUploader({
             const isBusy = busy === i;
             return (
               <div key={i} className="image-thumb" style={{ position: "relative", outline: isMain ? "2px solid var(--gold)" : undefined, outlineOffset: 2 }}>
-                <img src={src} alt={`Photo ${i + 1}`} />
+                <img src={src} alt={`Photo ${i + 1}`} onClick={() => setPreview(i)} style={{ cursor: "zoom-in" }} />
                 {isBusy && (
                   <div style={{ position: "absolute", inset: 0, background: "rgba(255,255,255,.7)", display: "grid", placeItems: "center" }}>
                     <IconLoader2 className="spin" />
@@ -153,6 +154,31 @@ export function ImageUploader({
               </div>
             );
           })}
+        </div>
+      )}
+
+      {preview !== null && value[preview] && (
+        <div
+          onClick={() => setPreview(null)}
+          style={{
+            position: "fixed", inset: 0, background: "rgba(0,0,0,.85)", zIndex: 9999,
+            display: "grid", placeItems: "center", padding: 24, cursor: "zoom-out",
+          }}
+        >
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); setPreview(null); }}
+            aria-label="Close preview"
+            style={{ position: "absolute", top: 16, right: 16, background: "rgba(255,255,255,.95)", border: "none", borderRadius: 999, width: 36, height: 36, display: "grid", placeItems: "center", cursor: "pointer" }}
+          >
+            <IconX />
+          </button>
+          <img
+            src={value[preview]}
+            alt={`Photo ${preview + 1} preview`}
+            onClick={(e) => e.stopPropagation()}
+            style={{ maxWidth: "90vw", maxHeight: "90vh", objectFit: "contain", boxShadow: "0 20px 60px rgba(0,0,0,.5)", cursor: "default" }}
+          />
         </div>
       )}
     </div>
