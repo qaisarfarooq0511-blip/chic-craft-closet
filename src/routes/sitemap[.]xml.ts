@@ -9,7 +9,7 @@ export const Route = createFileRoute("/sitemap.xml")({
   server: {
     handlers: {
       GET: async () => {
-        const BASE_URL = "";
+        const BASE_URL = "https://yaawun.com";
         // SSR-safe product list: localStorage unavailable, fall back to seed.
         const products = typeof window !== "undefined" ? getProducts() : seedProducts;
         const entries: Entry[] = [
