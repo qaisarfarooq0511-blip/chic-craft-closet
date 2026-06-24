@@ -1,7 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { getConfig, saveConfig, type AppConfig } from "@/lib/storage";
+import { getConfig, saveConfig, type AppConfig, type HsnCode } from "@/lib/storage";
 import { useToast } from "@/lib/toast";
+
 
 export const Route = createFileRoute("/admin/config")({
   component: ConfigAdmin,
@@ -120,9 +121,67 @@ function ConfigAdmin() {
         />
       ))}
 
+      <HsnEditor values={cfg.hsnCodes} onChange={(next) => update("hsnCodes", next)} />
+
       <div style={{ display: "flex", gap: 10, marginTop: 12 }}>
         <button type="button" className="cta-primary" onClick={save}>Save configuration</button>
       </div>
     </>
   );
 }
+
+function HsnEditor({ values, onChange }: { values: HsnCode[]; onChange: (next: HsnCode[]) => void }) {
+  const [code, setCode] = useState("");
+  const [description, setDescription] = useState("");
+  const [gstRate, setGstRate] = useState<number | "">("");
+
+  const add = () => {
+    const c = code.trim();
+    const r = typeof gstRate === "number" ? gstRate : Number(gstRate);
+    if (!c || !Number.isFinite(r) || r < 0) return;
+    if (values.some((h) => h.code.toLowerCase() === c.toLowerCase())) return;
+    onChange([...values, { code: c, description: description.trim() || undefined, gstRate: r }]);
+    setCode(""); setDescription(""); setGstRate("");
+  };
+
+  const updateRow = (i: number, patch: Partial<HsnCode>) =>
+    onChange(values.map((h, idx) => (idx === i ? { ...h, ...patch } : h)));
+  const remove = (i: number) => onChange(values.filter((_, idx) => idx !== i));
+
+  return (
+    <div className="admin-card">
+      <div className="cart-sum-title" style={{ marginBottom: 4 }}>HSN codes &amp; GST rates</div>
+      <p style={{ fontSize: 11, color: "var(--ink3)", marginBottom: 12 }}>
+        Add HSN codes with their applicable GST rate (in %). Product prices are stored as <strong>inclusive of GST</strong>, and the breakup is auto-derived from the selected HSN.
+      </p>
+
+      {values.length === 0 && (
+        <p style={{ fontSize: 12, color: "var(--ink3)", marginBottom: 10 }}>No HSN codes yet.</p>
+      )}
+
+      {values.length > 0 && (
+        <div style={{ display: "grid", gap: 8, marginBottom: 14 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "120px 1fr 110px 80px", gap: 8, fontSize: 11, color: "var(--ink3)", textTransform: "uppercase", letterSpacing: 0.4 }}>
+            <span>HSN</span><span>Description</span><span>GST %</span><span></span>
+          </div>
+          {values.map((h, i) => (
+            <div key={i} style={{ display: "grid", gridTemplateColumns: "120px 1fr 110px 80px", gap: 8, alignItems: "center" }}>
+              <input className="form-input" value={h.code} onChange={(e) => updateRow(i, { code: e.target.value })} />
+              <input className="form-input" value={h.description ?? ""} onChange={(e) => updateRow(i, { description: e.target.value })} />
+              <input className="form-input" type="number" min={0} step={0.5} value={h.gstRate} onChange={(e) => updateRow(i, { gstRate: Number(e.target.value) })} />
+              <button type="button" className="btn-text-rust" onClick={() => remove(i)} style={{ fontSize: 12 }}>Remove</button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div style={{ display: "grid", gridTemplateColumns: "120px 1fr 110px auto", gap: 8 }}>
+        <input className="form-input" placeholder="HSN code" value={code} onChange={(e) => setCode(e.target.value)} />
+        <input className="form-input" placeholder="Description (optional)" value={description} onChange={(e) => setDescription(e.target.value)} />
+        <input className="form-input" placeholder="GST %" type="number" min={0} step={0.5} value={gstRate} onChange={(e) => setGstRate(e.target.value === "" ? "" : Number(e.target.value))} />
+        <button type="button" className="btn-ink" onClick={add}>Add</button>
+      </div>
+    </div>
+  );
+}
+
