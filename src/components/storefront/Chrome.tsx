@@ -28,8 +28,12 @@ export function Topbar() {
 export function Navbar() {
   const { count } = useCart();
   const [open, setOpen] = useState(false);
+  const cats = useCategoriesLive();
 
   const close = () => setOpen(false);
+
+  const shortName = (n: string) =>
+    n === "Kashmiri Shawls" ? "Shawls" : n === "Dress Material" ? "Dress material" : n;
 
   return (
     <nav className="navbar">
@@ -37,16 +41,16 @@ export function Navbar() {
 
       <div className={`nav-links${open ? " mobile-open" : ""}`}>
         <Link to="/" className="nav-link" activeOptions={{ exact: true }} activeProps={{ className: "nav-link active" }} onClick={close}>Home</Link>
-        {CATEGORIES.map((c) => (
+        {cats.map((c) => (
           <Link
-            key={c}
+            key={c.id}
             to="/shop/$category"
-            params={{ category: categorySlug(c) }}
+            params={{ category: c.slug }}
             className="nav-link"
             activeProps={{ className: "nav-link active" }}
             onClick={close}
           >
-            {c === "Kashmiri Shawls" ? "Shawls" : c === "Dress Material" ? "Dress material" : c}
+            {shortName(c.name)}
           </Link>
         ))}
         <Link to="/about" className="nav-link" activeProps={{ className: "nav-link active" }} onClick={close}>About</Link>
@@ -68,6 +72,7 @@ export function Navbar() {
 }
 
 export function Footer() {
+  const cats = useCategoriesLive();
   return (
     <footer className="footer">
       <div className="footer-top">
@@ -78,8 +83,8 @@ export function Footer() {
         </div>
         <div>
           <div className="footer-col-title">Shop</div>
-          {CATEGORIES.map((c) => (
-            <Link key={c} to="/shop/$category" params={{ category: categorySlug(c) }} className="footer-link">{c}</Link>
+          {cats.map((c) => (
+            <Link key={c.id} to="/shop/$category" params={{ category: c.slug }} className="footer-link">{c.name}</Link>
           ))}
         </div>
         <div>
@@ -102,3 +107,5 @@ export function Footer() {
     </footer>
   );
 }
+
+void CATEGORIES; void categorySlug; // legacy exports retained for type compatibility
