@@ -53,9 +53,11 @@ export function ProductForm({ initial, onSave, submitLabel }: Props) {
       const idx = p.mainImageIndex!;
       images = [images[idx], ...images.filter((_, i) => i !== idx)];
     }
+    const sizes = sizesText.split(",").map((t) => t.trim()).filter(Boolean);
     onSave({
       ...p,
       images,
+      sizes,
       mainImageIndex: 0,
       slug: `${slugify(p.name)}-${p.id}`,
       pieces: p.items.length || 1,
