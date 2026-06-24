@@ -1,23 +1,21 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useMemo, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { IconTruck, IconShieldCheck, IconRefresh, IconBrandWhatsapp } from "@tabler/icons-react";
 import { ProductCard } from "@/components/storefront/ProductCard";
-import { CATEGORIES, categorySlug } from "@/lib/types";
-import { getProducts } from "@/lib/storage";
+import { categorySlug } from "@/lib/types";
+import { getProducts, getHero, getCategoriesStore, getSections, resolveSectionProducts } from "@/lib/storage";
+import { seedHero, seedCategories, seedSections } from "@/lib/seed";
 import { STORE } from "@/lib/jsonld";
-import heroMain from "@/assets/hero-main.jpg";
-import heroShawl from "@/assets/products/sozni-burgundy.jpg";
-import heroFabric from "@/assets/products/banarasi-maroon.jpg";
 
 function subscribeStorage(cb: () => void) {
   window.addEventListener("storage", cb);
   return () => window.removeEventListener("storage", cb);
 }
-function useProducts() {
+function useStoreTick() {
   return useSyncExternalStore(
     subscribeStorage,
-    () => JSON.stringify(getProducts()),
-    () => "[]",
+    () => String(Date.now()),
+    () => "0",
   );
 }
 
@@ -35,73 +33,85 @@ export const Route = createFileRoute("/")({
   component: Home,
 });
 
-const eyebrows: Record<string, string> = {
-  "Kashmiri Shawls": "New in",
-  "Dress Material": "Trending",
-  Kidswear: "Popular",
-  Accessories: "Handpicked",
-};
-
 function Home() {
-  useProducts(); // subscribe to localStorage changes
-  const products = useMemo(() => getProducts().filter((p) => p.listed), []);
-  const featured = useMemo(() => products.slice(0, 6), [products]);
+  useStoreTick();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
+
+  // Use seeded defaults during SSR / first paint so hydration matches.
+  const products = useMemo(() => (mounted ? getProducts() : []), [mounted]);
+  const hero = mounted ? getHero() : seedHero;
+  const cats = mounted ? getCategoriesStore() : seedCategories;
+  const sections = mounted ? getSections() : seedSections;
+
   const counts = useMemo(
-    () =>
-      Object.fromEntries(CATEGORIES.map((c) => [c, products.filter((p) => p.category === c).length])) as Record<string, number>,
-    [products],
+    () => Object.fromEntries(cats.map((c) => [c.name, products.filter((p) => p.category === c.name && p.listed).length])) as Record<string, number>,
+    [cats, products],
   );
+
+  const headlineLines = hero.headline.split("\n");
 
   return (
     <>
       <section className="hero">
         <div className="hero-left">
-          <div className="eyebrow-light hero-eyebrow">New collection · Summer 2025</div>
-          <h1 className="hero-h1">Where every<br />thread carries<br />a story</h1>
-          <p className="hero-sub">
-            Unstitched dress materials, Kashmiri shawls, kidswear &amp; handpicked accessories — curated with care for the modern Indian woman.
-          </p>
+          <div className="eyebrow-light hero-eyebrow">{hero.eyebrow}</div>
+          <h1 className="hero-h1">
+            {headlineLines.map((line, i) => (
+              <span key={i}>{line}{i < headlineLines.length - 1 && <br />}</span>
+            ))}
+          </h1>
+          <p className="hero-sub">{hero.sub}</p>
           <div className="hero-ctas">
-            <Link to="/shop" className="btn-gold">Shop now</Link>
-            <Link to="/shop/$category" params={{ category: categorySlug("Kashmiri Shawls") }} className="btn-ghost">
-              Explore shawls
-            </Link>
+            <a href={hero.ctaPrimary.href} className="btn-gold">{hero.ctaPrimary.label}</a>
+            <a href={hero.ctaSecondary.href} className="btn-ghost">{hero.ctaSecondary.label}</a>
           </div>
         </div>
         <div className="hero-right">
-          <div className="hero-img-main">
-            <img src={heroMain} alt="Featured Kashmiri shawl" loading="eager" />
-          </div>
+          {hero.images.main && (
+            <div className="hero-img-main">
+              <img src={hero.images.main} alt="Featured" loading="eager" />
+            </div>
+          )}
           <div className="hero-img-row">
-            <div className="hero-img-sm">
-              <img src={heroShawl} alt="Kashmiri shawl" loading="lazy" />
-            </div>
-            <div className="hero-img-sm">
-              <img src={heroFabric} alt="Dress material" loading="lazy" />
-            </div>
+            {hero.images.smallLeft && (
+              <div className="hero-img-sm"><img src={hero.images.smallLeft} alt="" loading="lazy" /></div>
+            )}
+            {hero.images.smallRight && (
+              <div className="hero-img-sm"><img src={hero.images.smallRight} alt="" loading="lazy" /></div>
+            )}
           </div>
         </div>
       </section>
 
       <div className="cat-strip">
-        {CATEGORIES.map((c) => (
-          <Link key={c} to="/shop/$category" params={{ category: categorySlug(c) }} className="cat-tile">
-            <div className="cat-tile-eye eyebrow">{eyebrows[c]}</div>
-            <div className="cat-tile-name">{c}</div>
-            <div className="cat-tile-count">{counts[c] ?? 0} pieces</div>
+        {cats.map((c) => (
+          <Link key={c.id} to="/shop/$category" params={{ category: c.slug }} className="cat-tile">
+            {c.label && <div className="cat-tile-eye eyebrow">{c.label}</div>}
+            <div className="cat-tile-name">{c.name}</div>
+            <div className="cat-tile-count">{counts[c.name] ?? 0} pieces</div>
           </Link>
         ))}
       </div>
 
-      <section className="section">
-        <div className="section-head">
-          <h2 className="section-title">Featured pieces</h2>
-          <Link to="/shop" className="section-link">View all →</Link>
-        </div>
-        <div className="prod-grid">
-          {featured.map((p) => <ProductCard key={p.id} p={p} />)}
-        </div>
-      </section>
+      {sections.filter((s) => s.visible).map((s) => {
+        const items = resolveSectionProducts(s, products);
+        if (!items.length && mounted) return null;
+        return (
+          <section key={s.id} className="section">
+            <div className="section-head">
+              <div>
+                <h2 className="section-title">{s.title}</h2>
+                {s.subtitle && <p style={{ fontSize: 13, color: "var(--ink2)", marginTop: 4 }}>{s.subtitle}</p>}
+              </div>
+              <Link to="/shop" className="section-link">View all →</Link>
+            </div>
+            <div className="prod-grid">
+              {items.map((p) => <ProductCard key={p.id} p={p} />)}
+            </div>
+          </section>
+        );
+      })}
 
       <div className="trust-bar">
         <div className="trust-item"><IconTruck /><div className="trust-title">Free delivery</div><div className="trust-sub">Orders above ₹999</div></div>
@@ -137,3 +147,5 @@ function Home() {
     </>
   );
 }
+
+void categorySlug; // exported helper referenced elsewhere

@@ -1,8 +1,21 @@
 import { Link } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { IconSearch, IconHeart, IconShoppingBag, IconMenu2, IconX } from "@tabler/icons-react";
 import { useCart } from "@/lib/cart-context";
 import { CATEGORIES, categorySlug } from "@/lib/types";
+import { getCategoriesStore } from "@/lib/storage";
+import { seedCategories } from "@/lib/seed";
+
+function useCategoriesLive() {
+  const [cats, setCats] = useState(seedCategories);
+  useEffect(() => {
+    setCats(getCategoriesStore());
+    const refresh = () => setCats(getCategoriesStore());
+    window.addEventListener("storage", refresh);
+    return () => window.removeEventListener("storage", refresh);
+  }, []);
+  return cats;
+}
 
 export function Topbar() {
   return (
