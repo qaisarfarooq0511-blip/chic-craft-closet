@@ -123,6 +123,10 @@ function ConfigAdmin() {
 
       <HsnEditor values={cfg.hsnCodes} onChange={(next) => update("hsnCodes", next)} />
 
+      <GlobalFaqEditor values={cfg.globalFaqs} onChange={(next) => update("globalFaqs", next)} />
+
+
+
       <div style={{ display: "flex", gap: 10, marginTop: 12 }}>
         <button type="button" className="cta-primary" onClick={save}>Save configuration</button>
       </div>
@@ -180,6 +184,34 @@ function HsnEditor({ values, onChange }: { values: HsnCode[]; onChange: (next: H
         <input className="form-input" placeholder="Description (optional)" value={description} onChange={(e) => setDescription(e.target.value)} />
         <input className="form-input" placeholder="GST %" type="number" min={0} step={0.5} value={gstRate} onChange={(e) => setGstRate(e.target.value === "" ? "" : Number(e.target.value))} />
         <button type="button" className="btn-ink" onClick={add}>Add</button>
+      </div>
+    </div>
+  );
+}
+
+function GlobalFaqEditor({ values, onChange }: { values: { q: string; a: string }[]; onChange: (v: { q: string; a: string }[]) => void }) {
+  const update = (i: number, patch: Partial<{ q: string; a: string }>) =>
+    onChange(values.map((row, idx) => (idx === i ? { ...row, ...patch } : row)));
+  const remove = (i: number) => onChange(values.filter((_, idx) => idx !== i));
+  const add = () => onChange([...values, { q: "", a: "" }]);
+  return (
+    <div className="admin-card">
+      <div className="cart-sum-title" style={{ marginBottom: 4 }}>Global FAQs</div>
+      <p style={{ fontSize: 11, color: "var(--ink3)", marginBottom: 12 }}>
+        Shown on product pages that don't have their own FAQs, and emitted as <code>FAQPage</code> structured data for AI search engines.
+      </p>
+      <div style={{ display: "grid", gap: 10 }}>
+        {values.map((row, i) => (
+          <div key={i} style={{ border: "1px solid var(--line)", borderRadius: 8, padding: 12, display: "grid", gap: 8 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span className="form-label" style={{ margin: 0 }}>Q&amp;A #{i + 1}</span>
+              <button type="button" className="btn-text-rust" onClick={() => remove(i)} style={{ fontSize: 12 }}>Remove</button>
+            </div>
+            <input className="form-input" placeholder="Question" value={row.q} onChange={(e) => update(i, { q: e.target.value })} />
+            <textarea className="form-textarea" rows={2} placeholder="Answer" value={row.a} onChange={(e) => update(i, { a: e.target.value })} />
+          </div>
+        ))}
+        <button type="button" className="btn-outline" onClick={add} style={{ alignSelf: "start" }}>+ Add FAQ</button>
       </div>
     </div>
   );
