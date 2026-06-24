@@ -5,7 +5,7 @@ import { ProductCard } from "@/components/storefront/ProductCard";
 // (legacy categorySlug helper no longer needed here — categories come from the live store)
 import { getProducts, getHero, getCategoriesStore, getSections, resolveSectionProducts } from "@/lib/storage";
 import { seedHero, seedCategories, seedSections } from "@/lib/seed";
-import { STORE, itemListLd, abs } from "@/lib/jsonld";
+import { STORE, itemListLd, breadcrumbLd, abs } from "@/lib/jsonld";
 
 let tick = 0;
 const listeners = new Set<() => void>();
@@ -35,9 +35,15 @@ export const Route = createFileRoute("/")({
         { property: "og:url", content: abs("/") },
       ],
       links: [{ rel: "canonical", href: abs("/") }],
-      scripts: featured.length
-        ? [{ type: "application/ld+json", children: JSON.stringify(itemListLd(featured)) }]
-        : [],
+      scripts: [
+        {
+          type: "application/ld+json",
+          children: JSON.stringify(breadcrumbLd([{ name: "Home", url: "/" }])),
+        },
+        ...(featured.length
+          ? [{ type: "application/ld+json", children: JSON.stringify(itemListLd(featured)) }]
+          : []),
+      ],
     };
   },
   component: Home,
