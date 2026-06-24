@@ -1,12 +1,19 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { IconScissors, IconTruck, IconRefresh, IconShieldCheck, IconAlertCircle, IconCircleCheck } from "@tabler/icons-react";
+import { IconScissors, IconTruck, IconRefresh, IconShieldCheck, IconAlertCircle, IconCircleCheck, IconChevronDown } from "@tabler/icons-react";
 import { getProductBySlug, getReviewsFor, getConfig } from "@/lib/storage";
 import { useCart } from "@/lib/cart-context";
 import { useToast } from "@/lib/toast";
 import { Stars, fmt, WishlistButton } from "@/components/storefront/ProductCard";
-import { breadcrumbLd, productLd, abs } from "@/lib/jsonld";
+import { breadcrumbLd, productLd, faqPageLd, abs } from "@/lib/jsonld";
 import { categorySlug } from "@/lib/types";
+
+const resolveFaqs = (productFaqs: { q: string; a: string }[] | undefined): { q: string; a: string }[] => {
+  const own = (productFaqs ?? []).filter((f) => f.q.trim() && f.a.trim());
+  if (own.length) return own;
+  if (typeof window === "undefined") return [];
+  return getConfig().globalFaqs.filter((f) => f.q.trim() && f.a.trim());
+};
 
 export const Route = createFileRoute("/product/$slug")({
   loader: ({ params }) => {
@@ -35,17 +42,23 @@ export const Route = createFileRoute("/product/$slug")({
       ],
       links: [{ rel: "canonical", href: abs(`/product/${params.slug}`) }],
       scripts: p
-        ? [
-            { type: "application/ld+json", children: JSON.stringify(productLd(p, reviews)) },
-            {
-              type: "application/ld+json",
-              children: JSON.stringify(breadcrumbLd([
-                { name: "Home", url: "/" },
-                { name: p.category, url: `/shop/${categorySlug(p.category)}` },
-                { name: p.name, url: `/product/${p.slug}` },
-              ])),
-            },
-          ]
+        ? (() => {
+            const faqs = resolveFaqs(p.faqs);
+            return [
+              { type: "application/ld+json", children: JSON.stringify(productLd(p, reviews)) },
+              {
+                type: "application/ld+json",
+                children: JSON.stringify(breadcrumbLd([
+                  { name: "Home", url: "/" },
+                  { name: p.category, url: `/shop/${categorySlug(p.category)}` },
+                  { name: p.name, url: `/product/${p.slug}` },
+                ])),
+              },
+              ...(faqs.length
+                ? [{ type: "application/ld+json", children: JSON.stringify(faqPageLd(faqs)) }]
+                : []),
+            ];
+          })()
         : [],
     };
   },
