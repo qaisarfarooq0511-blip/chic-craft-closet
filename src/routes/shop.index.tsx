@@ -56,11 +56,13 @@ export function PLP({ category, query }: { category: Category | null; query?: st
     else if (price === "above5000") list = list.filter((p) => p.price > 5000);
     if (rating === "4plus") list = list.filter((p) => p.rating >= 4);
     else if (rating === "3plus") list = list.filter((p) => p.rating >= 3);
+    if (fabrics.length) list = list.filter((p) => fabrics.includes((p.fabric || "").trim()));
     if (sort === "price-asc") list = [...list].sort((a, b) => a.price - b.price);
     else if (sort === "price-desc") list = [...list].sort((a, b) => b.price - a.price);
     else if (sort === "rating") list = [...list].sort((a, b) => b.rating - a.rating);
     return list;
-  }, [category, price, rating, sort, query]);
+  }, [category, price, rating, sort, query, fabrics]);
+
 
   const title = query ? `Results for "${query}"` : (category ?? "All products");
 
