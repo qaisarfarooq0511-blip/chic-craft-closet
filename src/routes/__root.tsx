@@ -17,7 +17,7 @@ import { ToastProvider } from "@/lib/toast";
 import { Topbar, Navbar, Footer } from "@/components/storefront/Chrome";
 import { ThemeProvider } from "@/lib/theme-context";
 import { UserAuthProvider } from "@/lib/user-auth";
-import { organizationLd, websiteLd, STORE } from "@/lib/jsonld";
+import { organizationLd, websiteLd, localBusinessLd, STORE } from "@/lib/jsonld";
 
 function NotFoundComponent() {
   return (
@@ -79,6 +79,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     scripts: [
       { type: "application/ld+json", children: JSON.stringify(organizationLd()) },
       { type: "application/ld+json", children: JSON.stringify(websiteLd()) },
+      { type: "application/ld+json", children: JSON.stringify(localBusinessLd()) },
     ],
   }),
   shellComponent: RootShell,

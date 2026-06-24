@@ -5,7 +5,7 @@ import { getProductBySlug, getReviewsFor, getConfig } from "@/lib/storage";
 import { useCart } from "@/lib/cart-context";
 import { useToast } from "@/lib/toast";
 import { Stars, fmt, WishlistButton } from "@/components/storefront/ProductCard";
-import { breadcrumbLd, productLd } from "@/lib/jsonld";
+import { breadcrumbLd, productLd, abs } from "@/lib/jsonld";
 import { categorySlug } from "@/lib/types";
 
 export const Route = createFileRoute("/product/$slug")({
@@ -27,10 +27,13 @@ export const Route = createFileRoute("/product/$slug")({
         { property: "og:title", content: title },
         { property: "og:description", content: desc },
         { property: "og:type", content: "product" },
-        { property: "og:url", content: `/product/${params.slug}` },
-        ...(p?.images[0] ? [{ property: "og:image", content: p.images[0] }] : []),
+        { property: "og:url", content: abs(`/product/${params.slug}`) },
+        ...(p?.images[0] ? [{ property: "og:image", content: abs(p.images[0]) }] : []),
+        { name: "twitter:title", content: title },
+        { name: "twitter:description", content: desc },
+        ...(p?.images[0] ? [{ name: "twitter:image", content: abs(p.images[0]) }] : []),
       ],
-      links: [{ rel: "canonical", href: `/product/${params.slug}` }],
+      links: [{ rel: "canonical", href: abs(`/product/${params.slug}`) }],
       scripts: p
         ? [
             { type: "application/ld+json", children: JSON.stringify(productLd(p, reviews)) },
