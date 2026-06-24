@@ -3,6 +3,7 @@ import { useState, useSyncExternalStore } from "react";
 import { getProducts, upsertProduct, deleteProduct } from "@/lib/storage";
 import { fmt } from "@/components/storefront/ProductCard";
 import { useToast } from "@/lib/toast";
+import { exportRowsToXlsx } from "@/lib/xlsx-export";
 
 export const Route = createFileRoute("/admin/products/")({
   component: ProductsList,
@@ -37,11 +38,33 @@ function ProductsList() {
     toast("Product deleted");
   };
 
+  const exportXlsx = () => {
+    if (products.length === 0) { toast("Nothing to export"); return; }
+    const rows = products.map((p) => ({
+      ID: p.id,
+      Name: p.name,
+      Slug: p.slug,
+      Category: p.category,
+      Type: p.type,
+      Subtitle: p.subtitle ?? "",
+      Price: p.price,
+      MRP: p.was ?? "",
+      Stock: p.stock,
+      Listed: p.listed ? "Yes" : "No",
+      Images: p.images.length,
+    }));
+    exportRowsToXlsx(rows, "Products", "products");
+    toast("Products exported");
+  };
+
   return (
     <>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4, gap: 12, flexWrap: "wrap" }}>
         <h1 className="admin-h1">Products</h1>
-        <Link to="/admin/products/new" className="btn-ink">+ New product</Link>
+        <div style={{ display: "flex", gap: 8 }}>
+          <button className="btn-outline" onClick={exportXlsx}>Export Excel</button>
+          <Link to="/admin/products/new" className="btn-ink">+ New product</Link>
+        </div>
       </div>
       <p className="admin-sub">{products.length} products · {products.filter((p) => p.listed).length} live</p>
 

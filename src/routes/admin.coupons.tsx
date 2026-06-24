@@ -11,6 +11,7 @@ import {
   type PaymentMode,
 } from "@/lib/storage";
 import { useToast } from "@/lib/toast";
+import { exportRowsToXlsx } from "@/lib/xlsx-export";
 
 export const Route = createFileRoute("/admin/coupons")({
   component: CouponsAdmin,
@@ -95,7 +96,36 @@ function CouponsAdmin() {
       <h1 className="admin-h1">Coupons</h1>
       <p className="admin-sub">Create and manage discount codes. Control eligibility by product, category, payment mode, and usage caps.</p>
 
-      <div className="admin-card" style={{ display: "flex", justifyContent: "flex-end" }}>
+      <div className="admin-card" style={{ display: "flex", justifyContent: "flex-end", gap: 8 }}>
+        <button
+          className="btn-outline"
+          onClick={() => {
+            if (list.length === 0) { toast("Nothing to export"); return; }
+            const rows = list.map((c) => ({
+              Code: c.code,
+              Description: c.description ?? "",
+              "Discount Type": c.discountType,
+              Amount: c.amount,
+              "Max Cap": c.maxDiscountCap ?? "",
+              "Min Order": c.minOrderValue ?? "",
+              "Global Limit": c.globalUsageLimit ?? "",
+              "Per User Limit": c.perUserLimit ?? "",
+              Used: c.usedCount,
+              "Included Categories": c.includedCategories.join(", "),
+              "Excluded Categories": c.excludedCategories.join(", "),
+              "Included Products": c.includedProductIds.length,
+              "Excluded Products": c.excludedProductIds.length,
+              "Payment Modes": c.paymentModes.join(", "),
+              "Starts At": new Date(c.startsAt).toISOString().slice(0, 10),
+              "Expires At": new Date(c.expiresAt).toISOString().slice(0, 10),
+              Active: c.active ? "Yes" : "No",
+            }));
+            exportRowsToXlsx(rows, "Coupons", "coupons");
+            toast("Coupons exported");
+          }}
+        >
+          Export Excel
+        </button>
         <button className="btn-ink" onClick={() => setEditing(blankCoupon())}>+ New coupon</button>
       </div>
 
