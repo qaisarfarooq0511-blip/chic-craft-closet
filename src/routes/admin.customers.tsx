@@ -63,6 +63,29 @@ function CustomersAdmin() {
           onChange={(e) => setSearch(e.target.value)}
           style={{ flex: 1, minWidth: 220 }}
         />
+        <button
+          className="btn-outline"
+          onClick={() => {
+            if (users.length === 0) { toast("Nothing to export"); return; }
+            const rows = users.map((u) => {
+              const o = ordersFor(u);
+              const totalSpend = o.reduce((s, i) => s + i.total, 0);
+              return {
+                Name: u.name,
+                Mobile: u.mobile,
+                Email: u.email ?? "",
+                "Newsletter Opt-in": isOptedIn(u) ? "Yes" : "No",
+                Joined: new Date(u.createdAt).toISOString().slice(0, 10),
+                Orders: o.length,
+                "Total Spend": totalSpend,
+              };
+            });
+            exportRowsToXlsx(rows, "Customers", "customers");
+            toast("Customers exported");
+          }}
+        >
+          Export Excel
+        </button>
         <button className="btn-ink" onClick={() => setAdding(true)}>+ Add customer</button>
       </div>
 
