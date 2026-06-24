@@ -18,10 +18,12 @@ const FLAGS: { value: ProductFlag; label: string }[] = [
 
 export function ProductForm({ initial, onSave, submitLabel }: Props) {
   const [p, setP] = useState<Product>({ ...initial, mainImageIndex: initial.mainImageIndex ?? 0, tags: initial.tags ?? [], flags: initial.flags ?? [], sizes: initial.sizes ?? [] });
+  const [sizesText, setSizesText] = useState((initial.sizes ?? []).join(", "));
   const toast = useToast();
   const [cats, setCats] = useState(getCategoriesStore());
 
   useEffect(() => { setP({ ...initial, mainImageIndex: initial.mainImageIndex ?? 0, tags: initial.tags ?? [], flags: initial.flags ?? [], sizes: initial.sizes ?? [] }); }, [initial]);
+  useEffect(() => { setSizesText((initial.sizes ?? []).join(", ")); }, [initial]);
   useEffect(() => {
     const refresh = () => setCats(getCategoriesStore());
     window.addEventListener("storage", refresh);
