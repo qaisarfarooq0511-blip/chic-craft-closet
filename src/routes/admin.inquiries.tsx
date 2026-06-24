@@ -211,7 +211,7 @@ function ViewModal({ inquiry, onClose }: { inquiry: Inquiry; onClose: () => void
   return (
     <Modal title={`Order ${inquiry.id}`} onClose={onClose} maxWidth={620}>
       <div style={{ fontSize: 12, color: "var(--ink3)", marginBottom: 14 }}>
-        Placed {new Date(inquiry.createdAt).toLocaleString()} · <StatusPill status={inquiry.status} />
+        Placed {new Date(inquiry.createdAt).toLocaleString()} · <StatusPill status={inquiry.status} /> · Source: <span style={{ textTransform: "capitalize" }}>{inquiry.source ?? "—"}</span>
       </div>
 
       <SectionTitle>Customer</SectionTitle>
