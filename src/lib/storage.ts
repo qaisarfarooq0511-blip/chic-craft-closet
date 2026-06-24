@@ -154,6 +154,24 @@ export const resolveSectionProducts = (s: SectionRow, products: Product[]): Prod
   return matches.slice(0, limit);
 };
 
+// Static pages
+export const getPages = (): StaticPage[] => {
+  ensureSeeded();
+  const list = read<StaticPage[]>(KEY.pages, seedPages);
+  return [...list].sort((a, b) => a.order - b.order);
+};
+export const getPage = (slug: string): StaticPage | undefined =>
+  getPages().find((p) => p.slug === slug);
+export const savePages = (pages: StaticPage[]) => write(KEY.pages, pages);
+export const upsertPage = (p: StaticPage) => {
+  const all = getPages();
+  const i = all.findIndex((x) => x.slug === p.slug);
+  if (i >= 0) all[i] = p; else all.push(p);
+  savePages(all);
+};
+export const deletePage = (slug: string) =>
+  savePages(getPages().filter((p) => p.slug !== slug));
+
 // Auth (placeholder, local only)
 export const ADMIN_EMAIL = "amiga.qaisar@gmail.com";
 export const ADMIN_PASSWORD = "yaawun-admin";
