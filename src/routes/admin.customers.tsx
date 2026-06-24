@@ -89,9 +89,14 @@ function CustomersAdmin() {
                 </div>
               </div>
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                <button className="btn-outline" onClick={() => setViewingOrders(u)} disabled={orders.length === 0}>
+                <button
+                  className="btn-outline"
+                  onClick={() => navigate({ to: "/admin/inquiries", search: { phone: u.mobile, name: u.name } })}
+                  disabled={orders.length === 0}
+                >
                   View orders
                 </button>
+
                 <button
                   className="btn-outline"
                   onClick={() => {
