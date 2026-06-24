@@ -145,6 +145,7 @@ function AuthPage() {
                 placeholder="Your name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
+                onBlur={() => setName((n) => (n.trim() ? capitalizeName(n.trim()) : n))}
                 style={inputStyle}
               />
             </label>
