@@ -163,13 +163,14 @@ function AuthPage() {
 
 const inputStyle: React.CSSProperties = {
   width: "100%",
-  padding: "10px 12px",
-  border: "1px solid var(--line)",
+  padding: "12px 14px",
+  border: "1.5px solid #d4cfc7",
   borderRadius: 8,
-  fontSize: 14,
+  fontSize: 15,
   background: "#fff",
   color: "var(--ink)",
   outline: "none",
+  boxShadow: "inset 0 1px 2px rgba(0,0,0,0.03)",
 };
 
 const errorStyle: React.CSSProperties = {
