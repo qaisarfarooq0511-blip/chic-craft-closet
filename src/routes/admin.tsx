@@ -88,7 +88,9 @@ function AdminShell() {
     { to: "/admin/reviews", label: "Reviews", icon: <IconStar /> },
     { to: "/admin/inquiries", label: "Orders", icon: <IconReceipt /> },
     { to: "/admin/customers", label: "Customers", icon: <IconUsers /> },
+    { to: "/admin/coupons", label: "Coupons", icon: <IconTicket /> },
     { to: "/admin/config", label: "Configuration", icon: <IconSettings /> },
+
     { to: "/admin/theme", label: "Theme", icon: <IconPalette /> },
   ];
 
