@@ -80,6 +80,7 @@ function PDP() {
   reviews.forEach((r) => { distrib[r.rating - 1]++; });
 
   const hasSizes = (p.sizes?.length ?? 0) > 0;
+  const maxQty = Math.min(getConfig().maxQtyPerItem, p.stock || Number.MAX_SAFE_INTEGER);
   const addAndToast = () => {
     if (hasSizes && !size) { toast("Please select a size"); return; }
     add(p.id, qty);
