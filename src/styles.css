@@ -733,3 +733,21 @@
 .static-page-body table { width: 100%; border-collapse: collapse; margin: 0 0 14px; font-size: 13px; }
 .static-page-body th, .static-page-body td { border: 1px solid var(--b); padding: 8px 12px; text-align: left; }
 .static-page-body th { background: var(--cream2); font-weight: 500; color: var(--ink); }
+
+/* ── Global mobile overflow guard ─────────────────────────── */
+html, body { overflow-x: hidden; max-width: 100%; }
+#root, main { max-width: 100%; }
+img, video, svg { max-width: 100%; }
+
+/* ── Account dashboard layout ─────────────────────────────── */
+.account-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 220px) minmax(0, 1fr);
+  gap: 28px;
+  align-items: start;
+}
+.account-aside { position: sticky; top: 80px; min-width: 0; }
+@media (max-width: 720px) {
+  .account-grid { grid-template-columns: minmax(0, 1fr); gap: 20px; }
+  .account-aside { position: static; }
+}
