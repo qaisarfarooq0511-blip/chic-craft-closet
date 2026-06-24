@@ -8,7 +8,7 @@ export const Route = createFileRoute("/admin/config")({
   component: ConfigAdmin,
 });
 
-type ListKey = "badges" | "fabrics" | "embroideries" | "careOptions" | "tags" | "sizes";
+type ListKey = "badges" | "fabrics" | "embroideries" | "careOptions" | "tags" | "sizes" | "shippingPartners" | "cancellationReasons";
 
 const LIST_FIELDS: { key: ListKey; label: string; hint: string }[] = [
   { key: "badges", label: "Corner Badges", hint: "Shown on product cards (e.g. New in, Bestseller)." },
@@ -17,6 +17,8 @@ const LIST_FIELDS: { key: ListKey; label: string; hint: string }[] = [
   { key: "careOptions", label: "Care Instructions", hint: "Care label options (Dry clean only…)." },
   { key: "tags", label: "Tags", hint: "Used by rule-based homepage sections." },
   { key: "sizes", label: "Sizes", hint: "All available size labels (XS–XL, age ranges…)." },
+  { key: "shippingPartners", label: "Shipping Partners", hint: "Couriers selectable when marking an order fulfilled (Delhivery, Blue Dart…)." },
+  { key: "cancellationReasons", label: "Cancellation Reasons", hint: "Reasons selectable when an admin cancels an order." },
 ];
 
 function ListEditor({

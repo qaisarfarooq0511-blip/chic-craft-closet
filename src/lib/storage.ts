@@ -58,6 +58,8 @@ export interface AppConfig {
   careOptions: string[];
   tags: string[];
   sizes: string[];
+  shippingPartners: string[];
+  cancellationReasons: string[];
   maxQtyPerItem: number;
   hsnCodes: HsnCode[];
   globalFaqs: FaqEntry[];
@@ -70,6 +72,8 @@ export const DEFAULT_CONFIG: AppConfig = {
   careOptions: ["Dry clean only", "Hand wash cold", "Machine wash 30°C", "Avoid moisture", "Iron on low"],
   tags: ["pashmina", "ivory", "chikankari", "cotton", "earrings", "kundan", "festive", "bridal", "casual"],
   sizes: ["XS", "S", "M", "L", "XL", "XXL", "Free Size", "0-3 Months", "3-6 Months", "6-12 Months", "12-18 Months", "2-4 yrs", "4-8 yrs"],
+  shippingPartners: ["Delhivery", "Blue Dart", "DTDC", "India Post", "Shiprocket", "Ekart", "XpressBees"],
+  cancellationReasons: ["Customer requested cancellation", "Out of stock", "Address unreachable", "Payment failed", "Duplicate order", "Suspected fraud", "Other"],
   maxQtyPerItem: 10,
   hsnCodes: [
     { code: "6214", description: "Shawls, scarves, mufflers (textile)", gstRate: 5 },
@@ -282,6 +286,8 @@ export const getConfig = (): AppConfig => {
     careOptions: stored.careOptions ?? DEFAULT_CONFIG.careOptions,
     tags: stored.tags ?? DEFAULT_CONFIG.tags,
     sizes: stored.sizes ?? DEFAULT_CONFIG.sizes,
+    shippingPartners: stored.shippingPartners ?? DEFAULT_CONFIG.shippingPartners,
+    cancellationReasons: stored.cancellationReasons ?? DEFAULT_CONFIG.cancellationReasons,
     maxQtyPerItem: stored.maxQtyPerItem ?? DEFAULT_CONFIG.maxQtyPerItem,
     hsnCodes: stored.hsnCodes ?? DEFAULT_CONFIG.hsnCodes,
     globalFaqs: stored.globalFaqs ?? DEFAULT_CONFIG.globalFaqs,
