@@ -7,16 +7,18 @@ import { getProducts, getHero, getCategoriesStore, getSections, resolveSectionPr
 import { seedHero, seedCategories, seedSections } from "@/lib/seed";
 import { STORE } from "@/lib/jsonld";
 
+let tick = 0;
+const listeners = new Set<() => void>();
+function bump() { tick++; listeners.forEach((l) => l()); }
+if (typeof window !== "undefined") {
+  window.addEventListener("storage", bump);
+}
 function subscribeStorage(cb: () => void) {
-  window.addEventListener("storage", cb);
-  return () => window.removeEventListener("storage", cb);
+  listeners.add(cb);
+  return () => { listeners.delete(cb); };
 }
 function useStoreTick() {
-  return useSyncExternalStore(
-    subscribeStorage,
-    () => String(Date.now()),
-    () => "0",
-  );
+  return useSyncExternalStore(subscribeStorage, () => tick, () => 0);
 }
 
 export const Route = createFileRoute("/")({
