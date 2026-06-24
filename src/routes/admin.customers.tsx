@@ -14,6 +14,7 @@ import {
 import { getInquiries } from "@/lib/storage";
 import { fmt } from "@/components/storefront/ProductCard";
 import { useToast } from "@/lib/toast";
+import { exportRowsToXlsx } from "@/lib/xlsx-export";
 
 export const Route = createFileRoute("/admin/customers")({
   component: CustomersAdmin,
