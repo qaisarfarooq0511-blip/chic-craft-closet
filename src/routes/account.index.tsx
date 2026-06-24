@@ -21,7 +21,7 @@ function AccountOverview() {
     return () => clearTimeout(t);
   }, [savedMsg]);
 
-  if (!user) return null;
+  if (!user) return <div />;
 
   const startEditName = () => { setNameDraft(user.name); setError(null); setEditing("name"); };
   const startEditEmail = () => { setEmailDraft(user.email ?? ""); setError(null); setEditing("email"); };

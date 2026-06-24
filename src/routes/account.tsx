@@ -22,21 +22,21 @@ const NAV: { to: string; label: string; icon: typeof IconUser; exact?: boolean }
 
 function AccountLayout() {
   const navigate = useNavigate();
-  const { user, signOut } = useUserAuth();
+  const { user, hydrated, signOut } = useUserAuth();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
 
   useEffect(() => {
-    if (!user) navigate({ to: "/auth", search: { redirect: pathname }, replace: true });
-  }, [user, navigate, pathname]);
+    if (hydrated && !user) navigate({ to: "/auth", search: { redirect: pathname }, replace: true });
+  }, [hydrated, user, navigate, pathname]);
 
-  if (!user) return null;
+
 
   return (
     <main className="container" style={{ maxWidth: 980, padding: "40px 20px 80px" }}>
       <div style={{ marginBottom: 8 }}>
         <Link to="/" className="muted-link" style={{ fontSize: 12 }}>← Back to store</Link>
       </div>
-      <h1 className="serif" style={{ fontSize: 32, fontWeight: 400, marginBottom: 4 }}>Hi, {user.name.split(" ")[0]}</h1>
+      <h1 className="serif" style={{ fontSize: 32, fontWeight: 400, marginBottom: 4 }}>Hi, {user ? user.name.split(" ")[0] : ""}</h1>
       <p style={{ color: "var(--ink3)", marginBottom: 28, fontSize: 14 }}>
         Manage your profile, orders, wishlist and saved addresses.
       </p>
