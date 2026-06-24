@@ -4,6 +4,7 @@ export type AppUser = {
   id: string;
   mobile: string; // E.164-ish, e.g. +919876543210
   name: string;
+  email?: string;
   createdAt: number;
 };
 
