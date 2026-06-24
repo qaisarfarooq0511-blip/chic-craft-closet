@@ -1,9 +1,10 @@
 import { Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
-import { IconSearch, IconHeart, IconShoppingBag, IconMenu2, IconX } from "@tabler/icons-react";
+import { useEffect, useRef, useState } from "react";
+import { IconSearch, IconHeart, IconShoppingBag, IconMenu2, IconX, IconUser } from "@tabler/icons-react";
 import { useCart } from "@/lib/cart-context";
 import { getCategoriesStore, getPages } from "@/lib/storage";
 import { seedCategories, seedPages } from "@/lib/seed";
+import { useUserAuth } from "@/lib/user-auth";
 
 function useCategoriesLive() {
   const [cats, setCats] = useState(seedCategories);
