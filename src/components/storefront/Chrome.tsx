@@ -1,10 +1,12 @@
-import { Link } from "@tanstack/react-router";
-import { useEffect, useRef, useState } from "react";
+import { Link, useNavigate } from "@tanstack/react-router";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { IconSearch, IconHeart, IconShoppingBag, IconMenu2, IconX, IconUser } from "@tabler/icons-react";
 import { useCart } from "@/lib/cart-context";
-import { getCategoriesStore, getPages } from "@/lib/storage";
+import { getCategoriesStore, getPages, getProducts } from "@/lib/storage";
 import { seedCategories, seedPages } from "@/lib/seed";
 import { useUserAuth } from "@/lib/user-auth";
+import type { Product } from "@/lib/types";
+
 
 function useCategoriesLive() {
   const [cats, setCats] = useState(seedCategories);
