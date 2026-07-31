@@ -307,6 +307,10 @@ export async function pullAll() {
     const counts = await Promise.all(Object.keys(SPECS).map(pullKey));
     const total = counts.reduce((a, b) => a + b, 0);
     if (total === 0) {
+      // First run: make sure the seed content exists locally, then upload
+      // whatever this browser holds so nothing is lost.
+      const { ensureSeeded } = await import("./storage");
+      ensureSeeded();
       await pushAll();
     }
   } catch (e) {
