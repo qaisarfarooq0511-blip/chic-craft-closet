@@ -96,26 +96,27 @@ export const DEFAULT_CONFIG: AppConfig = {
 
 const isBrowser = () => typeof window !== "undefined";
 
-function read<T>(key: string, fallback: T): T {
-  if (!isBrowser()) return fallback;
-  try {
-    const raw = localStorage.getItem(key);
-    if (!raw) return fallback;
-    return JSON.parse(raw) as T;
-  } catch {
-    return fallback;
-  }
-}
+// Reads come from the cloud-backed cache; writes update the cache and are
+// pushed to the database (see store-sync.ts).
+const read = readLocal;
+const write = writeLocal;
 
-function write<T>(key: string, value: T) {
+export function ensureSeeded() {
   if (!isBrowser()) return;
-  try {
-    localStorage.setItem(key, JSON.stringify(value));
-    // Manually fire storage event for same-tab listeners.
-    window.dispatchEvent(new StorageEvent("storage", { key }));
-  } catch (e) {
-    console.warn("storage write failed", key, e);
+  if (localStorage.getItem(KEY.seeded)) {
+    // Make sure pages exist even if user had a previous seed.
+    if (readLocal<StaticPage[] | null>(KEY.pages, null) == null) {
+      write(KEY.pages, seedPages);
+    }
+    return;
   }
+  write(KEY.products, seedProducts);
+  write(KEY.reviews, seedReviews);
+  write(KEY.hero, seedHero);
+  write(KEY.categories, seedCategories);
+  write(KEY.sections, seedSections);
+  write(KEY.pages, seedPages);
+  localStorage.setItem(KEY.seeded, "1");
 }
 
 export function ensureSeeded() {
