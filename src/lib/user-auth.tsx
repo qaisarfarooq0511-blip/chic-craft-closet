@@ -24,10 +24,12 @@ export type Address = {
   createdAt: number;
 };
 
-const USERS_KEY = "yaawun:users:v1";
-const SESSION_KEY = "yaawun:user-session:v1";
-const ADDRESSES_KEY = "yaawun:addresses:v1";
-const WISHLIST_KEY = "yaawun:wishlist:v1";
+import { K, readLocal, writeLocal, removeLocal } from "./store-sync";
+
+const USERS_KEY = K.users;
+const SESSION_KEY = K.session;
+const ADDRESSES_KEY = K.addresses;
+const WISHLIST_KEY = K.wishlist;
 
 const isBrowser = () => typeof window !== "undefined";
 
@@ -87,23 +89,17 @@ export function normalizeMobile(input: string): string {
 // ---------------- users ----------------
 
 function readUsers(): AppUser[] {
-  if (!isBrowser()) return [];
-  try { return JSON.parse(localStorage.getItem(USERS_KEY) || "[]"); } catch { return []; }
+  return readLocal<AppUser[]>(USERS_KEY, []);
 }
 function writeUsers(users: AppUser[]) {
-  if (!isBrowser()) return;
-  localStorage.setItem(USERS_KEY, JSON.stringify(users));
-  window.dispatchEvent(new StorageEvent("storage", { key: USERS_KEY }));
+  writeLocal(USERS_KEY, users);
 }
 function readSession(): AppUser | null {
-  if (!isBrowser()) return null;
-  try { return JSON.parse(localStorage.getItem(SESSION_KEY) || "null"); } catch { return null; }
+  return readLocal<AppUser | null>(SESSION_KEY, null);
 }
 function writeSession(u: AppUser | null) {
-  if (!isBrowser()) return;
-  if (u) localStorage.setItem(SESSION_KEY, JSON.stringify(u));
-  else localStorage.removeItem(SESSION_KEY);
-  window.dispatchEvent(new StorageEvent("storage", { key: SESSION_KEY }));
+  if (u) writeLocal(SESSION_KEY, u);
+  else removeLocal(SESSION_KEY);
 }
 
 export function findUserByMobile(mobile: string): AppUser | undefined {
@@ -165,13 +161,10 @@ export function deleteUserRecord(id: string) {
 // ---------------- addresses ----------------
 
 function readAllAddresses(): Address[] {
-  if (!isBrowser()) return [];
-  try { return JSON.parse(localStorage.getItem(ADDRESSES_KEY) || "[]"); } catch { return []; }
+  return readLocal<Address[]>(ADDRESSES_KEY, []);
 }
 function writeAllAddresses(list: Address[]) {
-  if (!isBrowser()) return;
-  localStorage.setItem(ADDRESSES_KEY, JSON.stringify(list));
-  window.dispatchEvent(new StorageEvent("storage", { key: ADDRESSES_KEY }));
+  writeLocal(ADDRESSES_KEY, list);
 }
 export function getAddresses(userId: string): Address[] {
   return readAllAddresses().filter((a) => a.userId === userId);
@@ -201,13 +194,10 @@ export function setDefaultAddress(userId: string, id: string) {
 type WishlistMap = Record<string, number[]>; // userId -> productIds
 
 function readWishlistMap(): WishlistMap {
-  if (!isBrowser()) return {};
-  try { return JSON.parse(localStorage.getItem(WISHLIST_KEY) || "{}"); } catch { return {}; }
+  return readLocal<WishlistMap>(WISHLIST_KEY, {});
 }
 function writeWishlistMap(m: WishlistMap) {
-  if (!isBrowser()) return;
-  localStorage.setItem(WISHLIST_KEY, JSON.stringify(m));
-  window.dispatchEvent(new StorageEvent("storage", { key: WISHLIST_KEY }));
+  writeLocal(WISHLIST_KEY, m);
 }
 export function getWishlist(userId: string): number[] {
   return readWishlistMap()[userId] ?? [];
