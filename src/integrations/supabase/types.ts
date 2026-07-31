@@ -14,7 +14,294 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      addresses: {
+        Row: {
+          data: Json
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          data?: Json
+          id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          data?: Json
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      categories: {
+        Row: {
+          data: Json
+          id: string
+          name: string
+          slug: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          data?: Json
+          id: string
+          name: string
+          slug: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          data?: Json
+          id?: string
+          name?: string
+          slug?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      coupons: {
+        Row: {
+          active: boolean
+          code: string
+          data: Json
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          code: string
+          data?: Json
+          id: string
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          code?: string
+          data?: Json
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      customers: {
+        Row: {
+          created_at: number
+          data: Json
+          email: string | null
+          id: string
+          mobile: string
+          name: string
+          newsletter_opt_in: boolean
+          updated_at: string
+        }
+        Insert: {
+          created_at?: number
+          data?: Json
+          email?: string | null
+          id: string
+          mobile: string
+          name?: string
+          newsletter_opt_in?: boolean
+          updated_at?: string
+        }
+        Update: {
+          created_at?: number
+          data?: Json
+          email?: string | null
+          id?: string
+          mobile?: string
+          name?: string
+          newsletter_opt_in?: boolean
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      orders: {
+        Row: {
+          created_at: number
+          data: Json
+          id: string
+          phone: string | null
+          status: string
+          total: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: number
+          data?: Json
+          id: string
+          phone?: string | null
+          status?: string
+          total?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: number
+          data?: Json
+          id?: string
+          phone?: string | null
+          status?: string
+          total?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      pages: {
+        Row: {
+          data: Json
+          slug: string
+          sort_order: number
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          data?: Json
+          slug: string
+          sort_order?: number
+          title?: string
+          updated_at?: string
+        }
+        Update: {
+          data?: Json
+          slug?: string
+          sort_order?: number
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      products: {
+        Row: {
+          category: string | null
+          created_at: number
+          data: Json
+          id: number
+          listed: boolean
+          name: string
+          price: number
+          slug: string
+          stock: number
+          updated_at: string
+        }
+        Insert: {
+          category?: string | null
+          created_at?: number
+          data?: Json
+          id: number
+          listed?: boolean
+          name: string
+          price?: number
+          slug: string
+          stock?: number
+          updated_at?: string
+        }
+        Update: {
+          category?: string | null
+          created_at?: number
+          data?: Json
+          id?: number
+          listed?: boolean
+          name?: string
+          price?: number
+          slug?: string
+          stock?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      reviews: {
+        Row: {
+          data: Json
+          id: string
+          product_id: number
+          rating: number
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          data?: Json
+          id: string
+          product_id: number
+          rating?: number
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          data?: Json
+          id?: string
+          product_id?: number
+          rating?: number
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      sections: {
+        Row: {
+          data: Json
+          id: string
+          sort_order: number
+          title: string
+          updated_at: string
+          visible: boolean
+        }
+        Insert: {
+          data?: Json
+          id: string
+          sort_order?: number
+          title?: string
+          updated_at?: string
+          visible?: boolean
+        }
+        Update: {
+          data?: Json
+          id?: string
+          sort_order?: number
+          title?: string
+          updated_at?: string
+          visible?: boolean
+        }
+        Relationships: []
+      }
+      settings: {
+        Row: {
+          data: Json
+          key: string
+          updated_at: string
+        }
+        Insert: {
+          data?: Json
+          key: string
+          updated_at?: string
+        }
+        Update: {
+          data?: Json
+          key?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      wishlist: {
+        Row: {
+          created_at: string
+          product_id: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          product_id: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          product_id?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
