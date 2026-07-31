@@ -1,18 +1,19 @@
 import type { Product, Review, Inquiry, CartLine, HeroContent, CategoryRow, SectionRow, StaticPage } from "./types";
 import { seedProducts, seedReviews, seedCategories, seedHero, seedSections, seedPages } from "./seed";
+import { K, readLocal, writeLocal, removeLocal } from "./store-sync";
 
 const KEY = {
-  products: "yaawun:products:v1",
-  reviews: "yaawun:reviews:v1",
-  cart: "yaawun:cart:v1",
-  inquiries: "yaawun:inquiries:v1",
-  auth: "yaawun:auth:v1",
-  hero: "yaawun:hero:v1",
-  categories: "yaawun:categories:v1",
-  sections: "yaawun:sections:v1",
-  pages: "yaawun:pages:v1",
-  config: "yaawun:config:v1",
-  coupons: "yaawun:coupons:v1",
+  products: K.products,
+  reviews: K.reviews,
+  cart: K.cart,
+  inquiries: K.inquiries,
+  auth: K.auth,
+  hero: K.hero,
+  categories: K.categories,
+  sections: K.sections,
+  pages: K.pages,
+  config: K.config,
+  coupons: K.coupons,
   seeded: "yaawun:seeded:v6",
   pagesSeed: "yaawun:pages-seed:v2",
 } as const;
