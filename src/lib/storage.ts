@@ -1,18 +1,19 @@
 import type { Product, Review, Inquiry, CartLine, HeroContent, CategoryRow, SectionRow, StaticPage } from "./types";
 import { seedProducts, seedReviews, seedCategories, seedHero, seedSections, seedPages } from "./seed";
+import { K, readLocal, writeLocal, removeLocal } from "./store-sync";
 
 const KEY = {
-  products: "yaawun:products:v1",
-  reviews: "yaawun:reviews:v1",
-  cart: "yaawun:cart:v1",
-  inquiries: "yaawun:inquiries:v1",
-  auth: "yaawun:auth:v1",
-  hero: "yaawun:hero:v1",
-  categories: "yaawun:categories:v1",
-  sections: "yaawun:sections:v1",
-  pages: "yaawun:pages:v1",
-  config: "yaawun:config:v1",
-  coupons: "yaawun:coupons:v1",
+  products: K.products,
+  reviews: K.reviews,
+  cart: K.cart,
+  inquiries: K.inquiries,
+  auth: K.auth,
+  hero: K.hero,
+  categories: K.categories,
+  sections: K.sections,
+  pages: K.pages,
+  config: K.config,
+  coupons: K.coupons,
   seeded: "yaawun:seeded:v6",
   pagesSeed: "yaawun:pages-seed:v2",
 } as const;
@@ -95,45 +96,29 @@ export const DEFAULT_CONFIG: AppConfig = {
 
 const isBrowser = () => typeof window !== "undefined";
 
-function read<T>(key: string, fallback: T): T {
-  if (!isBrowser()) return fallback;
-  try {
-    const raw = localStorage.getItem(key);
-    if (!raw) return fallback;
-    return JSON.parse(raw) as T;
-  } catch {
-    return fallback;
-  }
-}
-
-function write<T>(key: string, value: T) {
-  if (!isBrowser()) return;
-  try {
-    localStorage.setItem(key, JSON.stringify(value));
-    // Manually fire storage event for same-tab listeners.
-    window.dispatchEvent(new StorageEvent("storage", { key }));
-  } catch (e) {
-    console.warn("storage write failed", key, e);
-  }
-}
+// Reads come from the cloud-backed cache; writes update the cache and are
+// pushed to the database (see store-sync.ts).
+const read = readLocal;
+const write = writeLocal;
 
 export function ensureSeeded() {
   if (!isBrowser()) return;
   if (localStorage.getItem(KEY.seeded)) {
     // Make sure pages exist even if user had a previous seed.
-    if (!localStorage.getItem(KEY.pages)) {
-      localStorage.setItem(KEY.pages, JSON.stringify(seedPages));
+    if (readLocal<StaticPage[] | null>(KEY.pages, null) == null) {
+      write(KEY.pages, seedPages);
     }
     return;
   }
-  localStorage.setItem(KEY.products, JSON.stringify(seedProducts));
-  localStorage.setItem(KEY.reviews, JSON.stringify(seedReviews));
-  localStorage.setItem(KEY.hero, JSON.stringify(seedHero));
-  localStorage.setItem(KEY.categories, JSON.stringify(seedCategories));
-  localStorage.setItem(KEY.sections, JSON.stringify(seedSections));
-  localStorage.setItem(KEY.pages, JSON.stringify(seedPages));
+  write(KEY.products, seedProducts);
+  write(KEY.reviews, seedReviews);
+  write(KEY.hero, seedHero);
+  write(KEY.categories, seedCategories);
+  write(KEY.sections, seedSections);
+  write(KEY.pages, seedPages);
   localStorage.setItem(KEY.seeded, "1");
 }
+
 
 // Products
 export const getProducts = (): Product[] => {
