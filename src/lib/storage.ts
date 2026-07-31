@@ -119,23 +119,6 @@ export function ensureSeeded() {
   localStorage.setItem(KEY.seeded, "1");
 }
 
-export function ensureSeeded() {
-  if (!isBrowser()) return;
-  if (localStorage.getItem(KEY.seeded)) {
-    // Make sure pages exist even if user had a previous seed.
-    if (!localStorage.getItem(KEY.pages)) {
-      localStorage.setItem(KEY.pages, JSON.stringify(seedPages));
-    }
-    return;
-  }
-  localStorage.setItem(KEY.products, JSON.stringify(seedProducts));
-  localStorage.setItem(KEY.reviews, JSON.stringify(seedReviews));
-  localStorage.setItem(KEY.hero, JSON.stringify(seedHero));
-  localStorage.setItem(KEY.categories, JSON.stringify(seedCategories));
-  localStorage.setItem(KEY.sections, JSON.stringify(seedSections));
-  localStorage.setItem(KEY.pages, JSON.stringify(seedPages));
-  localStorage.setItem(KEY.seeded, "1");
-}
 
 // Products
 export const getProducts = (): Product[] => {
