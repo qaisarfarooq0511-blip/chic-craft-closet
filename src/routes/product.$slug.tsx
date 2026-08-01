@@ -14,21 +14,25 @@ import { useToast } from "@/lib/toast";
 import { Stars } from "@/components/storefront/ProductCard";
 import { formatPrice, discountPercent } from "@/types/database";
 import { productImageUrl } from "@/lib/product-images";
+import { productLd, breadcrumbLd } from "@/lib/jsonld";
 
 const MAX_QTY_PER_ITEM = 10;
 
 export const Route = createFileRoute("/product/$slug")({
   loader: async ({ params, context: { queryClient } }) => {
-    await queryClient.ensureQueryData({
+    const product = await queryClient.ensureQueryData({
       queryKey: ["product", params.slug],
       queryFn: () => fetchProduct(params.slug),
     });
+    return { product };
   },
   head: () => ({
     meta: [
       { title: "Product — Yaawun" },
       { name: "description", content: "Yaawun product detail." },
     ],
+    // Product + breadcrumb JSON-LD rendered directly in PDP() below — see
+    // __root.tsx's RootComponent comment for why head().scripts isn't used.
   }),
   component: PDP,
 });
@@ -118,6 +122,26 @@ function PDP() {
 
   return (
     <>
+      <script
+        id="jsonld-product"
+        type="application/ld+json"
+        suppressHydrationWarning
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(productLd(p)) }}
+      />
+      <script
+        id="jsonld-breadcrumb-pdp"
+        type="application/ld+json"
+        suppressHydrationWarning
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(
+            breadcrumbLd([
+              { name: "Home", url: "/" },
+              ...(p.category ? [{ name: p.category.name, url: `/shop/${p.category.slug}` }] : []),
+              { name: p.name, url: `/product/${slug}` },
+            ]),
+          ),
+        }}
+      />
       <div className="plp-breadcrumb">
         <Link to="/">Home</Link> &nbsp;›&nbsp;
         {p.category && (

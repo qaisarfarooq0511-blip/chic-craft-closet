@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { ProductCard } from "@/components/storefront/ProductCard";
 import { useCategories, fetchCategories } from "@/hooks/useCategories";
 import { useProducts, fetchProducts } from "@/hooks/useProducts";
+import { breadcrumbLd } from "@/lib/jsonld";
 
 type PriceFilter = "all" | "under1000" | "1000-2500" | "2500-5000" | "above5000";
 type RatingFilter = "any" | "4plus" | "3plus";
@@ -281,11 +282,30 @@ export const Route = createFileRoute("/shop/")({
           "Shop the full Yaawun collection — Kashmiri shawls, unstitched dress material, kidswear and accessories.",
       },
     ],
+    // Breadcrumb JSON-LD rendered directly in ShopAllRoute() below — see
+    // __root.tsx's RootComponent comment for why head().scripts isn't used.
   }),
   component: ShopAllRoute,
 });
 
 function ShopAllRoute() {
   const { q } = Route.useSearch();
-  return <PLP categorySlug={null} query={q} />;
+  return (
+    <>
+      <script
+        id="jsonld-breadcrumb-shop"
+        type="application/ld+json"
+        suppressHydrationWarning
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(
+            breadcrumbLd([
+              { name: "Home", url: "/" },
+              { name: "Shop", url: "/shop" },
+            ]),
+          ),
+        }}
+      />
+      <PLP categorySlug={null} query={q} />
+    </>
+  );
 }

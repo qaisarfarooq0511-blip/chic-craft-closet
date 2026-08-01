@@ -18,7 +18,7 @@ import { Topbar, Navbar, Footer } from "@/components/storefront/Chrome";
 import { AddPhonePrompt } from "@/components/AddPhonePrompt";
 import { ThemeProvider } from "@/lib/theme-context";
 import { UserAuthProvider } from "@/lib/user-auth";
-import { organizationLd, websiteLd, localBusinessLd, STORE } from "@/lib/jsonld";
+import { organizationLd, websiteLd, STORE } from "@/lib/jsonld";
 
 function NotFoundComponent() {
   return (
@@ -134,11 +134,11 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         href: "https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&display=swap",
       },
     ],
-    scripts: [
-      { type: "application/ld+json", children: JSON.stringify(organizationLd()) },
-      { type: "application/ld+json", children: JSON.stringify(websiteLd()) },
-      { type: "application/ld+json", children: JSON.stringify(localBusinessLd()) },
-    ],
+    // Organization/WebSite JSON-LD are rendered directly in RootComponent below,
+    // not here — head().scripts entries get duplicated on client hydration in this
+    // TanStack Router version (confirmed: no dedup keys off `attrs`, e.g. `id`, are
+    // checked anywhere in its HeadContent/Asset/useTags implementation). Rendering
+    // directly with suppressHydrationWarning avoids that.
   }),
   shellComponent: RootShell,
   component: RootComponent,
@@ -174,14 +174,49 @@ function Chrome({ children }: { children: ReactNode }) {
   );
 }
 
+// The root route's match (unlike any nested route's) renders through this
+// component twice during this app's SSR-to-hydration sequence — confirmed
+// empirically: identical JSON-LD script tags placed here (and, before that,
+// directly in RootShell's <head>) both end up duplicated in the DOM after
+// hydration, while the exact same rendering approach in every leaf route
+// component (Home, ShopAllRoute, CategoryPage, PDP) produces exactly one
+// copy. Root cause not fully isolated (not a head().scripts issue -- see the
+// comment on Route.head below -- and not fixed by moving between
+// shellComponent/component). This effect runs once on mount and removes any
+// extra copies by id, keeping the first, as a definitive fix regardless of
+// which render pass produced the duplicate.
+function useDedupeJsonLd(ids: string[]) {
+  useEffect(() => {
+    for (const id of ids) {
+      const matches = document.querySelectorAll(`script[id="${id}"]`);
+      matches.forEach((el, i) => {
+        if (i > 0) el.remove();
+      });
+    }
+  }, [ids]);
+}
+
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  useDedupeJsonLd(["jsonld-organization", "jsonld-website"]);
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
         <ToastProvider>
           <UserAuthProvider>
             <CartProvider>
+              <script
+                id="jsonld-organization"
+                type="application/ld+json"
+                suppressHydrationWarning
+                dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationLd()) }}
+              />
+              <script
+                id="jsonld-website"
+                type="application/ld+json"
+                suppressHydrationWarning
+                dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteLd()) }}
+              />
               <Chrome>
                 <Outlet />
               </Chrome>

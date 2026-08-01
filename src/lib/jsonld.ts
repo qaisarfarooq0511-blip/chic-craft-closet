@@ -1,6 +1,7 @@
-import type { Product, Review } from "./types";
+import type { Product, ProductImage, Category } from "@/types/database";
+import { productImageUrl } from "@/lib/product-images";
 
-export const SITE_URL = "https://yaawun.com";
+export const SITE_URL = "https://yaawun.in";
 
 export const abs = (path: string) => {
   if (!path) return SITE_URL;
@@ -8,30 +9,18 @@ export const abs = (path: string) => {
   return `${SITE_URL}${path.startsWith("/") ? path : `/${path}`}`;
 };
 
+// Fields with no real value yet (email, phone, street address) are omitted
+// entirely rather than filled with placeholder text — this store previously
+// shipped literal "{{STORE_EMAIL}}"-style template markers into live JSON-LD.
 export const STORE = {
   name: "Yaawun",
   tagline: "Crafted with care",
   description:
     "Yaawun curates unstitched dress materials, Kashmiri shawls, kidswear and handpicked accessories for the modern Indian woman.",
-  email: "{{STORE_EMAIL}}",
-  phone: "{{STORE_PHONE}}",
-  whatsapp: "{{STORE_WHATSAPP}}",
-  logo: abs("/favicon.ico"),
-  sameAs: [
-    "https://www.instagram.com/yaawun",
-    "https://www.facebook.com/yaawun",
-  ],
-  address: {
-    street: "{{STORE_STREET}}",
-    locality: "{{STORE_CITY}}",
-    region: "{{STORE_STATE}}",
-    postalCode: "{{STORE_PIN}}",
-    country: "IN",
-  },
-  hours: "Mo-Su 10:00-20:00",
+  logo: abs("/icon-512.png"), // placeholder — no dedicated logo asset yet
+  sameAs: ["https://www.instagram.com/yaawun", "https://www.facebook.com/yaawun"],
 };
 
-// Sitewide Organization — used for entity grounding by AI engines.
 export const organizationLd = () => ({
   "@context": "https://schema.org",
   "@type": "Organization",
@@ -40,51 +29,7 @@ export const organizationLd = () => ({
   url: SITE_URL,
   logo: STORE.logo,
   description: STORE.description,
-  email: STORE.email,
-  telephone: STORE.phone,
   sameAs: STORE.sameAs,
-  address: {
-    "@type": "PostalAddress",
-    streetAddress: STORE.address.street,
-    addressLocality: STORE.address.locality,
-    addressRegion: STORE.address.region,
-    postalCode: STORE.address.postalCode,
-    addressCountry: STORE.address.country,
-  },
-  contactPoint: [
-    {
-      "@type": "ContactPoint",
-      contactType: "customer support",
-      telephone: STORE.phone,
-      email: STORE.email,
-      areaServed: "IN",
-      availableLanguage: ["English", "Hindi"],
-    },
-  ],
-});
-
-// Local store presence — separate node so it doesn't collide with the
-// brand-level Organization above.
-export const localBusinessLd = () => ({
-  "@context": "https://schema.org",
-  "@type": "LocalBusiness",
-  "@id": `${SITE_URL}/#localbusiness`,
-  name: STORE.name,
-  url: SITE_URL,
-  image: STORE.logo,
-  description: STORE.description,
-  telephone: STORE.phone,
-  email: STORE.email,
-  priceRange: "₹₹",
-  openingHours: STORE.hours,
-  address: {
-    "@type": "PostalAddress",
-    streetAddress: STORE.address.street,
-    addressLocality: STORE.address.locality,
-    addressRegion: STORE.address.region,
-    postalCode: STORE.address.postalCode,
-    addressCountry: STORE.address.country,
-  },
 });
 
 export const websiteLd = () => ({
@@ -105,92 +50,6 @@ export const websiteLd = () => ({
   },
 });
 
-export const productLd = (p: Product, reviews: Review[]) => {
-  const url = abs(`/product/${p.slug}`);
-  const inStock = p.stock > 0 && p.listed;
-  // priceValidUntil ~1 year out — required by Google for Offer best-practice.
-  const validUntil = new Date(Date.now() + 365 * 24 * 3600 * 1000)
-    .toISOString()
-    .slice(0, 10);
-  const additionalProperty = [
-    p.fabric && { "@type": "PropertyValue", name: "Fabric", value: p.fabric },
-    p.embroidery && { "@type": "PropertyValue", name: "Embroidery", value: p.embroidery },
-    p.care && { "@type": "PropertyValue", name: "Care", value: p.care },
-    p.type && { "@type": "PropertyValue", name: "Type", value: p.type },
-    p.sizes?.length && { "@type": "PropertyValue", name: "Sizes", value: p.sizes.join(", ") },
-    p.pieces && { "@type": "PropertyValue", name: "Pieces", value: String(p.pieces) },
-  ].filter(Boolean);
-  return {
-    "@context": "https://schema.org",
-    "@type": "Product",
-    name: `${p.name}${p.subtitle ? " — " + p.subtitle : ""}`,
-    description: p.tldr || p.desc,
-    sku: `YWN-${p.id}`,
-    mpn: `YWN-${p.id}`,
-    category: p.category,
-    brand: { "@type": "Brand", name: STORE.name },
-    image: p.images.length ? p.images.map(abs) : undefined,
-    material: p.fabric || undefined,
-    url,
-    additionalProperty: additionalProperty.length ? additionalProperty : undefined,
-    offers: {
-      "@type": "Offer",
-      price: p.price,
-      priceCurrency: "INR",
-      availability: inStock
-        ? "https://schema.org/InStock"
-        : "https://schema.org/OutOfStock",
-      itemCondition: "https://schema.org/NewCondition",
-      url,
-      priceValidUntil: validUntil,
-      seller: { "@id": `${SITE_URL}/#organization` },
-      hasMerchantReturnPolicy: {
-        "@type": "MerchantReturnPolicy",
-        applicableCountry: "IN",
-        returnPolicyCategory:
-          "https://schema.org/MerchantReturnFiniteReturnWindow",
-        merchantReturnDays: 7,
-        returnMethod: "https://schema.org/ReturnByMail",
-        returnFees: "https://schema.org/FreeReturn",
-      },
-      shippingDetails: {
-        "@type": "OfferShippingDetails",
-        shippingRate: {
-          "@type": "MonetaryAmount",
-          value: p.price >= 999 ? 0 : 99,
-          currency: "INR",
-        },
-        shippingDestination: {
-          "@type": "DefinedRegion",
-          addressCountry: "IN",
-        },
-        deliveryTime: {
-          "@type": "ShippingDeliveryTime",
-          handlingTime: { "@type": "QuantitativeValue", minValue: 1, maxValue: 2, unitCode: "DAY" },
-          transitTime: { "@type": "QuantitativeValue", minValue: 3, maxValue: 7, unitCode: "DAY" },
-        },
-      },
-    },
-    aggregateRating:
-      reviews.length > 0
-        ? {
-            "@type": "AggregateRating",
-            ratingValue: p.rating,
-            reviewCount: p.reviewsCount,
-            bestRating: 5,
-            worstRating: 1,
-          }
-        : undefined,
-    review: reviews.slice(0, 5).map((r) => ({
-      "@type": "Review",
-      author: { "@type": "Person", name: r.name },
-      datePublished: r.date,
-      reviewBody: r.text,
-      reviewRating: { "@type": "Rating", ratingValue: r.rating, bestRating: 5 },
-    })),
-  };
-};
-
 export const breadcrumbLd = (items: { name: string; url: string }[]) => ({
   "@context": "https://schema.org",
   "@type": "BreadcrumbList",
@@ -202,56 +61,42 @@ export const breadcrumbLd = (items: { name: string; url: string }[]) => ({
   })),
 });
 
-export const itemListLd = (products: Product[]) => ({
-  "@context": "https://schema.org",
-  "@type": "ItemList",
-  numberOfItems: products.length,
-  itemListElement: products.map((p, i) => ({
-    "@type": "ListItem",
-    position: i + 1,
-    url: abs(`/product/${p.slug}`),
+// No dedicated OG/placeholder asset exists yet — icon-512.png is the closest
+// real, existing square brand image to fall back to.
+const NO_IMAGE_PLACEHOLDER = abs("/icon-512.png");
+
+export const productLd = (p: Product & { images: ProductImage[]; category?: Category | null }) => {
+  const url = abs(`/product/${p.slug}`);
+  const primaryImage = p.images.find((i) => i.is_primary) ?? p.images[0];
+  const image = primaryImage
+    ? (productImageUrl(primaryImage) ?? NO_IMAGE_PLACEHOLDER)
+    : NO_IMAGE_PLACEHOLDER;
+
+  return {
+    "@context": "https://schema.org",
+    "@type": "Product",
     name: p.name,
-  })),
-});
-
-export const collectionPageLd = (opts: {
-  name: string;
-  description: string;
-  url: string;
-  products: Product[];
-}) => ({
-  "@context": "https://schema.org",
-  "@type": "CollectionPage",
-  name: opts.name,
-  description: opts.description,
-  url: abs(opts.url),
-  isPartOf: { "@id": `${SITE_URL}/#website` },
-  mainEntity: itemListLd(opts.products),
-});
-
-export const aboutPageLd = (description: string) => ({
-  "@context": "https://schema.org",
-  "@type": "AboutPage",
-  name: `About ${STORE.name}`,
-  description,
-  url: abs("/about"),
-  about: { "@id": `${SITE_URL}/#organization` },
-});
-
-export const contactPageLd = () => ({
-  "@context": "https://schema.org",
-  "@type": "ContactPage",
-  name: `Contact ${STORE.name}`,
-  url: abs("/contact"),
-  about: { "@id": `${SITE_URL}/#organization` },
-});
-
-export const faqPageLd = (qa: { q: string; a: string }[]) => ({
-  "@context": "https://schema.org",
-  "@type": "FAQPage",
-  mainEntity: qa.map((x) => ({
-    "@type": "Question",
-    name: x.q,
-    acceptedAnswer: { "@type": "Answer", text: x.a },
-  })),
-});
+    description: p.meta_description || p.description || undefined,
+    image: [image],
+    sku: p.id,
+    category: p.category?.name,
+    url,
+    offers: {
+      "@type": "Offer",
+      price: p.price / 100, // paise -> rupees
+      priceCurrency: "INR",
+      availability:
+        p.stock_count > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
+      url,
+    },
+    ...(p.rating_count > 0
+      ? {
+          aggregateRating: {
+            "@type": "AggregateRating",
+            ratingValue: p.rating_avg,
+            reviewCount: p.rating_count,
+          },
+        }
+      : {}),
+  };
+};

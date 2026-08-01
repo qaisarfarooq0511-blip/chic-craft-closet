@@ -32,12 +32,8 @@ export const Route = createFileRoute("/")({
       { property: "og:url", content: abs("/") },
     ],
     links: [{ rel: "canonical", href: abs("/") }],
-    scripts: [
-      {
-        type: "application/ld+json",
-        children: JSON.stringify(breadcrumbLd([{ name: "Home", url: "/" }])),
-      },
-    ],
+    // Breadcrumb JSON-LD rendered directly in Home() below, not here — see
+    // __root.tsx's RootComponent comment for why head().scripts isn't used.
   }),
   component: Home,
 });
@@ -64,6 +60,14 @@ function Home() {
 
   return (
     <>
+      <script
+        id="jsonld-breadcrumb-home"
+        type="application/ld+json"
+        suppressHydrationWarning
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(breadcrumbLd([{ name: "Home", url: "/" }])),
+        }}
+      />
       <section className="hero">
         <div className="hero-left">
           <div className="eyebrow-light hero-eyebrow">{hero.eyebrow}</div>

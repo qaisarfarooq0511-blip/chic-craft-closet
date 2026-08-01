@@ -1,6 +1,23 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
 import { IconBrandWhatsapp, IconMail, IconPhone, IconMapPin } from "@tabler/icons-react";
-import { STORE, contactPageLd, breadcrumbLd, abs } from "@/lib/jsonld";
+import { supabase } from "@/lib/supabase";
+import { STORE, breadcrumbLd, abs } from "@/lib/jsonld";
+
+const STORE_ADDRESS = "Sopore, Baramulla, Jammu & Kashmir";
+// The store_whatsapp site_setting is still seeded to this placeholder — treat it
+// as "not set yet" until an admin puts in a real number via /admin/settings.
+const PLACEHOLDER_WHATSAPP = "919000000000";
+
+async function fetchStoreWhatsapp(): Promise<string | null> {
+  const { data } = await supabase
+    .from("site_settings")
+    .select("value")
+    .eq("key", "store_whatsapp")
+    .maybeSingle();
+  const value = typeof data?.value === "string" ? data.value : null;
+  return value && value !== PLACEHOLDER_WHATSAPP ? value : null;
+}
 
 export const Route = createFileRoute("/contact")({
   head: () => {
@@ -14,37 +31,77 @@ export const Route = createFileRoute("/contact")({
         { property: "og:url", content: abs("/contact") },
       ],
       links: [{ rel: "canonical", href: abs("/contact") }],
-      scripts: [
-        { type: "application/ld+json", children: JSON.stringify(contactPageLd()) },
-        { type: "application/ld+json", children: JSON.stringify(breadcrumbLd([
-          { name: "Home", url: "/" },
-          { name: "Contact", url: "/contact" },
-        ])) },
-      ],
+      // Breadcrumb JSON-LD rendered directly in Contact() below — see
+      // __root.tsx's RootComponent comment for why head().scripts isn't used.
     };
   },
   component: Contact,
 });
 
 function Contact() {
+  const { data: whatsapp } = useQuery({
+    queryKey: ["site-setting", "store_whatsapp"],
+    queryFn: fetchStoreWhatsapp,
+  });
+
   const tiles = [
-    { icon: <IconBrandWhatsapp />, label: "WhatsApp", value: STORE.whatsapp, href: `https://wa.me/${STORE.whatsapp.replace(/\D/g, "")}` },
-    { icon: <IconPhone />, label: "Call", value: STORE.phone, href: `tel:${STORE.phone}` },
-    { icon: <IconMail />, label: "Email", value: STORE.email, href: `mailto:${STORE.email}` },
-    { icon: <IconMapPin />, label: "Visit", value: `${STORE.address.locality}, ${STORE.address.region}` },
+    {
+      icon: <IconBrandWhatsapp />,
+      label: "WhatsApp",
+      value: whatsapp ?? "Coming soon",
+      href: whatsapp ? `https://wa.me/${whatsapp.replace(/\D/g, "")}` : undefined,
+    },
+    { icon: <IconPhone />, label: "Call", value: "Coming soon", href: undefined },
+    { icon: <IconMail />, label: "Email", value: "Coming soon", href: undefined },
+    { icon: <IconMapPin />, label: "Visit", value: STORE_ADDRESS, href: undefined },
   ];
   return (
     <div className="cart-wrap-page">
-      <div className="eyebrow" style={{ marginBottom: 8 }}>We're here</div>
+      <script
+        id="jsonld-breadcrumb-contact"
+        type="application/ld+json"
+        suppressHydrationWarning
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(
+            breadcrumbLd([
+              { name: "Home", url: "/" },
+              { name: "Contact", url: "/contact" },
+            ]),
+          ),
+        }}
+      />
+      <div className="eyebrow" style={{ marginBottom: 8 }}>
+        We're here
+      </div>
       <h1 className="cart-title">Get in touch</h1>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(220px,1fr))", gap: 12 }}>
-        {tiles.map((t) => (
-          <a key={t.label} href={t.href} className="admin-card" style={{ textDecoration: "none" }} target={t.href?.startsWith("http") ? "_blank" : undefined} rel="noreferrer">
-            <div style={{ color: "var(--gold)", marginBottom: 8 }}>{t.icon}</div>
-            <div className="form-label">{t.label}</div>
-            <div style={{ fontSize: 14, color: "var(--ink)", marginTop: 4 }}>{t.value}</div>
-          </a>
-        ))}
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fill,minmax(220px,1fr))",
+          gap: 12,
+        }}
+      >
+        {tiles.map((t) => {
+          const Tag = t.href ? "a" : "div";
+          return (
+            <Tag
+              key={t.label}
+              {...(t.href
+                ? {
+                    href: t.href,
+                    target: t.href.startsWith("http") ? "_blank" : undefined,
+                    rel: "noreferrer",
+                  }
+                : {})}
+              className="admin-card"
+              style={{ textDecoration: "none" }}
+            >
+              <div style={{ color: "var(--gold)", marginBottom: 8 }}>{t.icon}</div>
+              <div className="form-label">{t.label}</div>
+              <div style={{ fontSize: 14, color: "var(--ink)", marginTop: 4 }}>{t.value}</div>
+            </Tag>
+          );
+        })}
       </div>
     </div>
   );
