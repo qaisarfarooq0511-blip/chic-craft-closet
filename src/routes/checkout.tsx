@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { IconLock } from "@tabler/icons-react";
-import { useCart } from "@/hooks/useCart";
+import { useCart, cartLinePrice } from "@/hooks/useCart";
 import { useSupabaseAuth } from "@/hooks/useSupabaseAuth";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { supabase } from "@/lib/supabase";
@@ -125,15 +125,22 @@ function Checkout() {
         .single();
       if (orderError) throw orderError;
 
-      const items = lines.map((l) => ({
-        order_id: order.id,
-        product_id: l.productId,
-        product_name: l.product!.name,
-        product_slug: l.product!.slug,
-        quantity: l.quantity,
-        unit_price: l.product!.price,
-        total_price: l.product!.price * l.quantity,
-      }));
+      const items = lines.map((l) => {
+        const unitPrice = cartLinePrice(l);
+        const variantLabel =
+          [l.variant?.colour?.name, l.variant?.size?.label].filter(Boolean).join(" · ") || null;
+        return {
+          order_id: order.id,
+          product_id: l.productId,
+          product_name: l.product!.name,
+          product_slug: l.product!.slug,
+          variant_id: l.variantId,
+          variant_label: variantLabel,
+          quantity: l.quantity,
+          unit_price: unitPrice,
+          total_price: unitPrice * l.quantity,
+        };
+      });
       const { error: itemsError } = await supabase.from("order_items").insert(items);
       if (itemsError) throw itemsError;
 
@@ -284,17 +291,21 @@ function Checkout() {
         </form>
         <aside className="cart-summary">
           <div className="cart-sum-title">Order summary</div>
-          {lines.map(
-            (l) =>
-              l.product && (
-                <div key={l.productId} className="cart-row">
-                  <span>
-                    {l.product.name} × {l.quantity}
-                  </span>
-                  <span>{formatPrice(l.product.price * l.quantity)}</span>
-                </div>
-              ),
-          )}
+          {lines.map((l) => {
+            if (!l.product) return null;
+            const variantText = [l.variant?.colour?.name, l.variant?.size?.label]
+              .filter(Boolean)
+              .join(" · ");
+            return (
+              <div key={`${l.productId}-${l.variantId ?? "none"}`} className="cart-row">
+                <span>
+                  {l.product.name}
+                  {variantText && ` (${variantText})`} × {l.quantity}
+                </span>
+                <span>{formatPrice(cartLinePrice(l) * l.quantity)}</span>
+              </div>
+            );
+          })}
           <hr className="divider" style={{ margin: "10px 0" }} />
           <div className="cart-row">
             <span>Subtotal</span>

@@ -4,6 +4,12 @@ import { supabase } from "@/lib/supabase";
 import { guestCartStore } from "@/lib/guest-cart-store";
 import { useSupabaseAuth } from "@/hooks/useSupabaseAuth";
 import type { ProductWithRelations } from "@/hooks/useProducts";
+import type { ColourOption, ProductVariant, SizeOption } from "@/types/database";
+
+export type CartLineVariant = ProductVariant & {
+  colour: ColourOption | null;
+  size: SizeOption | null;
+};
 
 export interface CartLineWithProduct {
   productId: string;
@@ -11,6 +17,24 @@ export interface CartLineWithProduct {
   quantity: number;
   /** null when the product was removed/archived after being added to the cart. */
   product: ProductWithRelations | null;
+  /** null for a no-variant line, or if the variant itself was later deleted. */
+  variant: CartLineVariant | null;
+}
+
+/** Effective unit price for a cart line — a variant's price_override, if set, else the base product price. */
+export const cartLinePrice = (line: Pick<CartLineWithProduct, "product" | "variant">): number =>
+  line.variant?.price_override ?? line.product?.price ?? 0;
+
+async function fetchVariantsByIds(ids: string[]): Promise<Record<string, CartLineVariant>> {
+  if (!ids.length) return {};
+  const { data, error } = await supabase
+    .from("product_variants")
+    .select("*, colour:colour_options(*), size:size_options(*)")
+    .in("id", ids);
+  if (error) throw error;
+  const map: Record<string, CartLineVariant> = {};
+  for (const v of (data ?? []) as unknown as CartLineVariant[]) map[v.id] = v;
+  return map;
 }
 
 async function fetchServerCart(customerId: string): Promise<CartLineWithProduct[]> {
@@ -21,11 +45,13 @@ async function fetchServerCart(customerId: string): Promise<CartLineWithProduct[
     )
     .eq("customer_id", customerId);
   if (error) throw error;
+  // variant is attached afterwards in useCart() — this raw fetch doesn't join it.
   return (data ?? []).map((row) => ({
     productId: row.product_id as string,
     variantId: (row.variant_id as string | null) ?? null,
     quantity: row.quantity as number,
     product: (row.product as unknown as ProductWithRelations) ?? null,
+    variant: null,
   }));
 }
 
@@ -108,21 +134,35 @@ export function useCart() {
     enabled: !isAuthenticated && guestProductIds.length > 0,
   });
 
-  const lines: CartLineWithProduct[] = isAuthenticated
+  const rawLines: CartLineWithProduct[] = isAuthenticated
     ? (serverCartQuery.data ?? [])
     : guestLines.map((l) => ({
         productId: l.productId,
         variantId: l.variantId,
         quantity: l.quantity,
         product: guestProductsQuery.data?.find((p) => p.id === l.productId) ?? null,
+        variant: null,
       }));
 
+  const variantIds = Array.from(
+    new Set(rawLines.map((l) => l.variantId).filter((id): id is string => !!id)),
+  ).sort();
+  const variantsQuery = useQuery({
+    queryKey: ["cart-line-variants", variantIds.join(",")],
+    queryFn: () => fetchVariantsByIds(variantIds),
+    enabled: variantIds.length > 0,
+  });
+
+  const lines: CartLineWithProduct[] = rawLines.map((l) => ({
+    ...l,
+    variant: l.variantId ? (variantsQuery.data?.[l.variantId] ?? null) : null,
+  }));
+
   const count = lines.reduce((s, l) => s + l.quantity, 0);
-  // Note: uses base product price even for a variant line with a price_override —
-  // resolving effective per-variant pricing here is deferred to Stage D, alongside
-  // cart.tsx/checkout.tsx actually displaying and using it.
-  const subtotal = lines.reduce((s, l) => s + (l.product?.price ?? 0) * l.quantity, 0);
-  const isLoading = isAuthenticated ? serverCartQuery.isLoading : guestProductsQuery.isLoading;
+  const subtotal = lines.reduce((s, l) => s + cartLinePrice(l) * l.quantity, 0);
+  const isLoading =
+    (isAuthenticated ? serverCartQuery.isLoading : guestProductsQuery.isLoading) ||
+    (variantIds.length > 0 && variantsQuery.isLoading);
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ["cart", user?.id] });
 
