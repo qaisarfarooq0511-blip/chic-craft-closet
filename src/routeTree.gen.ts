@@ -31,6 +31,7 @@ import { Route as PageSlugRouteImport } from './routes/page.$slug'
 import { Route as OrderConfirmationOrderNumberRouteImport } from './routes/order-confirmation.$orderNumber'
 import { Route as ApiEnhanceImageRouteImport } from './routes/api/enhance-image'
 import { Route as AdminThemeRouteImport } from './routes/admin.theme'
+import { Route as AdminSettingsRouteImport } from './routes/admin.settings'
 import { Route as AdminSectionsRouteImport } from './routes/admin.sections'
 import { Route as AdminReviewsRouteImport } from './routes/admin.reviews'
 import { Route as AdminOrdersRouteImport } from './routes/admin.orders'
@@ -161,6 +162,11 @@ const AdminThemeRoute = AdminThemeRouteImport.update({
   path: '/theme',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminSettingsRoute = AdminSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminSectionsRoute = AdminSectionsRouteImport.update({
   id: '/sections',
   path: '/sections',
@@ -279,6 +285,7 @@ export interface FileRoutesByFullPath {
   '/admin/orders': typeof AdminOrdersRoute
   '/admin/reviews': typeof AdminReviewsRoute
   '/admin/sections': typeof AdminSectionsRoute
+  '/admin/settings': typeof AdminSettingsRoute
   '/admin/theme': typeof AdminThemeRoute
   '/api/enhance-image': typeof ApiEnhanceImageRoute
   '/order-confirmation/$orderNumber': typeof OrderConfirmationOrderNumberRoute
@@ -319,6 +326,7 @@ export interface FileRoutesByTo {
   '/admin/orders': typeof AdminOrdersRoute
   '/admin/reviews': typeof AdminReviewsRoute
   '/admin/sections': typeof AdminSectionsRoute
+  '/admin/settings': typeof AdminSettingsRoute
   '/admin/theme': typeof AdminThemeRoute
   '/api/enhance-image': typeof ApiEnhanceImageRoute
   '/order-confirmation/$orderNumber': typeof OrderConfirmationOrderNumberRoute
@@ -362,6 +370,7 @@ export interface FileRoutesById {
   '/admin/orders': typeof AdminOrdersRoute
   '/admin/reviews': typeof AdminReviewsRoute
   '/admin/sections': typeof AdminSectionsRoute
+  '/admin/settings': typeof AdminSettingsRoute
   '/admin/theme': typeof AdminThemeRoute
   '/api/enhance-image': typeof ApiEnhanceImageRoute
   '/order-confirmation/$orderNumber': typeof OrderConfirmationOrderNumberRoute
@@ -406,6 +415,7 @@ export interface FileRouteTypes {
     | '/admin/orders'
     | '/admin/reviews'
     | '/admin/sections'
+    | '/admin/settings'
     | '/admin/theme'
     | '/api/enhance-image'
     | '/order-confirmation/$orderNumber'
@@ -446,6 +456,7 @@ export interface FileRouteTypes {
     | '/admin/orders'
     | '/admin/reviews'
     | '/admin/sections'
+    | '/admin/settings'
     | '/admin/theme'
     | '/api/enhance-image'
     | '/order-confirmation/$orderNumber'
@@ -488,6 +499,7 @@ export interface FileRouteTypes {
     | '/admin/orders'
     | '/admin/reviews'
     | '/admin/sections'
+    | '/admin/settings'
     | '/admin/theme'
     | '/api/enhance-image'
     | '/order-confirmation/$orderNumber'
@@ -682,6 +694,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminThemeRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/settings': {
+      id: '/admin/settings'
+      path: '/settings'
+      fullPath: '/admin/settings'
+      preLoaderRoute: typeof AdminSettingsRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/sections': {
       id: '/admin/sections'
       path: '/sections'
@@ -839,6 +858,7 @@ interface AdminRouteChildren {
   AdminOrdersRoute: typeof AdminOrdersRoute
   AdminReviewsRoute: typeof AdminReviewsRoute
   AdminSectionsRoute: typeof AdminSectionsRoute
+  AdminSettingsRoute: typeof AdminSettingsRoute
   AdminThemeRoute: typeof AdminThemeRoute
   AdminIndexRoute: typeof AdminIndexRoute
   AdminPagesSlugRoute: typeof AdminPagesSlugRoute
@@ -859,6 +879,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminOrdersRoute: AdminOrdersRoute,
   AdminReviewsRoute: AdminReviewsRoute,
   AdminSectionsRoute: AdminSectionsRoute,
+  AdminSettingsRoute: AdminSettingsRoute,
   AdminThemeRoute: AdminThemeRoute,
   AdminIndexRoute: AdminIndexRoute,
   AdminPagesSlugRoute: AdminPagesSlugRoute,
