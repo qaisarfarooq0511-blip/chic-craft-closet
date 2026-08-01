@@ -4,6 +4,63 @@ Format: Problem / Root Cause / Fix / Risk / Rollback
 Lane: Fast Lane (FL) or Full Lane (FullL)
 ---
 
+## 2026-08-01 — Sprint 2C: Product variants schema (colours, sizes, fabrics)
+
+### [FullL] Stage A — migration for product_variants, colour/size/fabric catalogs
+
+**Problem:** Products need colour and size variants (each with its own stock and
+optional price override), an admin-managed fabric picklist instead of free text, and
+category-scoped size scales — none of which existed. Also discovered while starting
+this stage: migration `20260801100011` (Sprint 2B's notification_queue RLS fix) had
+been merged to `main` but never actually applied to the live Supabase project —
+`supabase migration list --linked` showed it with no matching remote entry. The order
+detail page's notification queueing has therefore been silently broken in production
+since Sprint 2B merged, not just in the pre-2B checkout path it was meant to fix.
+
+**Root Cause:** The variants feature is new scope, not a bug. The 100011 deployment
+gap was a process gap — merging to `main` was treated as "done," but no explicit
+`supabase db push` step followed it.
+
+**Fix:**
+
+- Migration `20260801100012_product_variants_colours_sizes_fabrics.sql`: adds
+  `fabric_options`, `colour_options`, `size_scales`, `size_options`, and
+  `product_variants` (all with full scale hooks — `created_at`/`updated_at`/
+  `deleted_at` — even where not explicitly spelled out, per CLAUDE.md rule 7),
+  `products.fabric_id`, `categories.default_size_scale_id` (backfilled: kidswear →
+  `age_kids`, kashmiri-shawls → `free_size`, dress-material → `dress_material`,
+  accessories → `NULL`), and `variant_id` columns on `cart_items`/`order_items`
+  (`order_items` additionally gets `variant_label` as a purchase-time snapshot,
+  matching that table's existing `product_name`/`product_slug` snapshot principle).
+- `product_variants` uniqueness on `(product_id, colour_id, size_id)` uses a
+  `COALESCE`-to-sentinel-UUID partial unique index (`WHERE deleted_at IS NULL`), not a
+  bare `UNIQUE(...)` — Postgres treats every `NULL` as distinct in a plain unique
+  constraint, which would not have caught duplicate variant rows for a product with no
+  colour or size set.
+- `products.fabric` (free text) is kept as a dual-write bridge alongside the new
+  `fabric_id` FK — the PDP still reads the text column directly and is unchanged in
+  this stage; the admin form (Stage B) will write both.
+- Audit trigger (`log_admin_action()`) added to `product_variants` only — not to the
+  four reference/catalog tables, which are the same shape as the already-audit-free
+  `site_settings`/`redirects`.
+- Both the missed `20260801100011` and the new `20260801100012` pushed to the live
+  project via `supabase db push --linked` in this session; verified via the app's own
+  anon client (seed counts: 10 fabrics, 18 colours, 5 scales, 17 size options, category
+  backfill on 3 of 4 categories) since the connected Supabase MCP tool returned a
+  permission error for this project.
+- `src/types/database.ts`, `docs/blueprint/SCHEMA.md`, `docs/blueprint/RLS.md` updated
+  to match.
+
+**Risk:** Low — purely additive (new tables, nullable new columns). No existing data
+migrated or reinterpreted. `product_variants` starts empty; every existing product
+continues to be managed at the product level exactly as before.
+
+**Rollback:** See migration file header for the exact drop statements. Applies in
+reverse dependency order (order_items/cart_items columns → product_variants →
+categories/products columns → size_options/size_scales/colour_options/fabric_options).
+
+---
+
 ## 2026-08-01 — Sprint 2B: Order detail page, tracking, and status transitions
 
 ### [FullL] Admin order detail page with status dropdown; fixes silently-broken notification_queue writes
