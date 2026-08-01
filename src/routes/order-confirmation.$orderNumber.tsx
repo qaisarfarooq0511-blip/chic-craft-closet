@@ -114,16 +114,35 @@ function OrderConfirmation() {
             <span style={{ color: "var(--ink3)" }}>Order number</span>
             <strong style={{ color: "var(--ink)" }}>{order.order_number}</strong>
           </div>
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              fontSize: 13,
-              marginBottom: 6,
-            }}
-          >
-            <span style={{ color: "var(--ink3)" }}>Items</span>
-            <span>{order.items.length}</span>
+          <div style={{ marginBottom: 10 }}>
+            {order.items.map(
+              (item: {
+                id: string;
+                product_name: string;
+                variant_label: string | null;
+                quantity: number;
+                total_price: number;
+              }) => (
+                <div
+                  key={item.id}
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    fontSize: 13,
+                    marginBottom: 4,
+                  }}
+                >
+                  <span>
+                    <span style={{ color: "var(--ink)" }}>{item.product_name}</span>
+                    {item.variant_label && (
+                      <span style={{ color: "var(--ink3)" }}> ({item.variant_label})</span>
+                    )}
+                    <span style={{ color: "var(--ink3)" }}> × {item.quantity}</span>
+                  </span>
+                  <span>{formatPrice(item.total_price)}</span>
+                </div>
+              ),
+            )}
           </div>
           <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13 }}>
             <span style={{ color: "var(--ink3)" }}>Total (COD)</span>

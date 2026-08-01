@@ -25,9 +25,66 @@ export interface Category {
   slug: string;
   description: string | null;
   sort_order: number;
+  default_size_scale_id: string | null;
   created_at: string;
   updated_at: string;
   deleted_at: string | null;
+}
+
+export interface FabricOption {
+  id: string;
+  name: string;
+  sort_order: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  deleted_at: string | null;
+}
+
+export interface ColourOption {
+  id: string;
+  name: string;
+  hex_code: string;
+  sort_order: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  deleted_at: string | null;
+}
+
+export interface SizeScale {
+  id: string;
+  name: string; // 'age_infant' | 'age_kids' | 'age_teens' | 'free_size' | 'dress_material'
+  created_at: string;
+  updated_at: string;
+  deleted_at: string | null;
+}
+
+export interface SizeOption {
+  id: string;
+  scale_id: string;
+  label: string;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+  deleted_at: string | null;
+}
+
+export interface ProductVariant {
+  id: string;
+  product_id: string;
+  colour_id: string | null;
+  size_id: string | null;
+  stock_count: number;
+  price_override: number | null; // paise; null = use parent product price
+  is_active: boolean;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+  deleted_at: string | null;
+  // Joined relations
+  colour?: ColourOption;
+  size?: SizeOption;
 }
 
 export interface Product {
@@ -42,7 +99,8 @@ export interface Product {
   badge: string | null;
   status: ProductStatus;
   is_unstitched: boolean;
-  fabric: string | null;
+  fabric: string | null; // free-text bridge column — mirrored from fabric_id's name at save time
+  fabric_id: string | null;
   embroidery: string | null;
   care: string | null;
   stock_count: number;
@@ -58,6 +116,8 @@ export interface Product {
   images?: ProductImage[];
   pieces?: ProductPiece[];
   includes?: ProductInclude[];
+  fabric_option?: FabricOption;
+  variants?: ProductVariant[];
 }
 
 export interface ProductPiece {
@@ -144,6 +204,8 @@ export interface OrderItem {
   product_id: string;
   product_name: string;
   product_slug: string;
+  variant_id: string | null;
+  variant_label: string | null; // snapshot at purchase time, e.g. "Maroon, 3-4 years"
   quantity: number;
   unit_price: number; // paise
   total_price: number; // paise
@@ -156,11 +218,13 @@ export interface CartItem {
   id: string;
   customer_id: string;
   product_id: string;
+  variant_id: string | null;
   quantity: number;
   created_at: string;
   updated_at: string;
   // Joined
   product?: Product;
+  variant?: ProductVariant;
 }
 
 export interface Review {

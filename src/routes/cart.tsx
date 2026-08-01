@@ -1,8 +1,12 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { IconShoppingBag, IconLock } from "@tabler/icons-react";
-import { useCart } from "@/hooks/useCart";
+import { useCart, cartLinePrice } from "@/hooks/useCart";
 import { formatPrice } from "@/types/database";
 import { productImageUrl } from "@/lib/product-images";
+
+function variantSummary(colourName: string | undefined, sizeLabel: string | undefined) {
+  return [colourName, sizeLabel].filter(Boolean).join(" · ") || null;
+}
 
 export const Route = createFileRoute("/cart")({
   head: () => ({
@@ -43,8 +47,9 @@ function CartPage() {
               const img = p
                 ? productImageUrl(p.images.find((i) => i.is_primary) ?? p.images[0])
                 : null;
+              const variantText = variantSummary(l.variant?.colour?.name, l.variant?.size?.label);
               return (
-                <div key={l.productId} className="cart-item">
+                <div key={`${l.productId}-${l.variantId ?? "none"}`} className="cart-item">
                   <div className="cart-item-img" style={{ background: "var(--cream2)" }}>
                     {img ? (
                       <img src={img} alt={p?.name} />
@@ -61,11 +66,37 @@ function CartPage() {
                         ? `${p.name}${p.subtitle ? ` — ${p.subtitle}` : ""}`
                         : "This item is no longer available"}
                     </div>
+                    {variantText && (
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 6,
+                          fontSize: 12,
+                          color: "var(--ink3)",
+                          marginTop: 2,
+                        }}
+                      >
+                        {l.variant?.colour && (
+                          <span
+                            style={{
+                              width: 12,
+                              height: 12,
+                              borderRadius: "50%",
+                              background: l.variant.colour.hex_code,
+                              border: "1px solid var(--line)",
+                              display: "inline-block",
+                            }}
+                          />
+                        )}
+                        {variantText}
+                      </div>
+                    )}
                     {p && (
                       <div className="cart-item-qty">
                         <button
                           className="ciq-btn"
-                          onClick={() => updateQty(l.productId, l.quantity - 1)}
+                          onClick={() => updateQty(l.productId, l.quantity - 1, l.variantId)}
                           aria-label="Decrease"
                         >
                           −
@@ -73,19 +104,22 @@ function CartPage() {
                         <span className="ciq-val">{l.quantity}</span>
                         <button
                           className="ciq-btn"
-                          onClick={() => updateQty(l.productId, l.quantity + 1)}
+                          onClick={() => updateQty(l.productId, l.quantity + 1, l.variantId)}
                           aria-label="Increase"
                         >
                           +
                         </button>
                       </div>
                     )}
-                    <button className="cart-item-remove" onClick={() => remove(l.productId)}>
+                    <button
+                      className="cart-item-remove"
+                      onClick={() => remove(l.productId, l.variantId)}
+                    >
                       Remove
                     </button>
                   </div>
                   <div className="cart-item-price">
-                    {p ? formatPrice(p.price * l.quantity) : ""}
+                    {p ? formatPrice(cartLinePrice(l) * l.quantity) : ""}
                   </div>
                 </div>
               );
