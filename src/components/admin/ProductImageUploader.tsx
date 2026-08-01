@@ -1,11 +1,10 @@
 import { useState, type ChangeEvent } from "react";
 import { IconUpload, IconX, IconStar, IconStarFilled, IconLoader2 } from "@tabler/icons-react";
-import { uploadToCloudinary, cloudinaryUrl } from "@/lib/cloudinary";
+import { uploadProductImage } from "@/lib/product-images";
 import { useToast } from "@/lib/toast";
 
 export interface ProductImageDraft {
   id?: string;
-  cloudinary_id: string;
   storage_path: string;
   is_primary: boolean;
   sort_order: number;
@@ -17,7 +16,7 @@ interface Props {
   max?: number;
 }
 
-export function CloudinaryImageUploader({ value, onChange, max = 5 }: Props) {
+export function ProductImageUploader({ value, onChange, max = 5 }: Props) {
   const toast = useToast();
   const [uploading, setUploading] = useState(false);
 
@@ -35,10 +34,9 @@ export function CloudinaryImageUploader({ value, onChange, max = 5 }: Props) {
     try {
       const uploaded: ProductImageDraft[] = [];
       for (const f of take) {
-        const res = await uploadToCloudinary(f);
+        const res = await uploadProductImage(f);
         uploaded.push({
-          cloudinary_id: res.public_id,
-          storage_path: res.secure_url,
+          storage_path: res.storage_path,
           is_primary: value.length === 0 && uploaded.length === 0,
           sort_order: value.length + uploaded.length,
         });
@@ -72,8 +70,7 @@ export function CloudinaryImageUploader({ value, onChange, max = 5 }: Props) {
         Photos
       </div>
       <p style={{ fontSize: 11, color: "var(--ink3)", marginBottom: 10 }}>
-        Upload up to {max} photos to Cloudinary. Auto-enhanced (improve + auto brightness) on
-        display. The starred photo is the main image.
+        Upload up to {max} photos. The starred photo is the main image.
       </p>
 
       {value.length < max && (
@@ -100,7 +97,7 @@ export function CloudinaryImageUploader({ value, onChange, max = 5 }: Props) {
         <div className="image-thumbs" style={{ marginTop: 14 }}>
           {value.map((img, i) => (
             <div
-              key={img.id ?? img.cloudinary_id}
+              key={img.id ?? img.storage_path}
               className="image-thumb"
               style={{
                 position: "relative",
@@ -108,10 +105,7 @@ export function CloudinaryImageUploader({ value, onChange, max = 5 }: Props) {
                 outlineOffset: 2,
               }}
             >
-              <img
-                src={cloudinaryUrl(img.cloudinary_id, { width: 200, height: 200 })}
-                alt={`Photo ${i + 1}`}
-              />
+              <img src={img.storage_path} alt={`Photo ${i + 1}`} />
               <button
                 type="button"
                 className="image-thumb-x"

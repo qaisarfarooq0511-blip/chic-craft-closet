@@ -6,7 +6,7 @@ import { useCategories } from "@/hooks/useCategories";
 import { useAdminProducts, ADMIN_PAGE_SIZE } from "@/hooks/useAdminProducts";
 import { useToast } from "@/lib/toast";
 import { formatPrice } from "@/types/database";
-import { productImageUrl } from "@/lib/cloudinary";
+import { productImageUrl } from "@/lib/product-images";
 
 export const Route = createFileRoute("/admin/products/")({
   component: ProductsList,

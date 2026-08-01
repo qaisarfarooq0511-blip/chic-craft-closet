@@ -2,7 +2,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { IconShoppingBag, IconLock } from "@tabler/icons-react";
 import { useCart } from "@/hooks/useCart";
 import { formatPrice } from "@/types/database";
-import { productImageUrl } from "@/lib/cloudinary";
+import { productImageUrl } from "@/lib/product-images";
 
 export const Route = createFileRoute("/cart")({
   head: () => ({

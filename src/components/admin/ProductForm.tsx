@@ -5,7 +5,8 @@ import { useCategories } from "@/hooks/useCategories";
 import { useAdminProduct } from "@/hooks/useAdminProduct";
 import { useToast } from "@/lib/toast";
 import { slugify } from "@/lib/types";
-import { CloudinaryImageUploader, type ProductImageDraft } from "./CloudinaryImageUploader";
+import { deleteProductImage } from "@/lib/product-images";
+import { ProductImageUploader, type ProductImageDraft } from "./ProductImageUploader";
 
 const BADGES = ["", "New in", "Bestseller", "Sale", "Limited"];
 
@@ -115,7 +116,6 @@ export function ProductForm({ productId, onSaved, submitLabel }: Props) {
       includes: existing.includes.map((i) => ({ id: i.id, description: i.description })),
       images: existing.images.map((i) => ({
         id: i.id,
-        cloudinary_id: i.cloudinary_id ?? "",
         storage_path: i.storage_path,
         is_primary: i.is_primary,
         sort_order: i.sort_order,
@@ -255,22 +255,21 @@ export function ProductForm({ productId, onSaved, submitLabel }: Props) {
 
       // --- images: delete removed, update existing (primary/order), insert new ---
       const keepImageIds = form.images.filter((img) => img.id).map((img) => img.id as string);
-      const removedImageIds = (existing?.images ?? [])
-        .map((img) => img.id)
-        .filter((iid) => !keepImageIds.includes(iid));
-      if (removedImageIds.length) {
+      const removedImages = (existing?.images ?? []).filter(
+        (img) => !keepImageIds.includes(img.id),
+      );
+      if (removedImages.length) {
         await supabase
           .from("product_images")
           .update({ deleted_at: new Date().toISOString() })
-          .in("id", removedImageIds);
+          .in(
+            "id",
+            removedImages.map((img) => img.id),
+          );
+        await Promise.all(removedImages.map((img) => deleteProductImage(img.storage_path)));
       }
       for (const [i, img] of form.images.entries()) {
-        const row = {
-          cloudinary_id: img.cloudinary_id,
-          storage_path: img.storage_path,
-          is_primary: img.is_primary,
-          sort_order: i,
-        };
+        const row = { storage_path: img.storage_path, is_primary: img.is_primary, sort_order: i };
         if (img.id) await supabase.from("product_images").update(row).eq("id", img.id);
         else await supabase.from("product_images").insert({ ...row, product_id: id });
       }
@@ -547,7 +546,7 @@ export function ProductForm({ productId, onSaved, submitLabel }: Props) {
       </div>
 
       <div className="admin-card">
-        <CloudinaryImageUploader value={form.images} onChange={(images) => set("images", images)} />
+        <ProductImageUploader value={form.images} onChange={(images) => set("images", images)} />
       </div>
 
       {error && (

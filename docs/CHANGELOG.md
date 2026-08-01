@@ -4,6 +4,34 @@ Format: Problem / Root Cause / Fix / Risk / Rollback
 Lane: Fast Lane (FL) or Full Lane (FullL)
 ---
 
+## 2026-08-01 — Sprint 1: Cloudinary dropped, Supabase Storage instead
+
+### [FullL] Product image uploads moved off Cloudinary
+
+**Problem:** Cloudinary was the planned image host (`VITE_CLOUDINARY_CLOUD_NAME`/
+`VITE_CLOUDINARY_UPLOAD_PRESET`, unsigned upload preset `yaawun_products`), but no
+Cloudinary account/credentials exist yet, and the owner decided to defer the
+auto-enhance feature Cloudinary was chosen for rather than block Sprint 1 on setting
+one up.
+
+**Fix:** New migration `20260801100008_product_images_storage_bucket.sql` creates a
+public Supabase Storage bucket `product-images` with explicit RLS on `storage.objects`
+(public read; insert/update/delete gated on `public.is_admin()`) — `storage.objects`
+has RLS enabled with zero policies by default, and a bucket's `public` flag alone only
+affects the CDN read path, not writes. `src/lib/product-images.ts` replaces
+`src/lib/cloudinary.ts`: plain upload + `getPublicUrl()`, no transformation applied.
+`product_images.cloudinary_id` is left in the schema, untouched and unused (nullable) —
+re-adding Cloudinary later is a Fast Lane change (new upload path + start populating
+that column), not a migration.
+
+**Risk:** No image auto-enhancement until Cloudinary is reintroduced. None to existing
+data — no product images had been uploaded yet under the Cloudinary path.
+
+**Rollback:** See the storage-bucket migration's own header for the exact drop
+statements.
+
+---
+
 ## 2026-08-01 — Sprint 0: Foundation
 
 ### [FullL] Initial repository scaffold and database schema

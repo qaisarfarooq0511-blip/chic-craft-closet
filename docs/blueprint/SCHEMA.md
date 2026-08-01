@@ -14,7 +14,7 @@ owner before this migration was written)
 | `categories`         | Product categories (Kashmiri Shawls, Dress Material, Kidswear, Accessories) | ✅  | ✅          | ✅    |
 | `products`           | Product catalogue — all items for sale                                      | ✅  | ✅          | ✅    |
 | `product_pieces`     | Per-piece dimension specs (length, width, weight) for 1–3 piece sets        | ✅  | ✅          | —     |
-| `product_images`     | Product photos — Cloudinary URLs + sort order                               | ✅  | ✅          | —     |
+| `product_images`     | Product photos — Supabase Storage public URLs + sort order                  | ✅  | ✅          | —     |
 | `product_includes`   | "What's in the package" list items                                          | ✅  | ✅          | —     |
 | `addresses`          | Customer shipping addresses                                                 | ✅  | ✅          | —     |
 | `orders`             | Order records with state machine status                                     | ✅  | ✅          | ✅    |

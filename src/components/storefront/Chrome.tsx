@@ -13,7 +13,7 @@ import { useProducts } from "@/hooks/useProducts";
 import { useSupabaseAuth } from "@/hooks/useSupabaseAuth";
 import { supabase } from "@/lib/supabase";
 import { formatPrice } from "@/types/database";
-import { productImageUrl } from "@/lib/cloudinary";
+import { productImageUrl } from "@/lib/product-images";
 import { getCategoriesStore, getPages } from "@/lib/storage";
 import { seedCategories, seedPages } from "@/lib/seed";
 

@@ -2,7 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { useCart } from "@/hooks/useCart";
 import { useToast } from "@/lib/toast";
 import { formatPrice } from "@/types/database";
-import { productImageUrl } from "@/lib/cloudinary";
+import { productImageUrl } from "@/lib/product-images";
 import type { ProductWithRelations } from "@/hooks/useProducts";
 
 export function Stars({ rating, size = 12 }: { rating: number; size?: number }) {

@@ -13,7 +13,7 @@ import { useCart } from "@/hooks/useCart";
 import { useToast } from "@/lib/toast";
 import { Stars } from "@/components/storefront/ProductCard";
 import { formatPrice, discountPercent } from "@/types/database";
-import { productImageUrl } from "@/lib/cloudinary";
+import { productImageUrl } from "@/lib/product-images";
 
 const MAX_QTY_PER_ITEM = 10;
 
