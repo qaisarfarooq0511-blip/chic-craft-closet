@@ -14,6 +14,7 @@ import {
   IconSettings,
   IconUsers,
   IconTicket,
+  IconAdjustmentsHorizontal,
 } from "@tabler/icons-react";
 
 import { ProtectedRoute } from "@/components/ProtectedRoute";
@@ -52,6 +53,7 @@ function AdminShell() {
     { to: "/admin/orders", label: "Orders", icon: <IconReceipt /> },
     { to: "/admin/customers", label: "Customers", icon: <IconUsers /> },
     { to: "/admin/coupons", label: "Coupons", icon: <IconTicket /> },
+    { to: "/admin/settings", label: "Store settings", icon: <IconAdjustmentsHorizontal /> },
     { to: "/admin/config", label: "Configuration", icon: <IconSettings /> },
     { to: "/admin/theme", label: "Theme", icon: <IconPalette /> },
   ];
