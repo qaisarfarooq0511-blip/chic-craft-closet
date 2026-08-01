@@ -26,6 +26,7 @@ export interface Category {
   description: string | null;
   sort_order: number;
   default_size_scale_id: string | null;
+  badge_label: string | null;
   created_at: string;
   updated_at: string;
   deleted_at: string | null;

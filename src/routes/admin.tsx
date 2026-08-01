@@ -22,6 +22,7 @@ import { useSupabaseAuth } from "@/hooks/useSupabaseAuth";
 import { supabase } from "@/lib/supabase";
 
 export const Route = createFileRoute("/admin")({
+  ssr: false,
   head: () => ({
     meta: [{ title: "Admin — Yaawun" }, { name: "robots", content: "noindex,nofollow" }],
   }),

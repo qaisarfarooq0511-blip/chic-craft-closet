@@ -1,37 +1,26 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { useMemo } from "react";
 import { IconTruck, IconShieldCheck, IconRefresh, IconBrandWhatsapp } from "@tabler/icons-react";
 import { ProductCard } from "@/components/storefront/ProductCard";
-import { useProducts } from "@/hooks/useProducts";
-// (legacy categorySlug helper no longer needed here — categories come from the live store)
-import { getHero, getCategoriesStore } from "@/lib/storage";
-import { seedHero, seedCategories } from "@/lib/seed";
+import { useProducts, fetchProducts } from "@/hooks/useProducts";
+import { useCategories, fetchCategories } from "@/hooks/useCategories";
+import { useHeroSettings, fetchHeroSettings } from "@/hooks/useHeroSettings";
 import { STORE, breadcrumbLd, abs } from "@/lib/jsonld";
-
-let tick = 0;
-const listeners = new Set<() => void>();
-function bump() {
-  tick++;
-  listeners.forEach((l) => l());
-}
-if (typeof window !== "undefined") {
-  window.addEventListener("storage", bump);
-}
-function subscribeStorage(cb: () => void) {
-  listeners.add(cb);
-  return () => {
-    listeners.delete(cb);
-  };
-}
-function useStoreTick() {
-  return useSyncExternalStore(
-    subscribeStorage,
-    () => tick,
-    () => 0,
-  );
-}
+import heroMain from "@/assets/hero-main.jpg";
+import imgSozni from "@/assets/products/sozni-burgundy.jpg";
+import imgBanarasi from "@/assets/products/banarasi-maroon.jpg";
 
 export const Route = createFileRoute("/")({
+  loader: async ({ context: { queryClient } }) => {
+    await Promise.all([
+      queryClient.ensureQueryData({ queryKey: ["hero-settings"], queryFn: fetchHeroSettings }),
+      queryClient.ensureQueryData({ queryKey: ["categories"], queryFn: fetchCategories }),
+      queryClient.ensureQueryData({
+        queryKey: ["products", null],
+        queryFn: () => fetchProducts({}),
+      }),
+    ]);
+  },
   head: () => ({
     meta: [
       {
@@ -53,17 +42,14 @@ export const Route = createFileRoute("/")({
   component: Home,
 });
 
-function Home() {
-  useStoreTick();
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+// Hero images are locked design-system assets (SETUP.md), not admin-editable —
+// bundled directly rather than round-tripped through site_settings.
+const HERO_IMAGES = { main: heroMain, smallLeft: imgSozni, smallRight: imgBanarasi };
 
-  // Real, active products from Supabase — powers the category tile counts and the featured grid.
+function Home() {
+  const { data: hero } = useHeroSettings();
+  const { data: cats = [] } = useCategories();
   const { data: products = [] } = useProducts({});
-  const hero = mounted ? getHero() : seedHero;
-  const cats = mounted ? getCategoriesStore() : seedCategories;
 
   const counts = useMemo(
     () =>
@@ -73,6 +59,7 @@ function Home() {
     [cats, products],
   );
 
+  if (!hero) return null;
   const headlineLines = hero.headline.split("\n");
 
   return (
@@ -99,22 +86,16 @@ function Home() {
           </div>
         </div>
         <div className="hero-right">
-          {hero.images.main && (
-            <div className="hero-img-main">
-              <img src={hero.images.main} alt="Featured" loading="eager" />
-            </div>
-          )}
+          <div className="hero-img-main">
+            <img src={HERO_IMAGES.main} alt="Featured" loading="eager" />
+          </div>
           <div className="hero-img-row">
-            {hero.images.smallLeft && (
-              <div className="hero-img-sm">
-                <img src={hero.images.smallLeft} alt="" loading="lazy" />
-              </div>
-            )}
-            {hero.images.smallRight && (
-              <div className="hero-img-sm">
-                <img src={hero.images.smallRight} alt="" loading="lazy" />
-              </div>
-            )}
+            <div className="hero-img-sm">
+              <img src={HERO_IMAGES.smallLeft} alt="" loading="lazy" />
+            </div>
+            <div className="hero-img-sm">
+              <img src={HERO_IMAGES.smallRight} alt="" loading="lazy" />
+            </div>
           </div>
         </div>
       </section>
@@ -122,7 +103,7 @@ function Home() {
       <div className="cat-strip">
         {cats.map((c) => (
           <Link key={c.id} to="/shop/$category" params={{ category: c.slug }} className="cat-tile">
-            {c.label && <div className="cat-tile-eye eyebrow">{c.label}</div>}
+            {c.badge_label && <div className="cat-tile-eye eyebrow">{c.badge_label}</div>}
             <div className="cat-tile-name">{c.name}</div>
             <div className="cat-tile-count">{counts[c.name] ?? 0} pieces</div>
           </Link>

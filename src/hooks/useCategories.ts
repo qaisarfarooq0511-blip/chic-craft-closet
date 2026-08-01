@@ -2,7 +2,8 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import type { Category } from "@/types/database";
 
-async function fetchCategories(): Promise<Category[]> {
+/** Exported so route loaders can ensureQueryData() with the exact same queryFn as useCategories(). */
+export async function fetchCategories(): Promise<Category[]> {
   const { data, error } = await supabase
     .from("categories")
     .select("*")

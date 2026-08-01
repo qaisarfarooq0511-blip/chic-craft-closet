@@ -8,7 +8,7 @@ import {
   IconAlertCircle,
   IconCircleCheck,
 } from "@tabler/icons-react";
-import { useProduct } from "@/hooks/useProduct";
+import { useProduct, fetchProduct } from "@/hooks/useProduct";
 import { useCart } from "@/hooks/useCart";
 import { useToast } from "@/lib/toast";
 import { Stars } from "@/components/storefront/ProductCard";
@@ -18,6 +18,12 @@ import { productImageUrl } from "@/lib/product-images";
 const MAX_QTY_PER_ITEM = 10;
 
 export const Route = createFileRoute("/product/$slug")({
+  loader: async ({ params, context: { queryClient } }) => {
+    await queryClient.ensureQueryData({
+      queryKey: ["product", params.slug],
+      queryFn: () => fetchProduct(params.slug),
+    });
+  },
   head: () => ({
     meta: [
       { title: "Product — Yaawun" },
