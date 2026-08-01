@@ -12,6 +12,47 @@
 
 ---
 
+## 🔴 WORKFLOW RULES
+
+These two rules are permanent process law — in force in every session, for every
+task, Fast Lane or Full Lane, until the user explicitly says "override CLAUDE.md rule
+[name]" for that specific instance. No other phrasing overrides them.
+
+### RULE 1 — BRANCH BEFORE EVERYTHING
+
+Never commit directly to `main`. Every piece of work — Fast Lane or Full Lane — goes
+on a branch first.
+
+Branch naming:
+
+- Fast Lane: `fl/short-description` (e.g. `fl/update-announcement-bar`)
+- Full Lane: `full/short-description` (e.g. `full/add-reviews-table`)
+
+Before starting any task:
+
+1. `git checkout main && git pull`
+2. `git checkout -b fl/...` or `full/...`
+3. Do the work
+4. Push the branch
+5. Tell the user: "Ready to merge — here is what changed: [summary]. Approve merge to
+   main?"
+6. Wait for the user's explicit "yes, merge" before touching `main`
+
+Never use `git merge` or `git push origin main` without the user's approval.
+
+### RULE 2 — CLASSIFY BEFORE CODING
+
+Before writing a single line of code or running any command for any task, state this
+explicitly:
+
+"LANE: Fast Lane" or "LANE: Full Lane"
+Then: "REASON: [one sentence why]"
+Then: "PLAN: [bullet list of exactly what will change]"
+
+Wait for the user to say "proceed" before starting.
+
+---
+
 ## 🔴 LANE CLASSIFICATION — Classify EVERY change before writing code
 
 ### Fast Lane
