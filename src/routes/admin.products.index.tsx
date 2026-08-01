@@ -20,6 +20,7 @@ function ProductsList() {
   const [categoryId, setCategoryId] = useState("");
   const [status, setStatus] = useState<"all" | "draft" | "active" | "archived">("all");
   const [search, setSearch] = useState("");
+  const [stockDrafts, setStockDrafts] = useState<Record<string, string>>({});
 
   const { data, isLoading } = useAdminProducts({
     page,
@@ -42,6 +43,39 @@ function ProductsList() {
     }
     invalidate();
     toast(next === "active" ? "Product is now live" : "Product unlisted");
+  };
+
+  const clearStockDraft = (id: string) =>
+    setStockDrafts((prev) => {
+      const next = { ...prev };
+      delete next[id];
+      return next;
+    });
+
+  const saveStock = async (id: string, currentStockCount: number) => {
+    const raw = stockDrafts[id];
+    if (raw === undefined) return; // untouched — nothing to save
+
+    const next = Number(raw);
+    if (!Number.isInteger(next) || next < 0) {
+      toast("Stock must be a whole number, 0 or more");
+      clearStockDraft(id);
+      return;
+    }
+    if (next === currentStockCount) {
+      clearStockDraft(id);
+      return;
+    }
+
+    const { error } = await supabase.from("products").update({ stock_count: next }).eq("id", id);
+    if (error) {
+      toast(error.message);
+      clearStockDraft(id);
+      return;
+    }
+    invalidate();
+    clearStockDraft(id);
+    toast("Stock updated");
   };
 
   const remove = async (id: string) => {
@@ -170,8 +204,26 @@ function ProductsList() {
                     </td>
                     <td>{p.category?.name}</td>
                     <td>{formatPrice(p.price)}</td>
-                    <td style={{ color: p.stock_count <= 5 ? "var(--rust)" : undefined }}>
-                      {p.stock_count}
+                    <td>
+                      <input
+                        className="form-input"
+                        type="number"
+                        min={0}
+                        step={1}
+                        style={{
+                          width: 64,
+                          padding: "4px 6px",
+                          color: p.stock_count <= 5 ? "var(--rust)" : undefined,
+                        }}
+                        value={stockDrafts[p.id] ?? String(p.stock_count)}
+                        onChange={(e) =>
+                          setStockDrafts((prev) => ({ ...prev, [p.id]: e.target.value }))
+                        }
+                        onBlur={() => void saveStock(p.id, p.stock_count)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") e.currentTarget.blur();
+                        }}
+                      />
                     </td>
                     <td>
                       <span
