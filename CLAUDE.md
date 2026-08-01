@@ -108,6 +108,13 @@ Edge functions · Notification channels · Order state machine · Admin permissi
 3. Supabase anon key is public-safe ONLY because RLS is correctly configured. If RLS is wrong, the key is dangerous.
 4. Admin routes require `role = 'admin'` check server-side. Never trust client-side role checks alone.
 5. All state-changing API calls (POST/PUT/PATCH) must include an idempotency key header.
+6. NO DEV BACKDOOR ACCOUNTS: Never create admin-privileged accounts with hardcoded
+   credentials in the production database for dev/testing convenience. `VITE_`
+   prefixed environment variables are client-side only and provide zero server-side
+   security. Any dev bypass that requires a real `auth.users` row in the production
+   Supabase project is a live security vulnerability regardless of whether the UI
+   button ships to production. If live UI verification is needed during development,
+   the developer clicks the real auth flow manually.
 
 ---
 
