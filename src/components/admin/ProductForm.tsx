@@ -1,8 +1,11 @@
 import { useEffect, useState } from "react";
-import { IconPlus, IconTrash } from "@tabler/icons-react";
+import { IconPlus, IconTrash, IconX } from "@tabler/icons-react";
 import { supabase } from "@/lib/supabase";
 import { useCategories } from "@/hooks/useCategories";
 import { useAdminProduct } from "@/hooks/useAdminProduct";
+import { useFabricOptions } from "@/hooks/useFabricOptions";
+import { useColourOptions } from "@/hooks/useColourOptions";
+import { useSizeOptionsByScale } from "@/hooks/useSizeOptionsByScale";
 import { useToast } from "@/lib/toast";
 import { slugify } from "@/lib/types";
 import { deleteProductImage } from "@/lib/product-images";
@@ -21,6 +24,13 @@ interface IncludeRow {
   id?: string;
   description: string;
 }
+interface VariantRow {
+  id?: string;
+  colourId: string;
+  sizeId: string | null; // null when the category has no size scale
+  stockCount: string;
+  priceOverride: string; // rupees, as typed — '' means no override
+}
 
 interface FormState {
   name: string;
@@ -30,7 +40,7 @@ interface FormState {
   comparePrice: string;
   badge: string;
   description: string;
-  fabric: string;
+  fabricId: string; // '' = none selected
   embroidery: string;
   care: string;
   isUnstitched: boolean;
@@ -39,6 +49,8 @@ interface FormState {
   pieces: PieceRow[];
   includes: IncludeRow[];
   images: ProductImageDraft[];
+  variantColourIds: string[];
+  variants: VariantRow[];
 }
 
 const emptyForm: FormState = {
@@ -49,7 +61,7 @@ const emptyForm: FormState = {
   comparePrice: "",
   badge: "",
   description: "",
-  fabric: "",
+  fabricId: "",
   embroidery: "",
   care: "",
   isUnstitched: false,
@@ -58,6 +70,8 @@ const emptyForm: FormState = {
   pieces: [{ piece_name: "", length: "", width: "", weight: "" }],
   includes: [],
   images: [],
+  variantColourIds: [],
+  variants: [],
 };
 
 async function generateUniqueSlug(base: string): Promise<string> {
@@ -84,12 +98,24 @@ export function ProductForm({ productId, onSaved, submitLabel }: Props) {
   const toast = useToast();
   const { data: categories = [] } = useCategories();
   const { data: existing, isLoading: loadingExisting } = useAdminProduct(productId);
+  const { data: fabricOptions = [] } = useFabricOptions();
+  const { data: colourOptions = [] } = useColourOptions();
   const [form, setForm] = useState<FormState>(emptyForm);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const selectedCategory = categories.find((c) => c.id === form.categoryId);
+  const scaleId = selectedCategory?.default_size_scale_id ?? null;
+  const { data: sizeOptions = [] } = useSizeOptionsByScale(scaleId);
+  const hasSizeScale = sizeOptions.length > 0;
+
   useEffect(() => {
     if (!existing) return;
+    const matchedFabricId =
+      existing.fabric_id ??
+      fabricOptions.find((f) => f.name.toLowerCase() === (existing.fabric ?? "").toLowerCase())
+        ?.id ??
+      "";
     setForm({
       name: existing.name,
       subtitle: existing.subtitle ?? "",
@@ -98,7 +124,7 @@ export function ProductForm({ productId, onSaved, submitLabel }: Props) {
       comparePrice: existing.compare_price ? String(existing.compare_price / 100) : "",
       badge: existing.badge ?? "",
       description: existing.description ?? "",
-      fabric: existing.fabric ?? "",
+      fabricId: matchedFabricId,
       embroidery: existing.embroidery ?? "",
       care: existing.care ?? "",
       isUnstitched: existing.is_unstitched,
@@ -120,8 +146,20 @@ export function ProductForm({ productId, onSaved, submitLabel }: Props) {
         is_primary: i.is_primary,
         sort_order: i.sort_order,
       })),
+      variantColourIds: Array.from(
+        new Set(existing.variants.map((v) => v.colour_id).filter((v): v is string => !!v)),
+      ),
+      variants: existing.variants
+        .filter((v) => v.colour_id)
+        .map((v) => ({
+          id: v.id,
+          colourId: v.colour_id as string,
+          sizeId: v.size_id,
+          stockCount: String(v.stock_count),
+          priceOverride: v.price_override ? String(v.price_override / 100) : "",
+        })),
     });
-  }, [existing]);
+  }, [existing, fabricOptions]);
 
   const set = <K extends keyof FormState>(key: K, value: FormState[K]) =>
     setForm((f) => ({ ...f, [key]: value }));
@@ -153,6 +191,46 @@ export function ProductForm({ productId, onSaved, submitLabel }: Props) {
       form.includes.filter((_, idx) => idx !== i),
     );
 
+  // --- variants: colour is the primary axis; size nests under a colour only when
+  // the category has a size scale with options (e.g. dress_material has none) ---
+  const addColour = (colourId: string) => {
+    if (form.variantColourIds.includes(colourId)) return;
+    setForm((f) => ({
+      ...f,
+      variantColourIds: [...f.variantColourIds, colourId],
+      variants: hasSizeScale
+        ? f.variants
+        : [...f.variants, { colourId, sizeId: null, stockCount: "0", priceOverride: "" }],
+    }));
+  };
+
+  const removeColour = (colourId: string) => {
+    setForm((f) => ({
+      ...f,
+      variantColourIds: f.variantColourIds.filter((id) => id !== colourId),
+      variants: f.variants.filter((v) => v.colourId !== colourId),
+    }));
+  };
+
+  const addSizeToColour = (colourId: string, sizeId: string) => {
+    if (form.variants.some((v) => v.colourId === colourId && v.sizeId === sizeId)) return;
+    set("variants", [...form.variants, { colourId, sizeId, stockCount: "0", priceOverride: "" }]);
+  };
+
+  const updateVariant = (colourId: string, sizeId: string | null, patch: Partial<VariantRow>) =>
+    set(
+      "variants",
+      form.variants.map((v) =>
+        v.colourId === colourId && v.sizeId === sizeId ? { ...v, ...patch } : v,
+      ),
+    );
+
+  const removeVariant = (colourId: string, sizeId: string | null) =>
+    set(
+      "variants",
+      form.variants.filter((v) => !(v.colourId === colourId && v.sizeId === sizeId)),
+    );
+
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -180,6 +258,12 @@ export function ProductForm({ productId, onSaved, submitLabel }: Props) {
 
     setSaving(true);
     try {
+      // Dual-write: fabric_id is the new FK; fabric (free text) is mirrored from the
+      // selected option's name so the PDP, which still reads the text column directly,
+      // needs no change yet (deferred to a later stage).
+      const fabricName = form.fabricId
+        ? (fabricOptions.find((f) => f.id === form.fabricId)?.name ?? null)
+        : null;
       const payload = {
         name: form.name.trim(),
         subtitle: form.subtitle.trim() || null,
@@ -188,7 +272,8 @@ export function ProductForm({ productId, onSaved, submitLabel }: Props) {
         compare_price: comparePriceNum,
         badge: form.badge || null,
         description: form.description.trim() || null,
-        fabric: form.fabric.trim() || null,
+        fabric_id: form.fabricId || null,
+        fabric: fabricName,
         embroidery: form.embroidery.trim() || null,
         care: form.care.trim() || null,
         is_unstitched: form.isUnstitched,
@@ -272,6 +357,33 @@ export function ProductForm({ productId, onSaved, submitLabel }: Props) {
         const row = { storage_path: img.storage_path, is_primary: img.is_primary, sort_order: i };
         if (img.id) await supabase.from("product_images").update(row).eq("id", img.id);
         else await supabase.from("product_images").insert({ ...row, product_id: id });
+      }
+
+      // --- variants: delete removed, update existing, insert new ---
+      // A product with zero variants stays governed by stock_count above, unchanged.
+      const keepVariantIds = form.variants.filter((v) => v.id).map((v) => v.id as string);
+      const removedVariantIds = (existing?.variants ?? [])
+        .map((v) => v.id)
+        .filter((vid) => !keepVariantIds.includes(vid));
+      if (removedVariantIds.length) {
+        await supabase
+          .from("product_variants")
+          .update({ deleted_at: new Date().toISOString() })
+          .in("id", removedVariantIds);
+      }
+      for (const [i, v] of form.variants.entries()) {
+        const priceOverride = v.priceOverride.trim()
+          ? Math.round(parseFloat(v.priceOverride) * 100)
+          : null;
+        const row = {
+          colour_id: v.colourId,
+          size_id: v.sizeId,
+          stock_count: parseInt(v.stockCount, 10) || 0,
+          price_override: priceOverride && priceOverride > 0 ? priceOverride : null,
+          sort_order: i,
+        };
+        if (v.id) await supabase.from("product_variants").update(row).eq("id", v.id);
+        else await supabase.from("product_variants").insert({ ...row, product_id: id });
       }
 
       toast(productId ? "Changes saved" : "Product created");
@@ -386,11 +498,18 @@ export function ProductForm({ productId, onSaved, submitLabel }: Props) {
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
           <div className="form-field">
             <label className="form-label">Fabric</label>
-            <input
+            <select
               className="form-input"
-              value={form.fabric}
-              onChange={(e) => set("fabric", e.target.value)}
-            />
+              value={form.fabricId}
+              onChange={(e) => set("fabricId", e.target.value)}
+            >
+              <option value="">Select a fabric</option>
+              {fabricOptions.map((f) => (
+                <option key={f.id} value={f.id}>
+                  {f.name}
+                </option>
+              ))}
+            </select>
           </div>
           <div className="form-field">
             <label className="form-label">Embroidery</label>
@@ -543,6 +662,209 @@ export function ProductForm({ productId, onSaved, submitLabel }: Props) {
         >
           <IconPlus size={14} /> Add item
         </button>
+      </div>
+
+      <div className="admin-card">
+        <div className="cart-sum-title" style={{ marginBottom: 4 }}>
+          Variants
+        </div>
+        <p style={{ fontSize: 11, color: "var(--ink3)", marginBottom: 12 }}>
+          Leave empty to manage stock at the product level above. Add a colour to create colour
+          {hasSizeScale ? "/size" : ""} variants, each with its own stock and optional price
+          override.
+        </p>
+
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 16 }}>
+          {colourOptions
+            .filter((c) => !form.variantColourIds.includes(c.id))
+            .map((c) => (
+              <button
+                key={c.id}
+                type="button"
+                onClick={() => addColour(c.id)}
+                title={`Add ${c.name}`}
+                aria-label={`Add ${c.name}`}
+                style={{
+                  width: 28,
+                  height: 28,
+                  borderRadius: "50%",
+                  background: c.hex_code,
+                  border: "1px solid var(--line)",
+                  cursor: "pointer",
+                }}
+              />
+            ))}
+          {colourOptions.length === 0 && (
+            <span style={{ fontSize: 12, color: "var(--ink3)" }}>
+              No colour options configured.
+            </span>
+          )}
+        </div>
+
+        {form.variantColourIds.length === 0 && (
+          <p style={{ fontSize: 12, color: "var(--ink3)" }}>
+            No variants yet — click a colour above to start.
+          </p>
+        )}
+
+        {form.variantColourIds.map((colourId) => {
+          const colour = colourOptions.find((c) => c.id === colourId);
+          const colourVariants = form.variants.filter((v) => v.colourId === colourId);
+          const availableSizes = sizeOptions.filter(
+            (s) => !colourVariants.some((v) => v.sizeId === s.id),
+          );
+          return (
+            <div
+              key={colourId}
+              style={{
+                border: "1px solid var(--line)",
+                borderRadius: 8,
+                padding: 12,
+                marginBottom: 12,
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  marginBottom: hasSizeScale ? 10 : 0,
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <span
+                    style={{
+                      width: 18,
+                      height: 18,
+                      borderRadius: "50%",
+                      background: colour?.hex_code,
+                      border: "1px solid var(--line)",
+                      display: "inline-block",
+                    }}
+                  />
+                  <strong style={{ fontSize: 13 }}>{colour?.name ?? "Unknown colour"}</strong>
+                </div>
+                <button
+                  type="button"
+                  className="btn-text-rust"
+                  onClick={() => removeColour(colourId)}
+                  aria-label={`Remove ${colour?.name ?? "colour"}`}
+                >
+                  <IconX size={14} />
+                </button>
+              </div>
+
+              {hasSizeScale ? (
+                <>
+                  {colourVariants.map((v) => {
+                    const size = sizeOptions.find((s) => s.id === v.sizeId);
+                    return (
+                      <div
+                        key={v.sizeId}
+                        style={{
+                          display: "grid",
+                          gridTemplateColumns: "1fr 100px 140px auto",
+                          gap: 8,
+                          marginBottom: 8,
+                          alignItems: "end",
+                        }}
+                      >
+                        <div className="form-field" style={{ margin: 0 }}>
+                          <label className="form-label">Size</label>
+                          <div style={{ padding: "8px 0", fontSize: 13 }}>{size?.label ?? "—"}</div>
+                        </div>
+                        <div className="form-field" style={{ margin: 0 }}>
+                          <label className="form-label">Stock</label>
+                          <input
+                            className="form-input"
+                            type="number"
+                            min={0}
+                            step={1}
+                            value={v.stockCount}
+                            onChange={(e) =>
+                              updateVariant(colourId, v.sizeId, { stockCount: e.target.value })
+                            }
+                          />
+                        </div>
+                        <div className="form-field" style={{ margin: 0 }}>
+                          <label className="form-label">Price override (₹)</label>
+                          <input
+                            className="form-input"
+                            type="number"
+                            min={0}
+                            step={1}
+                            placeholder={form.price ? `Default ₹${form.price}` : "Optional"}
+                            value={v.priceOverride}
+                            onChange={(e) =>
+                              updateVariant(colourId, v.sizeId, { priceOverride: e.target.value })
+                            }
+                          />
+                        </div>
+                        <button
+                          type="button"
+                          className="btn-text-rust"
+                          onClick={() => removeVariant(colourId, v.sizeId)}
+                          aria-label="Remove size"
+                        >
+                          <IconTrash size={16} />
+                        </button>
+                      </div>
+                    );
+                  })}
+                  {availableSizes.length > 0 && (
+                    <select
+                      className="form-input"
+                      value=""
+                      onChange={(e) => {
+                        if (e.target.value) addSizeToColour(colourId, e.target.value);
+                      }}
+                      style={{ maxWidth: 200 }}
+                    >
+                      <option value="">+ Add size</option>
+                      {availableSizes.map((s) => (
+                        <option key={s.id} value={s.id}>
+                          {s.label}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                </>
+              ) : (
+                colourVariants[0] && (
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                    <div className="form-field" style={{ margin: 0 }}>
+                      <label className="form-label">Stock</label>
+                      <input
+                        className="form-input"
+                        type="number"
+                        min={0}
+                        step={1}
+                        value={colourVariants[0].stockCount}
+                        onChange={(e) =>
+                          updateVariant(colourId, null, { stockCount: e.target.value })
+                        }
+                      />
+                    </div>
+                    <div className="form-field" style={{ margin: 0 }}>
+                      <label className="form-label">Price override (₹)</label>
+                      <input
+                        className="form-input"
+                        type="number"
+                        min={0}
+                        step={1}
+                        placeholder={form.price ? `Default ₹${form.price}` : "Optional"}
+                        value={colourVariants[0].priceOverride}
+                        onChange={(e) =>
+                          updateVariant(colourId, null, { priceOverride: e.target.value })
+                        }
+                      />
+                    </div>
+                  </div>
+                )
+              )}
+            </div>
+          );
+        })}
       </div>
 
       <div className="admin-card">
