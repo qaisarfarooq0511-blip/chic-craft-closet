@@ -1,0 +1,143 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  # ── Fast Lane checks — run on every push/PR ────────────────────────────
+  fast-lane:
+    name: Fast Lane (Lint · Typecheck · Build)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Type check
+        run: npm run typecheck
+
+      - name: Build
+        run: npm run build
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.VITE_SUPABASE_ANON_KEY }}
+
+      - name: Check for committed .env files
+        run: |
+          if git ls-files | grep -E '^\.env$|^\.env\.production$|^\.env\.local$'; then
+            echo "❌ CRITICAL: .env file found in repository. Remove it immediately."
+            exit 1
+          fi
+          echo "✅ No .env files committed"
+
+  # ── Full Lane checks — run only when supabase/ is touched ─────────────
+  full-lane:
+    name: Full Lane (Migration · RLS · Security audit)
+    runs-on: ubuntu-latest
+    if: |
+      contains(join(github.event.commits.*.modified, ','), 'supabase/') ||
+      contains(join(github.event.commits.*.added, ','), 'supabase/')
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check migration naming convention
+        run: |
+          echo "Checking migration file naming..."
+          for f in supabase/migrations/*.sql; do
+            filename=$(basename "$f")
+            if ! echo "$filename" | grep -qE '^[0-9]{14}_[a-z0-9_]+\.sql$'; then
+              echo "❌ Migration file '$filename' does not follow YYYYMMDDHHMMSS_description.sql convention"
+              exit 1
+            fi
+          done
+          echo "✅ All migration files follow naming convention"
+
+      - name: Check RLS is enabled in migrations
+        run: |
+          echo "Checking new migrations have RLS enabled..."
+          failed=0
+          for f in supabase/migrations/*.sql; do
+            # Check if file creates a table but doesn't enable RLS
+            if grep -q "CREATE TABLE" "$f" && ! grep -q "ENABLE ROW LEVEL SECURITY" "$f"; then
+              echo "❌ $f creates a table but does not enable RLS"
+              failed=1
+            fi
+          done
+          if [ $failed -eq 1 ]; then exit 1; fi
+          echo "✅ RLS enabled on all new tables"
+
+      - name: Check soft-delete columns in migrations
+        run: |
+          echo "Checking for soft-delete pattern..."
+          failed=0
+          for f in supabase/migrations/*.sql; do
+            if grep -q "CREATE TABLE" "$f" && ! grep -q "deleted_at" "$f"; then
+              echo "⚠️  WARNING: $f creates a table without deleted_at column"
+              # Warning only — some tables (e.g. audit_logs) are append-only
+            fi
+          done
+          echo "✅ Soft-delete check complete"
+
+      - name: Check SECURITY DEFINER functions have REVOKE
+        run: |
+          echo "Checking SECURITY DEFINER functions have REVOKE EXECUTE..."
+          failed=0
+          for f in supabase/migrations/*.sql; do
+            if grep -q "SECURITY DEFINER" "$f" && ! grep -q "REVOKE EXECUTE" "$f"; then
+              echo "❌ $f has SECURITY DEFINER function without REVOKE EXECUTE"
+              failed=1
+            fi
+          done
+          if [ $failed -eq 1 ]; then exit 1; fi
+          echo "✅ All SECURITY DEFINER functions have REVOKE EXECUTE"
+
+      - name: Require CHANGELOG entry for migrations
+        run: |
+          if ! grep -q "$(date +%Y-%m)" docs/CHANGELOG.md 2>/dev/null; then
+            echo "⚠️  WARNING: No CHANGELOG entry found for this month. Add one in docs/CHANGELOG.md"
+          fi
+          echo "✅ Changelog check complete"
+
+  # ── Secret scanning ────────────────────────────────────────────────────
+  secret-scan:
+    name: Secret scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Scan for hardcoded secrets
+        run: |
+          # Check for common secret patterns
+          patterns=(
+            "sk_live_"
+            "rzp_live_"
+            "AKIA[0-9A-Z]{16}"
+            "supabase.*service_role"
+            "-----BEGIN RSA PRIVATE KEY-----"
+          )
+          failed=0
+          for pattern in "${patterns[@]}"; do
+            if git log -p | grep -qE "$pattern"; then
+              echo "❌ Potential secret found matching pattern: $pattern"
+              failed=1
+            fi
+          done
+          if [ $failed -eq 1 ]; then
+            echo "Run: git filter-repo to remove secrets from history"
+            exit 1
+          fi
+          echo "✅ No hardcoded secrets detected"

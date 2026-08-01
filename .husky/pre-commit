@@ -1,0 +1,13 @@
+# Fast Lane guard — runs on every commit
+echo "🔍 Running pre-commit checks..."
+
+# 1. Block .env commits (added or modified content only — untracking/deleting is fine)
+if git diff --cached --name-only --diff-filter=AM | grep -E '^\.env$|^\.env\.production$'; then
+  echo "❌ Attempted to commit .env file. This is forbidden. Add it to .gitignore."
+  exit 1
+fi
+
+# 2. Lint staged files
+npx lint-staged
+
+echo "✅ Pre-commit checks passed"
