@@ -1,9 +1,6 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/lib/supabase";
 import { useAdminOrders, ADMIN_ORDERS_PAGE_SIZE } from "@/hooks/useAdminOrders";
-import { useToast } from "@/lib/toast";
 import { formatPrice } from "@/types/database";
 import type { Order } from "@/types/database";
 
@@ -22,68 +19,13 @@ const STATUS_OPTIONS: (Order["status"] | "all")[] = [
 ];
 
 function OrdersAdmin() {
-  const toast = useToast();
-  const queryClient = useQueryClient();
   const [page, setPage] = useState(0);
   const [status, setStatus] = useState<Order["status"] | "all">("all");
-  const [dispatchingId, setDispatchingId] = useState<string | null>(null);
-  const [trackingNumber, setTrackingNumber] = useState("");
-  const [trackingUrl, setTrackingUrl] = useState("");
 
   const { data, isLoading } = useAdminOrders({ page, status });
   const rows = data?.rows ?? [];
   const total = data?.total ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / ADMIN_ORDERS_PAGE_SIZE));
-
-  const invalidate = () => queryClient.invalidateQueries({ queryKey: ["admin-orders"] });
-
-  const confirmOrder = async (id: string) => {
-    const { error } = await supabase.from("orders").update({ status: "confirmed" }).eq("id", id);
-    if (error) {
-      toast(error.message);
-      return;
-    }
-    invalidate();
-    toast("Order confirmed");
-  };
-
-  const submitDispatch = async (id: string) => {
-    if (!trackingNumber.trim()) {
-      toast("Enter a tracking number");
-      return;
-    }
-    const { error } = await supabase
-      .from("orders")
-      .update({
-        status: "dispatched",
-        tracking_number: trackingNumber.trim(),
-        tracking_url: trackingUrl.trim() || null,
-        dispatched_at: new Date().toISOString(),
-      })
-      .eq("id", id);
-    if (error) {
-      toast(error.message);
-      return;
-    }
-    setDispatchingId(null);
-    setTrackingNumber("");
-    setTrackingUrl("");
-    invalidate();
-    toast("Order dispatched");
-  };
-
-  const deliverOrder = async (id: string) => {
-    const { error } = await supabase
-      .from("orders")
-      .update({ status: "delivered", delivered_at: new Date().toISOString() })
-      .eq("id", id);
-    if (error) {
-      toast(error.message);
-      return;
-    }
-    invalidate();
-    toast("Order marked delivered");
-  };
 
   return (
     <>
@@ -153,53 +95,10 @@ function OrdersAdmin() {
                   <td>
                     <span className={`pill pill-${o.status}`}>{o.status}</span>
                   </td>
-                  <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
-                    {o.status === "pending" && (
-                      <button className="btn-text-ink" onClick={() => confirmOrder(o.id)}>
-                        Confirm
-                      </button>
-                    )}
-                    {o.status === "confirmed" && dispatchingId !== o.id && (
-                      <button className="btn-text-ink" onClick={() => setDispatchingId(o.id)}>
-                        Dispatch
-                      </button>
-                    )}
-                    {o.status === "confirmed" && dispatchingId === o.id && (
-                      <div
-                        style={{
-                          display: "flex",
-                          gap: 6,
-                          alignItems: "center",
-                          justifyContent: "flex-end",
-                        }}
-                      >
-                        <input
-                          className="form-input"
-                          style={{ width: 130, padding: "6px 8px" }}
-                          placeholder="Tracking #"
-                          value={trackingNumber}
-                          onChange={(e) => setTrackingNumber(e.target.value)}
-                        />
-                        <input
-                          className="form-input"
-                          style={{ width: 130, padding: "6px 8px" }}
-                          placeholder="Tracking URL"
-                          value={trackingUrl}
-                          onChange={(e) => setTrackingUrl(e.target.value)}
-                        />
-                        <button className="btn-text-ink" onClick={() => submitDispatch(o.id)}>
-                          Save
-                        </button>
-                        <button className="btn-text-rust" onClick={() => setDispatchingId(null)}>
-                          Cancel
-                        </button>
-                      </div>
-                    )}
-                    {o.status === "dispatched" && (
-                      <button className="btn-text-ink" onClick={() => deliverOrder(o.id)}>
-                        Mark delivered
-                      </button>
-                    )}
+                  <td style={{ textAlign: "right" }}>
+                    <Link to="/admin/orders/$id" params={{ id: o.id }} className="btn-text-ink">
+                      View
+                    </Link>
                   </td>
                 </tr>
               ))}

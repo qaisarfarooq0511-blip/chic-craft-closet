@@ -4,6 +4,67 @@ Format: Problem / Root Cause / Fix / Risk / Rollback
 Lane: Fast Lane (FL) or Full Lane (FullL)
 ---
 
+## 2026-08-01 — Sprint 2B: Order detail page, tracking, and status transitions
+
+### [FullL] Admin order detail page with status dropdown; fixes silently-broken notification_queue writes
+
+**Problem:** The orders list had inline confirm/dispatch/deliver actions but no
+detail view (customer info, full address, line items, payment method all
+required opening the database directly), no cancel action, and dispatching
+required cramming two text inputs into a table row. Building the detail page's
+"queue a notification on every status change" requirement surfaced a real,
+pre-existing bug: `notification_queue` RLS granted `INSERT` only to
+`service_role`; admin had `SELECT` only. `NotificationService.send()` is
+called directly from the browser client (`checkout.tsx`'s `order_confirmed`
+call, live since Sprint 1) — every such call has been silently failing RLS
+(the error is caught and logged, never thrown) since it shipped. No customer
+has ever actually received an order-confirmation queue entry.
+
+**Root Cause:** `notification_queue`'s original RLS (Sprint 0) assumed only
+the Edge Function worker would ever write to it, missing that
+`NotificationService.send()` — the one sanctioned way to queue a
+notification per CLAUDE.md's Notification Service Law — is called directly
+from authenticated client code, not from a trusted server context.
+
+**Fix:**
+
+- Migration `20260801100011_notification_queue_write_policies.sql`: adds
+  `notif_queue_insert_own` (`user_id = auth.uid()`) and
+  `notif_queue_insert_admin` (`is_admin()`) INSERT policies.
+  UPDATE/DELETE and the full `service_role` `FOR ALL` policy are unchanged —
+  only the Edge Function worker that processes/marks rows sent or failed may
+  do those.
+- New `admin.orders.$id.tsx` detail page: customer info, shipping address,
+  payment method, all line items with totals, tracking info. Status actions
+  are restricted to the actual state machine (`pending → confirmed/cancelled`,
+  `confirmed → dispatched/cancelled`, `dispatched → delivered`) — not a free
+  choice across all six statuses. `refunded` is out of scope for this stage,
+  deliberately not added to the dropdown.
+- Dispatching requires a tracking number (URL optional) before the transition
+  is allowed.
+- Every transition writes `orders.status` (+ `tracking_number`/
+  `tracking_url`/`dispatched_at`/`delivered_at` as applicable) and calls
+  `NotificationService.send()` with the matching event type
+  (`order_confirmed`/`order_dispatched`/`order_delivered`/`order_cancelled`)
+  — these now actually reach the queue.
+- `admin.orders.tsx` (list) simplified to a read-only overview + "View" link
+  per row — the inline confirm/dispatch/deliver actions and the cramped
+  tracking-input row moved to the detail page, so status-transition logic
+  lives in exactly one place instead of two.
+- `docs/blueprint/RLS.md` updated: `notification_queue` policy matrix row and
+  critical-rules note reflect the new INSERT policies.
+
+**Risk:** Low — additive INSERT policies only, no change to existing
+UPDATE/DELETE/service_role access. No real orders exist yet to be affected by
+the list-page action removal.
+
+**Rollback:** `DROP POLICY "notif_queue_insert_own" ON notification_queue;
+DROP POLICY "notif_queue_insert_admin" ON notification_queue;` (see migration
+file header). Reverting the detail page means restoring the prior
+`admin.orders.tsx` from git history.
+
+---
+
 ## 2026-08-01 — Sprint 1: Magic-link email auth (bridge), phone OTP dormant
 
 ### [FullL] Custom OTP session-minting turned out to be fundamentally incompatible with GoTrue — switched to magic-link email as the live auth path
