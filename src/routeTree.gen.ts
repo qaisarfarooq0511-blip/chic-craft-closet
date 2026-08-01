@@ -10,6 +10,10 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
+import { Route as SignupRouteImport } from './routes/signup'
+import { Route as ResetPasswordRouteImport } from './routes/reset-password'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as ContactRouteImport } from './routes/contact'
 import { Route as CheckoutRouteImport } from './routes/checkout'
 import { Route as CartRouteImport } from './routes/cart'
@@ -24,10 +28,13 @@ import { Route as AccountIndexRouteImport } from './routes/account.index'
 import { Route as ShopCategoryRouteImport } from './routes/shop.$category'
 import { Route as ProductSlugRouteImport } from './routes/product.$slug'
 import { Route as PageSlugRouteImport } from './routes/page.$slug'
+import { Route as OrderConfirmationOrderNumberRouteImport } from './routes/order-confirmation.$orderNumber'
 import { Route as ApiEnhanceImageRouteImport } from './routes/api/enhance-image'
 import { Route as AdminThemeRouteImport } from './routes/admin.theme'
 import { Route as AdminSectionsRouteImport } from './routes/admin.sections'
 import { Route as AdminReviewsRouteImport } from './routes/admin.reviews'
+import { Route as AdminOrdersRouteImport } from './routes/admin.orders'
+import { Route as AdminLoginRouteImport } from './routes/admin.login'
 import { Route as AdminInquiriesRouteImport } from './routes/admin.inquiries'
 import { Route as AdminHeroRouteImport } from './routes/admin.hero'
 import { Route as AdminCustomersRouteImport } from './routes/admin.customers'
@@ -46,6 +53,26 @@ import { Route as AdminPagesSlugRouteImport } from './routes/admin.pages.$slug'
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
   id: '/sitemap.xml',
   path: '/sitemap.xml',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SignupRoute = SignupRouteImport.update({
+  id: '/signup',
+  path: '/signup',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ResetPasswordRoute = ResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
+  id: '/forgot-password',
+  path: '/forgot-password',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ContactRoute = ContactRouteImport.update({
@@ -118,6 +145,12 @@ const PageSlugRoute = PageSlugRouteImport.update({
   path: '/page/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
+const OrderConfirmationOrderNumberRoute =
+  OrderConfirmationOrderNumberRouteImport.update({
+    id: '/order-confirmation/$orderNumber',
+    path: '/order-confirmation/$orderNumber',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiEnhanceImageRoute = ApiEnhanceImageRouteImport.update({
   id: '/api/enhance-image',
   path: '/api/enhance-image',
@@ -136,6 +169,16 @@ const AdminSectionsRoute = AdminSectionsRouteImport.update({
 const AdminReviewsRoute = AdminReviewsRouteImport.update({
   id: '/reviews',
   path: '/reviews',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminOrdersRoute = AdminOrdersRouteImport.update({
+  id: '/orders',
+  path: '/orders',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminLoginRoute = AdminLoginRouteImport.update({
+  id: '/login',
+  path: '/login',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminInquiriesRoute = AdminInquiriesRouteImport.update({
@@ -218,6 +261,10 @@ export interface FileRoutesByFullPath {
   '/cart': typeof CartRoute
   '/checkout': typeof CheckoutRoute
   '/contact': typeof ContactRoute
+  '/forgot-password': typeof ForgotPasswordRoute
+  '/login': typeof LoginRoute
+  '/reset-password': typeof ResetPasswordRoute
+  '/signup': typeof SignupRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/account/addresses': typeof AccountAddressesRoute
   '/account/orders': typeof AccountOrdersRoute
@@ -228,10 +275,13 @@ export interface FileRoutesByFullPath {
   '/admin/customers': typeof AdminCustomersRoute
   '/admin/hero': typeof AdminHeroRoute
   '/admin/inquiries': typeof AdminInquiriesRoute
+  '/admin/login': typeof AdminLoginRoute
+  '/admin/orders': typeof AdminOrdersRoute
   '/admin/reviews': typeof AdminReviewsRoute
   '/admin/sections': typeof AdminSectionsRoute
   '/admin/theme': typeof AdminThemeRoute
   '/api/enhance-image': typeof ApiEnhanceImageRoute
+  '/order-confirmation/$orderNumber': typeof OrderConfirmationOrderNumberRoute
   '/page/$slug': typeof PageSlugRoute
   '/product/$slug': typeof ProductSlugRoute
   '/shop/$category': typeof ShopCategoryRoute
@@ -251,6 +301,10 @@ export interface FileRoutesByTo {
   '/cart': typeof CartRoute
   '/checkout': typeof CheckoutRoute
   '/contact': typeof ContactRoute
+  '/forgot-password': typeof ForgotPasswordRoute
+  '/login': typeof LoginRoute
+  '/reset-password': typeof ResetPasswordRoute
+  '/signup': typeof SignupRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/account/addresses': typeof AccountAddressesRoute
   '/account/orders': typeof AccountOrdersRoute
@@ -261,10 +315,13 @@ export interface FileRoutesByTo {
   '/admin/customers': typeof AdminCustomersRoute
   '/admin/hero': typeof AdminHeroRoute
   '/admin/inquiries': typeof AdminInquiriesRoute
+  '/admin/login': typeof AdminLoginRoute
+  '/admin/orders': typeof AdminOrdersRoute
   '/admin/reviews': typeof AdminReviewsRoute
   '/admin/sections': typeof AdminSectionsRoute
   '/admin/theme': typeof AdminThemeRoute
   '/api/enhance-image': typeof ApiEnhanceImageRoute
+  '/order-confirmation/$orderNumber': typeof OrderConfirmationOrderNumberRoute
   '/page/$slug': typeof PageSlugRoute
   '/product/$slug': typeof ProductSlugRoute
   '/shop/$category': typeof ShopCategoryRoute
@@ -287,6 +344,10 @@ export interface FileRoutesById {
   '/cart': typeof CartRoute
   '/checkout': typeof CheckoutRoute
   '/contact': typeof ContactRoute
+  '/forgot-password': typeof ForgotPasswordRoute
+  '/login': typeof LoginRoute
+  '/reset-password': typeof ResetPasswordRoute
+  '/signup': typeof SignupRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/account/addresses': typeof AccountAddressesRoute
   '/account/orders': typeof AccountOrdersRoute
@@ -297,10 +358,13 @@ export interface FileRoutesById {
   '/admin/customers': typeof AdminCustomersRoute
   '/admin/hero': typeof AdminHeroRoute
   '/admin/inquiries': typeof AdminInquiriesRoute
+  '/admin/login': typeof AdminLoginRoute
+  '/admin/orders': typeof AdminOrdersRoute
   '/admin/reviews': typeof AdminReviewsRoute
   '/admin/sections': typeof AdminSectionsRoute
   '/admin/theme': typeof AdminThemeRoute
   '/api/enhance-image': typeof ApiEnhanceImageRoute
+  '/order-confirmation/$orderNumber': typeof OrderConfirmationOrderNumberRoute
   '/page/$slug': typeof PageSlugRoute
   '/product/$slug': typeof ProductSlugRoute
   '/shop/$category': typeof ShopCategoryRoute
@@ -324,6 +388,10 @@ export interface FileRouteTypes {
     | '/cart'
     | '/checkout'
     | '/contact'
+    | '/forgot-password'
+    | '/login'
+    | '/reset-password'
+    | '/signup'
     | '/sitemap.xml'
     | '/account/addresses'
     | '/account/orders'
@@ -334,10 +402,13 @@ export interface FileRouteTypes {
     | '/admin/customers'
     | '/admin/hero'
     | '/admin/inquiries'
+    | '/admin/login'
+    | '/admin/orders'
     | '/admin/reviews'
     | '/admin/sections'
     | '/admin/theme'
     | '/api/enhance-image'
+    | '/order-confirmation/$orderNumber'
     | '/page/$slug'
     | '/product/$slug'
     | '/shop/$category'
@@ -357,6 +428,10 @@ export interface FileRouteTypes {
     | '/cart'
     | '/checkout'
     | '/contact'
+    | '/forgot-password'
+    | '/login'
+    | '/reset-password'
+    | '/signup'
     | '/sitemap.xml'
     | '/account/addresses'
     | '/account/orders'
@@ -367,10 +442,13 @@ export interface FileRouteTypes {
     | '/admin/customers'
     | '/admin/hero'
     | '/admin/inquiries'
+    | '/admin/login'
+    | '/admin/orders'
     | '/admin/reviews'
     | '/admin/sections'
     | '/admin/theme'
     | '/api/enhance-image'
+    | '/order-confirmation/$orderNumber'
     | '/page/$slug'
     | '/product/$slug'
     | '/shop/$category'
@@ -392,6 +470,10 @@ export interface FileRouteTypes {
     | '/cart'
     | '/checkout'
     | '/contact'
+    | '/forgot-password'
+    | '/login'
+    | '/reset-password'
+    | '/signup'
     | '/sitemap.xml'
     | '/account/addresses'
     | '/account/orders'
@@ -402,10 +484,13 @@ export interface FileRouteTypes {
     | '/admin/customers'
     | '/admin/hero'
     | '/admin/inquiries'
+    | '/admin/login'
+    | '/admin/orders'
     | '/admin/reviews'
     | '/admin/sections'
     | '/admin/theme'
     | '/api/enhance-image'
+    | '/order-confirmation/$orderNumber'
     | '/page/$slug'
     | '/product/$slug'
     | '/shop/$category'
@@ -428,8 +513,13 @@ export interface RootRouteChildren {
   CartRoute: typeof CartRoute
   CheckoutRoute: typeof CheckoutRoute
   ContactRoute: typeof ContactRoute
+  ForgotPasswordRoute: typeof ForgotPasswordRoute
+  LoginRoute: typeof LoginRoute
+  ResetPasswordRoute: typeof ResetPasswordRoute
+  SignupRoute: typeof SignupRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   ApiEnhanceImageRoute: typeof ApiEnhanceImageRoute
+  OrderConfirmationOrderNumberRoute: typeof OrderConfirmationOrderNumberRoute
   PageSlugRoute: typeof PageSlugRoute
   ProductSlugRoute: typeof ProductSlugRoute
   ShopCategoryRoute: typeof ShopCategoryRoute
@@ -443,6 +533,34 @@ declare module '@tanstack/react-router' {
       path: '/sitemap.xml'
       fullPath: '/sitemap.xml'
       preLoaderRoute: typeof SitemapDotxmlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/signup': {
+      id: '/signup'
+      path: '/signup'
+      fullPath: '/signup'
+      preLoaderRoute: typeof SignupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reset-password': {
+      id: '/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof ResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/forgot-password': {
+      id: '/forgot-password'
+      path: '/forgot-password'
+      fullPath: '/forgot-password'
+      preLoaderRoute: typeof ForgotPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/contact': {
@@ -543,6 +661,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PageSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/order-confirmation/$orderNumber': {
+      id: '/order-confirmation/$orderNumber'
+      path: '/order-confirmation/$orderNumber'
+      fullPath: '/order-confirmation/$orderNumber'
+      preLoaderRoute: typeof OrderConfirmationOrderNumberRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/enhance-image': {
       id: '/api/enhance-image'
       path: '/api/enhance-image'
@@ -569,6 +694,20 @@ declare module '@tanstack/react-router' {
       path: '/reviews'
       fullPath: '/admin/reviews'
       preLoaderRoute: typeof AdminReviewsRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/orders': {
+      id: '/admin/orders'
+      path: '/orders'
+      fullPath: '/admin/orders'
+      preLoaderRoute: typeof AdminOrdersRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/login': {
+      id: '/admin/login'
+      path: '/login'
+      fullPath: '/admin/login'
+      preLoaderRoute: typeof AdminLoginRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/inquiries': {
@@ -696,6 +835,8 @@ interface AdminRouteChildren {
   AdminCustomersRoute: typeof AdminCustomersRoute
   AdminHeroRoute: typeof AdminHeroRoute
   AdminInquiriesRoute: typeof AdminInquiriesRoute
+  AdminLoginRoute: typeof AdminLoginRoute
+  AdminOrdersRoute: typeof AdminOrdersRoute
   AdminReviewsRoute: typeof AdminReviewsRoute
   AdminSectionsRoute: typeof AdminSectionsRoute
   AdminThemeRoute: typeof AdminThemeRoute
@@ -714,6 +855,8 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminCustomersRoute: AdminCustomersRoute,
   AdminHeroRoute: AdminHeroRoute,
   AdminInquiriesRoute: AdminInquiriesRoute,
+  AdminLoginRoute: AdminLoginRoute,
+  AdminOrdersRoute: AdminOrdersRoute,
   AdminReviewsRoute: AdminReviewsRoute,
   AdminSectionsRoute: AdminSectionsRoute,
   AdminThemeRoute: AdminThemeRoute,
@@ -736,8 +879,13 @@ const rootRouteChildren: RootRouteChildren = {
   CartRoute: CartRoute,
   CheckoutRoute: CheckoutRoute,
   ContactRoute: ContactRoute,
+  ForgotPasswordRoute: ForgotPasswordRoute,
+  LoginRoute: LoginRoute,
+  ResetPasswordRoute: ResetPasswordRoute,
+  SignupRoute: SignupRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   ApiEnhanceImageRoute: ApiEnhanceImageRoute,
+  OrderConfirmationOrderNumberRoute: OrderConfirmationOrderNumberRoute,
   PageSlugRoute: PageSlugRoute,
   ProductSlugRoute: ProductSlugRoute,
   ShopCategoryRoute: ShopCategoryRoute,
@@ -746,3 +894,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
