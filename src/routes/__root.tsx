@@ -15,20 +15,28 @@ import { reportLovableError } from "../lib/lovable-error-reporting";
 import { CartProvider } from "@/lib/cart-context";
 import { ToastProvider } from "@/lib/toast";
 import { Topbar, Navbar, Footer } from "@/components/storefront/Chrome";
+import { AddPhonePrompt } from "@/components/AddPhonePrompt";
 import { ThemeProvider } from "@/lib/theme-context";
 import { UserAuthProvider } from "@/lib/user-auth";
 import { organizationLd, websiteLd, localBusinessLd, STORE } from "@/lib/jsonld";
 
 function NotFoundComponent() {
   return (
-    <div className="flex min-h-screen items-center justify-center px-4" style={{ background: "var(--cream)" }}>
+    <div
+      className="flex min-h-screen items-center justify-center px-4"
+      style={{ background: "var(--cream)" }}
+    >
       <div className="max-w-md text-center">
-        <h1 className="serif" style={{ fontSize: 72, fontWeight: 300, color: "var(--ink)" }}>404</h1>
+        <h1 className="serif" style={{ fontSize: 72, fontWeight: 300, color: "var(--ink)" }}>
+          404
+        </h1>
         <p style={{ color: "var(--ink3)", fontSize: 13, marginTop: 8 }}>
           That page doesn't exist or has moved.
         </p>
         <div style={{ marginTop: 24 }}>
-          <Link to="/" className="btn-ink">Back to home</Link>
+          <Link to="/" className="btn-ink">
+            Back to home
+          </Link>
         </div>
       </div>
     </div>
@@ -42,13 +50,30 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
     reportLovableError(error, { boundary: "tanstack_root_error_component" });
   }, [error]);
   return (
-    <div className="flex min-h-screen items-center justify-center px-4" style={{ background: "var(--cream)" }}>
+    <div
+      className="flex min-h-screen items-center justify-center px-4"
+      style={{ background: "var(--cream)" }}
+    >
       <div className="max-w-md text-center">
-        <h1 className="serif" style={{ fontSize: 28, fontWeight: 300, color: "var(--ink)" }}>Something went wrong</h1>
-        <p style={{ color: "var(--ink3)", fontSize: 13, marginTop: 8 }}>Please try again or head back home.</p>
+        <h1 className="serif" style={{ fontSize: 28, fontWeight: 300, color: "var(--ink)" }}>
+          Something went wrong
+        </h1>
+        <p style={{ color: "var(--ink3)", fontSize: 13, marginTop: 8 }}>
+          Please try again or head back home.
+        </p>
         <div style={{ marginTop: 24, display: "flex", gap: 10, justifyContent: "center" }}>
-          <button className="btn-ink" onClick={() => { router.invalidate(); reset(); }}>Try again</button>
-          <Link to="/" className="btn-outline">Home</Link>
+          <button
+            className="btn-ink"
+            onClick={() => {
+              router.invalidate();
+              reset();
+            }}
+          >
+            Try again
+          </button>
+          <Link to="/" className="btn-outline">
+            Home
+          </Link>
         </div>
       </div>
     </div>
@@ -73,11 +98,28 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { title: "Yaawun" },
       { property: "og:title", content: "Yaawun" },
       { name: "twitter:title", content: "Yaawun" },
-      { name: "description", content: "Chic Threads Boutique is an e-commerce website for a women's fashion store." },
-      { property: "og:description", content: "Chic Threads Boutique is an e-commerce website for a women's fashion store." },
-      { name: "twitter:description", content: "Chic Threads Boutique is an e-commerce website for a women's fashion store." },
-      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/d0bdf464-74fa-4b16-997a-b9ad5d701840/id-preview-f6c4b3c9--0d862b0c-e625-491f-9108-62963d7c2619.lovable.app-1782296443594.png" },
-      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/d0bdf464-74fa-4b16-997a-b9ad5d701840/id-preview-f6c4b3c9--0d862b0c-e625-491f-9108-62963d7c2619.lovable.app-1782296443594.png" },
+      {
+        name: "description",
+        content: "Chic Threads Boutique is an e-commerce website for a women's fashion store.",
+      },
+      {
+        property: "og:description",
+        content: "Chic Threads Boutique is an e-commerce website for a women's fashion store.",
+      },
+      {
+        name: "twitter:description",
+        content: "Chic Threads Boutique is an e-commerce website for a women's fashion store.",
+      },
+      {
+        property: "og:image",
+        content:
+          "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/d0bdf464-74fa-4b16-997a-b9ad5d701840/id-preview-f6c4b3c9--0d862b0c-e625-491f-9108-62963d7c2619.lovable.app-1782296443594.png",
+      },
+      {
+        name: "twitter:image",
+        content:
+          "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/d0bdf464-74fa-4b16-997a-b9ad5d701840/id-preview-f6c4b3c9--0d862b0c-e625-491f-9108-62963d7c2619.lovable.app-1782296443594.png",
+      },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
@@ -125,6 +167,7 @@ function Chrome({ children }: { children: ReactNode }) {
     <>
       {!isAdmin && <Topbar />}
       <Navbar />
+      {!isAdmin && <AddPhonePrompt />}
       <main>{children}</main>
       {!isAdmin && <Footer />}
     </>

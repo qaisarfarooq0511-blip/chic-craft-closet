@@ -12,12 +12,12 @@ import { supabase } from "@/lib/supabase";
 import type { NotificationChannel } from "@/types/database";
 
 export type NotificationEventType =
+  | "otp_request"
   | "order_confirmed"
   | "order_dispatched"
   | "order_delivered"
   | "order_cancelled"
   | "review_approved"
-  | "password_reset"
   | "welcome";
 
 export interface NotificationPayload {
@@ -62,22 +62,22 @@ class NotificationServiceClass {
 
   private getDefaultChannels(eventType: NotificationEventType): NotificationChannel[] {
     switch (eventType) {
+      case "otp_request":
+        return ["sms"];
       case "order_confirmed":
-        return ["email", "whatsapp"];
+        return ["sms", "whatsapp"];
       case "order_dispatched":
-        return ["email", "whatsapp", "sms"];
+        return ["sms", "whatsapp"];
       case "order_delivered":
-        return ["email"];
+        return ["whatsapp"];
       case "order_cancelled":
-        return ["email", "sms"];
+        return ["sms"];
       case "review_approved":
-        return ["email"];
-      case "password_reset":
-        return ["email"];
+        return ["whatsapp"];
       case "welcome":
-        return ["email"];
+        return ["sms"];
       default:
-        return ["email"];
+        return ["sms"];
     }
   }
 }

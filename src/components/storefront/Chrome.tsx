@@ -331,7 +331,7 @@ function AccountMenu() {
     );
   }
 
-  const displayName = profile?.full_name || session.user.email || "Account";
+  const displayName = profile?.full_name || session.user.email || session.user.phone || "Account";
   const initial = displayName.trim().charAt(0).toUpperCase() || "U";
 
   return (
@@ -372,7 +372,7 @@ function AccountMenu() {
         >
           <div style={{ fontSize: 13, color: "var(--ink)", fontWeight: 500 }}>{displayName}</div>
           <div style={{ fontSize: 11, color: "var(--ink3)", marginBottom: 10 }}>
-            {session.user.email}
+            {session.user.email || session.user.phone}
           </div>
           <button
             onClick={() => {

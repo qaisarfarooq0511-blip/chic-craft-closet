@@ -83,7 +83,7 @@ function AdminShell() {
             <span>Sign out</span>
           </button>
           <div style={{ fontSize: 10, color: "var(--ink3)", padding: "8px 10px" }}>
-            {profile?.full_name || session?.user.email}
+            {profile?.full_name || session?.user.email || session?.user.phone}
           </div>
         </div>
       </aside>

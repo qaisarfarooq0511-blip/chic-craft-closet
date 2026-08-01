@@ -59,7 +59,7 @@ export function ProtectedRoute({ children, role, loginPath = "/login" }: Props) 
             Access denied
           </h1>
           <p style={{ color: "var(--ink3)", fontSize: 13 }}>
-            This account ({session?.user.email}) doesn't have {role} access.
+            This account ({session?.user.email || session?.user.phone}) doesn't have {role} access.
           </p>
         </div>
       </div>
