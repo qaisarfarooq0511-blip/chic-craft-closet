@@ -1,62 +1,96 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { getProducts, getReviews, getInquiries } from "@/lib/storage";
-import { fmt } from "@/components/storefront/ProductCard";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/lib/supabase";
 
 export const Route = createFileRoute("/admin/")({
   component: Dashboard,
 });
 
+async function fetchDashboardStats() {
+  const [products, outOfStock, orders, pendingOrders] = await Promise.all([
+    supabase
+      .from("products")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "active")
+      .is("deleted_at", null),
+    supabase
+      .from("products")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "active")
+      .eq("stock_count", 0)
+      .is("deleted_at", null),
+    supabase.from("orders").select("id", { count: "exact", head: true }).is("deleted_at", null),
+    supabase
+      .from("orders")
+      .select("id", { count: "exact", head: true })
+      .eq("status", "pending")
+      .is("deleted_at", null),
+  ]);
+  return {
+    liveProducts: products.count ?? 0,
+    outOfStock: outOfStock.count ?? 0,
+    totalOrders: orders.count ?? 0,
+    pendingOrders: pendingOrders.count ?? 0,
+  };
+}
+
 function Dashboard() {
-  const products = typeof window !== "undefined" ? getProducts() : [];
-  const reviews = typeof window !== "undefined" ? getReviews() : [];
-  const inquiries = typeof window !== "undefined" ? getInquiries() : [];
-  const pending = reviews.filter((r) => r.status === "pending").length;
-  const newInq = inquiries.filter((i) => i.status === "new").length;
-  const live = products.filter((p) => p.listed).length;
-  const lowStock = products.filter((p) => p.stock <= 5 && p.listed).length;
-  const totalRevenue = inquiries.filter((i) => i.status !== "cancelled").reduce((s, i) => s + i.total, 0);
+  const { data } = useQuery({ queryKey: ["admin-dashboard-stats"], queryFn: fetchDashboardStats });
 
   const stats = [
-    { label: "Live products", value: live },
-    { label: "Low stock", value: lowStock },
-    { label: "Pending reviews", value: pending },
-    { label: "New orders", value: newInq },
+    { label: "Live products", value: data?.liveProducts ?? "—" },
+    { label: "Out of stock", value: data?.outOfStock ?? "—" },
+    { label: "Total orders", value: data?.totalOrders ?? "—" },
+    { label: "Pending orders", value: data?.pendingOrders ?? "—" },
   ];
 
   return (
     <>
       <h1 className="admin-h1">Dashboard</h1>
-      <p className="admin-sub">An overview of your store. Everything runs from local storage in this preview.</p>
+      <p className="admin-sub">An overview of your store.</p>
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(180px,1fr))", gap: 12, marginBottom: 24 }}>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fill,minmax(180px,1fr))",
+          gap: 12,
+          marginBottom: 24,
+        }}
+      >
         {stats.map((s) => (
           <div key={s.label} className="admin-card">
             <div className="form-label">{s.label}</div>
-            <div className="serif" style={{ fontSize: 32, fontWeight: 300, color: "var(--ink)", marginTop: 4 }}>{s.value}</div>
+            <div
+              className="serif"
+              style={{ fontSize: 32, fontWeight: 300, color: "var(--ink)", marginTop: 4 }}
+            >
+              {s.value}
+            </div>
           </div>
         ))}
       </div>
 
       <div className="admin-card">
-        <div className="cart-sum-title" style={{ marginBottom: 4 }}>Quick actions</div>
+        <div className="cart-sum-title" style={{ marginBottom: 4 }}>
+          Quick actions
+        </div>
         <p style={{ fontSize: 12, color: "var(--ink3)", marginBottom: 14 }}>
-          Manage what's shown on the storefront. Total order value to date: {fmt(totalRevenue)}.
+          Manage what's shown on the storefront.
         </p>
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-          <Link to="/admin/products/new" className="btn-ink">+ Add new product</Link>
-          <Link to="/admin/products" className="btn-outline">Manage products</Link>
-          <Link to="/admin/reviews" className="btn-outline">Moderate reviews{pending > 0 && ` (${pending})`}</Link>
-          <Link to="/admin/inquiries" className="btn-outline">View orders{newInq > 0 && ` (${newInq})`}</Link>
+          <Link to="/admin/products/new" className="btn-ink">
+            + Add new product
+          </Link>
+          <Link to="/admin/products" className="btn-outline">
+            Manage products
+          </Link>
+          <Link to="/admin/reviews" className="btn-outline">
+            Moderate reviews
+          </Link>
+          <Link to="/admin/orders" className="btn-outline">
+            View orders{(data?.pendingOrders ?? 0) > 0 && ` (${data?.pendingOrders})`}
+          </Link>
         </div>
-      </div>
-
-      <div className="admin-card">
-        <div className="cart-sum-title" style={{ marginBottom: 12 }}>Heads up</div>
-        <ul style={{ fontSize: 12, color: "var(--ink2)", lineHeight: 1.9, paddingLeft: 18 }}>
-          <li>All data lives in your browser's local storage during this preview phase.</li>
-          <li>Image uploads are auto-enhanced (cropped to square, contrast normalized, converted to WebP).</li>
-          <li>When ready, we'll move everything to Lovable Cloud and wire up real authentication + payments.</li>
-        </ul>
       </div>
     </>
   );

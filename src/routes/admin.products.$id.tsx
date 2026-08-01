@@ -1,42 +1,27 @@
-import { createFileRoute, Link, notFound, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { ProductForm } from "@/components/admin/ProductForm";
-import { getProduct, upsertProduct } from "@/lib/storage";
-import { useToast } from "@/lib/toast";
+import { useAdminProduct } from "@/hooks/useAdminProduct";
 
 export const Route = createFileRoute("/admin/products/$id")({
-  loader: ({ params }) => {
-    if (typeof window === "undefined") return { id: Number(params.id) };
-    const p = getProduct(Number(params.id));
-    if (!p) throw notFound();
-    return { id: p.id };
-  },
   component: EditProduct,
-  notFoundComponent: () => (
-    <div>
-      <h1 className="admin-h1">Product not found</h1>
-      <Link to="/admin/products" className="btn-ink" style={{ marginTop: 12, display: "inline-block" }}>Back to products</Link>
-    </div>
-  ),
 });
 
 function EditProduct() {
-  const { id } = Route.useLoaderData();
+  const { id } = Route.useParams();
   const navigate = useNavigate();
-  const toast = useToast();
-  const p = getProduct(id);
-  if (!p) return null;
+  const { data: product, isLoading } = useAdminProduct(id);
+
+  if (isLoading) return <p style={{ color: "var(--ink3)" }}>Loading…</p>;
+  if (!product) return <h1 className="admin-h1">Product not found</h1>;
+
   return (
     <>
       <h1 className="admin-h1">Edit product</h1>
-      <p className="admin-sub">{p.name}</p>
+      <p className="admin-sub">{product.name}</p>
       <ProductForm
-        initial={p}
+        productId={id}
         submitLabel="Save changes"
-        onSave={(next) => {
-          upsertProduct(next);
-          toast("Changes saved");
-          navigate({ to: "/admin/products" });
-        }}
+        onSaved={() => navigate({ to: "/admin/products" })}
       />
     </>
   );
