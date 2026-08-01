@@ -9,9 +9,9 @@ import { exportRowsToXlsx } from "@/lib/xlsx-export";
 import type { Inquiry, InquiryFulfillment, InquiryCancellation } from "@/lib/types";
 
 export const Route = createFileRoute("/admin/inquiries")({
-  validateSearch: (s: Record<string, unknown>) => ({
-    phone: typeof s.phone === "string" ? s.phone : undefined,
-    name: typeof s.name === "string" ? s.name : undefined,
+  validateSearch: (s: Record<string, unknown>): { phone?: string; name?: string } => ({
+    ...(typeof s.phone === "string" ? { phone: s.phone } : {}),
+    ...(typeof s.name === "string" ? { name: s.name } : {}),
   }),
   component: InquiriesAdmin,
 });
@@ -39,13 +39,17 @@ function InquiriesAdmin() {
   const [fMax, setFMax] = useState("");
 
   const all = typeof window !== "undefined" ? getInquiries() : [];
-  const base = useMemo(() => (
-    phone ? all.filter((i) => normalizeMobile(i.customer.phone) === normalizeMobile(phone)) : all
-  ), [all, phone]);
+  const base = useMemo(
+    () =>
+      phone ? all.filter((i) => normalizeMobile(i.customer.phone) === normalizeMobile(phone)) : all,
+    [all, phone],
+  );
 
   const sources = useMemo(() => {
     const s = new Set<string>();
-    base.forEach((i) => { if (i.source) s.add(i.source); });
+    base.forEach((i) => {
+      if (i.source) s.add(i.source);
+    });
     return Array.from(s).sort();
   }, [base]);
 
@@ -69,15 +73,33 @@ function InquiriesAdmin() {
     });
   }, [base, fOrderId, fDateFrom, fDateTo, fProduct, fStatus, fSource, fMin, fMax]);
 
-  const activeFilters = !!(fOrderId || fDateFrom || fDateTo || fProduct || fStatus || fSource || fMin || fMax);
+  const activeFilters = !!(
+    fOrderId ||
+    fDateFrom ||
+    fDateTo ||
+    fProduct ||
+    fStatus ||
+    fSource ||
+    fMin ||
+    fMax
+  );
   const clearFilters = () => {
-    setFOrderId(""); setFDateFrom(""); setFDateTo(""); setFProduct("");
-    setFStatus(""); setFSource(""); setFMin(""); setFMax("");
+    setFOrderId("");
+    setFDateFrom("");
+    setFDateTo("");
+    setFProduct("");
+    setFStatus("");
+    setFSource("");
+    setFMin("");
+    setFMax("");
   };
 
   const refresh = () => force((n) => n + 1);
 
-  const saveInquiry = (i: Inquiry) => { updateInquiry(i); refresh(); };
+  const saveInquiry = (i: Inquiry) => {
+    updateInquiry(i);
+    refresh();
+  };
 
   const onFulfill = (inquiry: Inquiry, data: InquiryFulfillment) => {
     saveInquiry({ ...inquiry, status: "fulfilled", fulfillment: data });
@@ -97,31 +119,73 @@ function InquiriesAdmin() {
       <p className="admin-sub">Order ledger with fulfillment and cancellation workflows.</p>
 
       {phone && (
-        <div className="admin-card" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10 }}>
+        <div
+          className="admin-card"
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            flexWrap: "wrap",
+            gap: 10,
+          }}
+        >
           <div style={{ fontSize: 13, color: "var(--ink2)" }}>
-            Filtered by customer{name ? `: ${name}` : ""} ({phone}) — {base.length} order{base.length === 1 ? "" : "s"}
+            Filtered by customer{name ? `: ${name}` : ""} ({phone}) — {base.length} order
+            {base.length === 1 ? "" : "s"}
           </div>
-          <Link to="/admin/inquiries" className="btn-outline">Clear customer filter</Link>
+          <Link to="/admin/inquiries" className="btn-outline">
+            Clear customer filter
+          </Link>
         </div>
       )}
 
       {base.length > 0 && (
         <div className="admin-card" style={{ display: "grid", gap: 10 }}>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 10 }}>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
+              gap: 10,
+            }}
+          >
             <FilterField label="Order ID">
-              <input className="form-input" value={fOrderId} onChange={(e) => setFOrderId(e.target.value)} placeholder="e.g. INQ-…" />
+              <input
+                className="form-input"
+                value={fOrderId}
+                onChange={(e) => setFOrderId(e.target.value)}
+                placeholder="e.g. INQ-…"
+              />
             </FilterField>
             <FilterField label="Date from">
-              <input className="form-input" type="date" value={fDateFrom} onChange={(e) => setFDateFrom(e.target.value)} />
+              <input
+                className="form-input"
+                type="date"
+                value={fDateFrom}
+                onChange={(e) => setFDateFrom(e.target.value)}
+              />
             </FilterField>
             <FilterField label="Date to">
-              <input className="form-input" type="date" value={fDateTo} onChange={(e) => setFDateTo(e.target.value)} />
+              <input
+                className="form-input"
+                type="date"
+                value={fDateTo}
+                onChange={(e) => setFDateTo(e.target.value)}
+              />
             </FilterField>
             <FilterField label="Product title">
-              <input className="form-input" value={fProduct} onChange={(e) => setFProduct(e.target.value)} placeholder="Contains…" />
+              <input
+                className="form-input"
+                value={fProduct}
+                onChange={(e) => setFProduct(e.target.value)}
+                placeholder="Contains…"
+              />
             </FilterField>
             <FilterField label="Status">
-              <select className="form-select" value={fStatus} onChange={(e) => setFStatus(e.target.value)}>
+              <select
+                className="form-select"
+                value={fStatus}
+                onChange={(e) => setFStatus(e.target.value)}
+              >
                 <option value="">All</option>
                 <option value="new">new</option>
                 <option value="contacted">contacted</option>
@@ -130,31 +194,69 @@ function InquiriesAdmin() {
               </select>
             </FilterField>
             <FilterField label="Source">
-              <select className="form-select" value={fSource} onChange={(e) => setFSource(e.target.value)}>
+              <select
+                className="form-select"
+                value={fSource}
+                onChange={(e) => setFSource(e.target.value)}
+              >
                 <option value="">All</option>
-                {sources.map((s) => <option key={s} value={s}>{s}</option>)}
+                {sources.map((s) => (
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
+                ))}
               </select>
             </FilterField>
             <FilterField label="Final ≥ (₹)">
-              <input className="form-input" type="number" min={0} value={fMin} onChange={(e) => setFMin(e.target.value)} />
+              <input
+                className="form-input"
+                type="number"
+                min={0}
+                value={fMin}
+                onChange={(e) => setFMin(e.target.value)}
+              />
             </FilterField>
             <FilterField label="Final ≤ (₹)">
-              <input className="form-input" type="number" min={0} value={fMax} onChange={(e) => setFMax(e.target.value)} />
+              <input
+                className="form-input"
+                type="number"
+                min={0}
+                value={fMax}
+                onChange={(e) => setFMax(e.target.value)}
+              />
             </FilterField>
           </div>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 12, color: "var(--ink3)", gap: 10, flexWrap: "wrap" }}>
-            <span>Showing {list.length} of {base.length} order{base.length === 1 ? "" : "s"}</span>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              fontSize: 12,
+              color: "var(--ink3)",
+              gap: 10,
+              flexWrap: "wrap",
+            }}
+          >
+            <span>
+              Showing {list.length} of {base.length} order{base.length === 1 ? "" : "s"}
+            </span>
             <div style={{ display: "flex", gap: 8 }}>
               {activeFilters && (
-                <button type="button" className="btn-outline" onClick={clearFilters}>Clear filters</button>
+                <button type="button" className="btn-outline" onClick={clearFilters}>
+                  Clear filters
+                </button>
               )}
               <button
                 type="button"
                 className="btn-outline"
                 onClick={() => {
-                  if (list.length === 0) { toast("Nothing to export"); return; }
+                  if (list.length === 0) {
+                    toast("Nothing to export");
+                    return;
+                  }
                   const rows = list.map((i) => {
-                    const mrpTotal = i.mrpTotal ?? i.lines.reduce((s, l) => s + (l.mrp ?? l.price) * l.qty, 0);
+                    const mrpTotal =
+                      i.mrpTotal ?? i.lines.reduce((s, l) => s + (l.mrp ?? l.price) * l.qty, 0);
                     const discount = i.discount ?? Math.max(0, mrpTotal - i.subtotal);
                     return {
                       "Order ID": i.id,
@@ -192,7 +294,10 @@ function InquiriesAdmin() {
       )}
 
       {list.length === 0 ? (
-        <div className="admin-card" style={{ textAlign: "center", padding: 40, color: "var(--ink3)" }}>
+        <div
+          className="admin-card"
+          style={{ textAlign: "center", padding: 40, color: "var(--ink3)" }}
+        >
           {base.length === 0 ? "No orders yet." : "No orders match the current filters."}
         </div>
       ) : (
@@ -214,7 +319,8 @@ function InquiriesAdmin() {
             </thead>
             <tbody>
               {list.map((i) => {
-                const mrpTotal = i.mrpTotal ?? i.lines.reduce((s, l) => s + (l.mrp ?? l.price) * l.qty, 0);
+                const mrpTotal =
+                  i.mrpTotal ?? i.lines.reduce((s, l) => s + (l.mrp ?? l.price) * l.qty, 0);
                 const discount = i.discount ?? Math.max(0, mrpTotal - i.subtotal);
                 const totalQty = i.lines.reduce((s, l) => s + l.qty, 0);
                 return (
@@ -223,7 +329,10 @@ function InquiriesAdmin() {
                     <td style={{ fontSize: 12 }}>{new Date(i.createdAt).toLocaleString()}</td>
                     <td style={{ fontSize: 12, maxWidth: 280 }}>
                       <div style={{ color: "var(--ink2)" }}>
-                        {i.lines.slice(0, 2).map((l) => `${l.name} ×${l.qty}`).join(", ")}
+                        {i.lines
+                          .slice(0, 2)
+                          .map((l) => `${l.name} ×${l.qty}`)
+                          .join(", ")}
                         {i.lines.length > 2 && ` +${i.lines.length - 2} more`}
                       </div>
                       <div style={{ fontSize: 10, color: "var(--ink3)", marginTop: 2 }}>
@@ -232,21 +341,41 @@ function InquiriesAdmin() {
                     </td>
                     <td style={{ textAlign: "right", fontSize: 12 }}>{fmt(mrpTotal)}</td>
                     <td style={{ textAlign: "right", fontSize: 12 }}>{fmt(i.subtotal)}</td>
-                    <td style={{ textAlign: "right", fontSize: 12, color: discount > 0 ? "var(--rust)" : "var(--ink3)" }}>
+                    <td
+                      style={{
+                        textAlign: "right",
+                        fontSize: 12,
+                        color: discount > 0 ? "var(--rust)" : "var(--ink3)",
+                      }}
+                    >
                       {discount > 0 ? `−${fmt(discount)}` : "—"}
-                      {i.couponCode && <div style={{ fontSize: 9, color: "var(--ink3)" }}>{i.couponCode}</div>}
+                      {i.couponCode && (
+                        <div style={{ fontSize: 9, color: "var(--ink3)" }}>{i.couponCode}</div>
+                      )}
                     </td>
-                    <td style={{ textAlign: "right", fontSize: 13, fontWeight: 600 }}>{fmt(i.total)}</td>
-                    <td style={{ fontSize: 11, color: "var(--ink3)", textTransform: "capitalize" }}>{i.source ?? "—"}</td>
+                    <td style={{ textAlign: "right", fontSize: 13, fontWeight: 600 }}>
+                      {fmt(i.total)}
+                    </td>
+                    <td style={{ fontSize: 11, color: "var(--ink3)", textTransform: "capitalize" }}>
+                      {i.source ?? "—"}
+                    </td>
                     <td>
                       <StatusPill status={i.status} />
                     </td>
                     <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
-                      <button className="icon-btn" title="View" onClick={() => setModal({ kind: "view", inquiry: i })}>
+                      <button
+                        className="icon-btn"
+                        title="View"
+                        onClick={() => setModal({ kind: "view", inquiry: i })}
+                      >
                         <IconEye size={16} />
                       </button>
                       {i.status !== "cancelled" && i.status !== "fulfilled" && (
-                        <button className="icon-btn" title="Fulfill / edit" onClick={() => setModal({ kind: "fulfill", inquiry: i })}>
+                        <button
+                          className="icon-btn"
+                          title="Fulfill / edit"
+                          onClick={() => setModal({ kind: "fulfill", inquiry: i })}
+                        >
                           <IconPencil size={16} />
                         </button>
                       )}
@@ -260,7 +389,11 @@ function InquiriesAdmin() {
                         <IconBrandWhatsapp size={16} />
                       </a>
                       {i.status !== "cancelled" && i.status !== "fulfilled" && (
-                        <button className="icon-btn icon-btn-danger" title="Cancel order" onClick={() => setModal({ kind: "cancel", inquiry: i })}>
+                        <button
+                          className="icon-btn icon-btn-danger"
+                          title="Cancel order"
+                          onClick={() => setModal({ kind: "cancel", inquiry: i })}
+                        >
                           <IconX size={16} />
                         </button>
                       )}
@@ -298,23 +431,42 @@ function InquiriesAdmin() {
 
 function StatusPill({ status }: { status: Inquiry["status"] }) {
   const cls =
-    status === "new" ? "pill-pending"
-    : status === "fulfilled" ? "pill-approved"
-    : status === "cancelled" ? "pill-rejected"
-    : "pill-live";
+    status === "new"
+      ? "pill-pending"
+      : status === "fulfilled"
+        ? "pill-approved"
+        : status === "cancelled"
+          ? "pill-rejected"
+          : "pill-live";
   return <span className={`pill ${cls}`}>{status}</span>;
 }
 
 /* ──────────── Modal shell ──────────── */
-function Modal({ title, onClose, children, maxWidth = 560 }: { title: string; onClose: () => void; children: React.ReactNode; maxWidth?: number }) {
+function Modal({
+  title,
+  onClose,
+  children,
+  maxWidth = 560,
+}: {
+  title: string;
+  onClose: () => void;
+  children: React.ReactNode;
+  maxWidth?: number;
+}) {
   return (
     <div
       role="dialog"
       aria-modal="true"
       onClick={onClose}
       style={{
-        position: "fixed", inset: 0, background: "rgba(28,20,16,0.5)", zIndex: 1000,
-        display: "grid", placeItems: "center", padding: 16, overflowY: "auto",
+        position: "fixed",
+        inset: 0,
+        background: "rgba(28,20,16,0.5)",
+        zIndex: 1000,
+        display: "grid",
+        placeItems: "center",
+        padding: 16,
+        overflowY: "auto",
       }}
     >
       <div
@@ -322,9 +474,20 @@ function Modal({ title, onClose, children, maxWidth = 560 }: { title: string; on
         className="admin-card"
         style={{ width: "100%", maxWidth, margin: 0, maxHeight: "90vh", overflowY: "auto" }}
       >
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
-          <div className="serif" style={{ fontSize: 20, color: "var(--ink)" }}>{title}</div>
-          <button className="icon-btn" onClick={onClose} aria-label="Close"><IconX size={16} /></button>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginBottom: 14,
+          }}
+        >
+          <div className="serif" style={{ fontSize: 20, color: "var(--ink)" }}>
+            {title}
+          </div>
+          <button className="icon-btn" onClick={onClose} aria-label="Close">
+            <IconX size={16} />
+          </button>
         </div>
         {children}
       </div>
@@ -334,34 +497,50 @@ function Modal({ title, onClose, children, maxWidth = 560 }: { title: string; on
 
 /* ──────────── View Modal ──────────── */
 function ViewModal({ inquiry, onClose }: { inquiry: Inquiry; onClose: () => void }) {
-  const mrpTotal = inquiry.mrpTotal ?? inquiry.lines.reduce((s, l) => s + (l.mrp ?? l.price) * l.qty, 0);
+  const mrpTotal =
+    inquiry.mrpTotal ?? inquiry.lines.reduce((s, l) => s + (l.mrp ?? l.price) * l.qty, 0);
   const discount = inquiry.discount ?? Math.max(0, mrpTotal - inquiry.subtotal);
 
   return (
     <Modal title={`Order ${inquiry.id}`} onClose={onClose} maxWidth={620}>
       <div style={{ fontSize: 12, color: "var(--ink3)", marginBottom: 14 }}>
-        Placed {new Date(inquiry.createdAt).toLocaleString()} · <StatusPill status={inquiry.status} /> · Source: <span style={{ textTransform: "capitalize" }}>{inquiry.source ?? "—"}</span>
+        Placed {new Date(inquiry.createdAt).toLocaleString()} ·{" "}
+        <StatusPill status={inquiry.status} /> · Source:{" "}
+        <span style={{ textTransform: "capitalize" }}>{inquiry.source ?? "—"}</span>
       </div>
 
       <SectionTitle>Customer</SectionTitle>
       <div style={{ fontSize: 13, color: "var(--ink2)", lineHeight: 1.7, marginBottom: 16 }}>
-        <strong style={{ color: "var(--ink)" }}>{inquiry.customer.name}</strong><br />
-        {inquiry.customer.phone}<br />
+        <strong style={{ color: "var(--ink)" }}>{inquiry.customer.name}</strong>
+        <br />
+        {inquiry.customer.phone}
+        <br />
         {inquiry.customer.address}, {inquiry.customer.city} — {inquiry.customer.pincode}
-        {inquiry.customer.notes && <><br /><em style={{ color: "var(--ink3)" }}>Note: {inquiry.customer.notes}</em></>}
+        {inquiry.customer.notes && (
+          <>
+            <br />
+            <em style={{ color: "var(--ink3)" }}>Note: {inquiry.customer.notes}</em>
+          </>
+        )}
       </div>
 
       <SectionTitle>Items</SectionTitle>
       <table className="orders-table" style={{ marginBottom: 16 }}>
         <thead>
-          <tr><th>Item</th><th style={{ textAlign: "right" }}>Qty</th><th style={{ textAlign: "right" }}>MRP</th><th style={{ textAlign: "right" }}>Sale</th><th style={{ textAlign: "right" }}>Subtotal</th></tr>
+          <tr>
+            <th>Item</th>
+            <th style={{ textAlign: "right" }}>Qty</th>
+            <th style={{ textAlign: "right" }}>MRP</th>
+            <th style={{ textAlign: "right" }}>Sale</th>
+            <th style={{ textAlign: "right" }}>Subtotal</th>
+          </tr>
         </thead>
         <tbody>
           {inquiry.lines.map((l) => (
             <tr key={l.productId}>
               <td style={{ fontSize: 12 }}>{l.name}</td>
               <td style={{ textAlign: "right", fontSize: 12 }}>{l.qty}</td>
-              <td style={{ textAlign: "right", fontSize: 12 }}>{fmt((l.mrp ?? l.price))}</td>
+              <td style={{ textAlign: "right", fontSize: 12 }}>{fmt(l.mrp ?? l.price)}</td>
               <td style={{ textAlign: "right", fontSize: 12 }}>{fmt(l.price)}</td>
               <td style={{ textAlign: "right", fontSize: 12 }}>{fmt(l.price * l.qty)}</td>
             </tr>
@@ -369,9 +548,23 @@ function ViewModal({ inquiry, onClose }: { inquiry: Inquiry; onClose: () => void
         </tbody>
       </table>
 
-      <div style={{ borderTop: "0.5px solid var(--b)", paddingTop: 12, display: "grid", gap: 6, fontSize: 13 }}>
+      <div
+        style={{
+          borderTop: "0.5px solid var(--b)",
+          paddingTop: 12,
+          display: "grid",
+          gap: 6,
+          fontSize: 13,
+        }}
+      >
         <Row label="MRP total" value={fmt(mrpTotal)} />
-        {discount > 0 && <Row label={`Discount${inquiry.couponCode ? ` (${inquiry.couponCode})` : ""}`} value={`−${fmt(discount)}`} color="var(--rust)" />}
+        {discount > 0 && (
+          <Row
+            label={`Discount${inquiry.couponCode ? ` (${inquiry.couponCode})` : ""}`}
+            value={`−${fmt(discount)}`}
+            color="var(--rust)"
+          />
+        )}
         <Row label="Subtotal" value={fmt(inquiry.subtotal)} />
         <Row label="Delivery" value={inquiry.delivery === 0 ? "Free" : fmt(inquiry.delivery)} />
         <Row label="Final total" value={fmt(inquiry.total)} bold />
@@ -381,14 +574,34 @@ function ViewModal({ inquiry, onClose }: { inquiry: Inquiry; onClose: () => void
         <>
           <SectionTitle style={{ marginTop: 18 }}>Fulfillment</SectionTitle>
           <div style={{ fontSize: 12, color: "var(--ink2)", lineHeight: 1.8 }}>
-            <div><strong>Partner:</strong> {inquiry.fulfillment.partner}</div>
-            <div><strong>AWB:</strong> {inquiry.fulfillment.awb}</div>
-            <div><strong>Shipping cost:</strong> {fmt(inquiry.fulfillment.shippingCost)}</div>
-            <div><strong>Expected delivery:</strong> {inquiry.fulfillment.expectedDelivery}</div>
+            <div>
+              <strong>Partner:</strong> {inquiry.fulfillment.partner}
+            </div>
+            <div>
+              <strong>AWB:</strong> {inquiry.fulfillment.awb}
+            </div>
+            <div>
+              <strong>Shipping cost:</strong> {fmt(inquiry.fulfillment.shippingCost)}
+            </div>
+            <div>
+              <strong>Expected delivery:</strong> {inquiry.fulfillment.expectedDelivery}
+            </div>
             {inquiry.fulfillment.trackingLink && (
-              <div><strong>Tracking:</strong> <a href={inquiry.fulfillment.trackingLink} target="_blank" rel="noreferrer" style={{ color: "var(--gold)" }}>{inquiry.fulfillment.trackingLink}</a></div>
+              <div>
+                <strong>Tracking:</strong>{" "}
+                <a
+                  href={inquiry.fulfillment.trackingLink}
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{ color: "var(--gold)" }}
+                >
+                  {inquiry.fulfillment.trackingLink}
+                </a>
+              </div>
             )}
-            <div style={{ color: "var(--ink3)", fontSize: 11 }}>Fulfilled {new Date(inquiry.fulfillment.fulfilledAt).toLocaleString()}</div>
+            <div style={{ color: "var(--ink3)", fontSize: 11 }}>
+              Fulfilled {new Date(inquiry.fulfillment.fulfilledAt).toLocaleString()}
+            </div>
           </div>
         </>
       )}
@@ -397,9 +610,17 @@ function ViewModal({ inquiry, onClose }: { inquiry: Inquiry; onClose: () => void
         <>
           <SectionTitle style={{ marginTop: 18 }}>Cancellation</SectionTitle>
           <div style={{ fontSize: 12, color: "var(--ink2)", lineHeight: 1.8 }}>
-            <div><strong>Reason:</strong> {inquiry.cancellation.reason}</div>
-            {inquiry.cancellation.note && <div><strong>Note:</strong> {inquiry.cancellation.note}</div>}
-            <div style={{ color: "var(--ink3)", fontSize: 11 }}>Cancelled {new Date(inquiry.cancellation.cancelledAt).toLocaleString()}</div>
+            <div>
+              <strong>Reason:</strong> {inquiry.cancellation.reason}
+            </div>
+            {inquiry.cancellation.note && (
+              <div>
+                <strong>Note:</strong> {inquiry.cancellation.note}
+              </div>
+            )}
+            <div style={{ color: "var(--ink3)", fontSize: 11 }}>
+              Cancelled {new Date(inquiry.cancellation.cancelledAt).toLocaleString()}
+            </div>
           </div>
         </>
       )}
@@ -407,28 +628,64 @@ function ViewModal({ inquiry, onClose }: { inquiry: Inquiry; onClose: () => void
   );
 }
 
-function Row({ label, value, bold, color }: { label: string; value: string; bold?: boolean; color?: string }) {
+function Row({
+  label,
+  value,
+  bold,
+  color,
+}: {
+  label: string;
+  value: string;
+  bold?: boolean;
+  color?: string;
+}) {
   return (
-    <div style={{ display: "flex", justifyContent: "space-between", fontWeight: bold ? 600 : 400, color: color ?? "var(--ink2)" }}>
-      <span>{label}</span><span>{value}</span>
+    <div
+      style={{
+        display: "flex",
+        justifyContent: "space-between",
+        fontWeight: bold ? 600 : 400,
+        color: color ?? "var(--ink2)",
+      }}
+    >
+      <span>{label}</span>
+      <span>{value}</span>
     </div>
   );
 }
 
-function SectionTitle({ children, style }: { children: React.ReactNode; style?: React.CSSProperties }) {
+function SectionTitle({
+  children,
+  style,
+}: {
+  children: React.ReactNode;
+  style?: React.CSSProperties;
+}) {
   return (
-    <div className="form-label" style={{ marginBottom: 8, ...style }}>{children}</div>
+    <div className="form-label" style={{ marginBottom: 8, ...style }}>
+      {children}
+    </div>
   );
 }
 
 /* ──────────── Fulfill Modal ──────────── */
-function FulfillModal({ inquiry, onClose, onSubmit }: { inquiry: Inquiry; onClose: () => void; onSubmit: (d: InquiryFulfillment) => void }) {
+function FulfillModal({
+  inquiry,
+  onClose,
+  onSubmit,
+}: {
+  inquiry: Inquiry;
+  onClose: () => void;
+  onSubmit: (d: InquiryFulfillment) => void;
+}) {
   const cfg = getConfig();
   const partners = cfg.shippingPartners;
   const existing = inquiry.fulfillment;
   const [partner, setPartner] = useState(existing?.partner ?? partners[0] ?? "");
   const [awb, setAwb] = useState(existing?.awb ?? "");
-  const [shippingCost, setShippingCost] = useState<string>(existing ? String(existing.shippingCost) : "");
+  const [shippingCost, setShippingCost] = useState<string>(
+    existing ? String(existing.shippingCost) : "",
+  );
   const [expectedDelivery, setExpectedDelivery] = useState(existing?.expectedDelivery ?? "");
   const [trackingLink, setTrackingLink] = useState(existing?.trackingLink ?? "");
   const [err, setErr] = useState<string | null>(null);
@@ -458,7 +715,13 @@ function FulfillModal({ inquiry, onClose, onSubmit }: { inquiry: Inquiry; onClos
         <p style={{ fontSize: 13, color: "var(--ink2)", marginBottom: 14 }}>
           No shipping partners configured yet.
         </p>
-        <Link to="/admin/config" className="btn-ink" onClick={() => { toast("Add partners under Configuration"); }}>
+        <Link
+          to="/admin/config"
+          className="btn-ink"
+          onClick={() => {
+            toast("Add partners under Configuration");
+          }}
+        >
           Go to Configuration
         </Link>
       </Modal>
@@ -470,8 +733,16 @@ function FulfillModal({ inquiry, onClose, onSubmit }: { inquiry: Inquiry; onClos
       <form onSubmit={submit}>
         <div className="form-field">
           <label className="form-label">Shipping partner *</label>
-          <select className="form-select" value={partner} onChange={(e) => setPartner(e.target.value)}>
-            {partners.map((p) => <option key={p} value={p}>{p}</option>)}
+          <select
+            className="form-select"
+            value={partner}
+            onChange={(e) => setPartner(e.target.value)}
+          >
+            {partners.map((p) => (
+              <option key={p} value={p}>
+                {p}
+              </option>
+            ))}
           </select>
         </div>
         <div className="form-field">
@@ -480,20 +751,42 @@ function FulfillModal({ inquiry, onClose, onSubmit }: { inquiry: Inquiry; onClos
         </div>
         <div className="form-field">
           <label className="form-label">Shipping cost incurred (₹) *</label>
-          <input className="form-input" type="number" min={0} step="0.01" value={shippingCost} onChange={(e) => setShippingCost(e.target.value)} />
+          <input
+            className="form-input"
+            type="number"
+            min={0}
+            step="0.01"
+            value={shippingCost}
+            onChange={(e) => setShippingCost(e.target.value)}
+          />
         </div>
         <div className="form-field">
           <label className="form-label">Expected delivery date *</label>
-          <input className="form-input" type="date" value={expectedDelivery} onChange={(e) => setExpectedDelivery(e.target.value)} />
+          <input
+            className="form-input"
+            type="date"
+            value={expectedDelivery}
+            onChange={(e) => setExpectedDelivery(e.target.value)}
+          />
         </div>
         <div className="form-field">
           <label className="form-label">Tracking link</label>
-          <input className="form-input" type="url" placeholder="https://…" value={trackingLink} onChange={(e) => setTrackingLink(e.target.value)} />
+          <input
+            className="form-input"
+            type="url"
+            placeholder="https://…"
+            value={trackingLink}
+            onChange={(e) => setTrackingLink(e.target.value)}
+          />
         </div>
         {err && <div style={{ color: "var(--rust)", fontSize: 12, marginBottom: 10 }}>{err}</div>}
         <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
-          <button type="button" className="btn-outline" onClick={onClose}>Close</button>
-          <button type="submit" className="btn-ink">Mark fulfilled</button>
+          <button type="button" className="btn-outline" onClick={onClose}>
+            Close
+          </button>
+          <button type="submit" className="btn-ink">
+            Mark fulfilled
+          </button>
         </div>
       </form>
     </Modal>
@@ -503,14 +796,24 @@ function FulfillModal({ inquiry, onClose, onSubmit }: { inquiry: Inquiry; onClos
 function FilterField({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="form-field" style={{ margin: 0 }}>
-      <label className="form-label" style={{ fontSize: 11 }}>{label}</label>
+      <label className="form-label" style={{ fontSize: 11 }}>
+        {label}
+      </label>
       {children}
     </div>
   );
 }
 
 /* ──────────── Cancel Modal ──────────── */
-function CancelModal({ inquiry, onClose, onSubmit }: { inquiry: Inquiry; onClose: () => void; onSubmit: (d: InquiryCancellation) => void }) {
+function CancelModal({
+  inquiry,
+  onClose,
+  onSubmit,
+}: {
+  inquiry: Inquiry;
+  onClose: () => void;
+  onSubmit: (d: InquiryCancellation) => void;
+}) {
   const cfg = getConfig();
   const reasons = cfg.cancellationReasons;
   const [reason, setReason] = useState(reasons[0] ?? "");
@@ -533,7 +836,11 @@ function CancelModal({ inquiry, onClose, onSubmit }: { inquiry: Inquiry; onClose
     return (
       <Modal title={`Cancel ${inquiry.id}`} onClose={onClose}>
         <p style={{ fontSize: 13, color: "var(--ink2)", marginBottom: 14 }}>
-          No cancellation reasons configured. Add them under <Link to="/admin/config" style={{ color: "var(--gold)" }}>Configuration</Link>.
+          No cancellation reasons configured. Add them under{" "}
+          <Link to="/admin/config" style={{ color: "var(--gold)" }}>
+            Configuration
+          </Link>
+          .
         </p>
       </Modal>
     );
@@ -543,13 +850,25 @@ function CancelModal({ inquiry, onClose, onSubmit }: { inquiry: Inquiry; onClose
     return (
       <Modal title="Confirm cancellation" onClose={() => setConfirming(false)}>
         <p style={{ fontSize: 13, color: "var(--ink2)", marginBottom: 16, lineHeight: 1.6 }}>
-          You're about to cancel <strong>{inquiry.id}</strong> for <strong>{inquiry.customer.name}</strong> ({fmt(inquiry.total)}).
-          Reason: <em>{reason}</em>.
-          <br /><br />This cannot be undone. Continue?
+          You're about to cancel <strong>{inquiry.id}</strong> for{" "}
+          <strong>{inquiry.customer.name}</strong> ({fmt(inquiry.total)}). Reason: <em>{reason}</em>
+          .
+          <br />
+          <br />
+          This cannot be undone. Continue?
         </p>
         <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
-          <button type="button" className="btn-outline" onClick={() => setConfirming(false)}>Go back</button>
-          <button type="button" className="btn-ink" style={{ background: "var(--rust)" }} onClick={confirmCancel}>Yes, cancel order</button>
+          <button type="button" className="btn-outline" onClick={() => setConfirming(false)}>
+            Go back
+          </button>
+          <button
+            type="button"
+            className="btn-ink"
+            style={{ background: "var(--rust)" }}
+            onClick={confirmCancel}
+          >
+            Yes, cancel order
+          </button>
         </div>
       </Modal>
     );
@@ -560,18 +879,36 @@ function CancelModal({ inquiry, onClose, onSubmit }: { inquiry: Inquiry; onClose
       <form onSubmit={proceed}>
         <div className="form-field">
           <label className="form-label">Cancellation reason *</label>
-          <select className="form-select" value={reason} onChange={(e) => setReason(e.target.value)}>
-            {reasons.map((r) => <option key={r} value={r}>{r}</option>)}
+          <select
+            className="form-select"
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+          >
+            {reasons.map((r) => (
+              <option key={r} value={r}>
+                {r}
+              </option>
+            ))}
           </select>
         </div>
         <div className="form-field">
           <label className="form-label">Internal note (optional)</label>
-          <textarea className="form-textarea" rows={3} value={note} onChange={(e) => setNote(e.target.value)} placeholder="Any additional context for the team…" />
+          <textarea
+            className="form-textarea"
+            rows={3}
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            placeholder="Any additional context for the team…"
+          />
         </div>
         {err && <div style={{ color: "var(--rust)", fontSize: 12, marginBottom: 10 }}>{err}</div>}
         <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
-          <button type="button" className="btn-outline" onClick={onClose}>Close</button>
-          <button type="submit" className="btn-ink" style={{ background: "var(--rust)" }}>Continue</button>
+          <button type="button" className="btn-outline" onClick={onClose}>
+            Close
+          </button>
+          <button type="submit" className="btn-ink" style={{ background: "var(--rust)" }}>
+            Continue
+          </button>
         </div>
       </form>
     </Modal>
