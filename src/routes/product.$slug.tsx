@@ -32,6 +32,8 @@ function PDP() {
   const { data: p, isLoading } = useProduct(slug);
   const [qty, setQty] = useState(1);
   const [thumb, setThumb] = useState(0);
+  const [selectedColourId, setSelectedColourId] = useState<string | null>(null);
+  const [selectedSizeId, setSelectedSizeId] = useState<string | null>(null);
   const { add } = useCart();
   const toast = useToast();
 
@@ -65,9 +67,45 @@ function PDP() {
     distrib[r.rating - 1]++;
   });
 
-  const maxQty = Math.min(MAX_QTY_PER_ITEM, p.stock_count || Number.MAX_SAFE_INTEGER);
+  // Every product_variants row the admin form saves always has a colour_id (colour
+  // is the primary axis there) — size_id is only ever populated when the category
+  // has a size scale with options, so its presence/absence here is a reliable signal.
+  const hasVariants = p.variants.length > 0;
+  const hasSizeVariants = p.variants.some((v) => v.size_id !== null);
+
+  const colourStock = (colourId: string) =>
+    p.variants.filter((v) => v.colour_id === colourId).reduce((sum, v) => sum + v.stock_count, 0);
+
+  const colours = Array.from(
+    new Map(p.variants.map((v) => [v.colour_id as string, v.colour!])).values(),
+  ).sort((a, b) => a.sort_order - b.sort_order);
+
+  const sizes = hasSizeVariants
+    ? Array.from(new Map(p.variants.map((v) => [v.size_id as string, v.size!])).values()).sort(
+        (a, b) => a.sort_order - b.sort_order,
+      )
+    : [];
+
+  const sizeStockForSelectedColour = (sizeId: string) =>
+    p.variants.find((v) => v.colour_id === selectedColourId && v.size_id === sizeId)?.stock_count ??
+    0;
+
+  const selectedVariant = hasVariants
+    ? (p.variants.find(
+        (v) =>
+          v.colour_id === selectedColourId &&
+          (hasSizeVariants ? v.size_id === selectedSizeId : true),
+      ) ?? null)
+    : null;
+
+  const selectionComplete =
+    !hasVariants || (!!selectedColourId && (!hasSizeVariants || !!selectedSizeId));
+  const effectiveStock = hasVariants ? (selectedVariant?.stock_count ?? 0) : p.stock_count;
+  const canAddToBag = selectionComplete && effectiveStock > 0;
+
+  const maxQty = Math.min(MAX_QTY_PER_ITEM, effectiveStock || Number.MAX_SAFE_INTEGER);
   const addAndToast = () => {
-    add(p.id, qty);
+    add(p.id, qty, selectedVariant?.id ?? null);
     toast(`${p.name} added to bag`);
     setQty(1);
   };
@@ -140,13 +178,96 @@ function PDP() {
               )}
             </div>
             <p className="pdp-desc">{p.description}</p>
-            {p.stock_count <= 5 && p.stock_count > 0 && (
-              <div className="pdp-stock">
-                <IconAlertCircle />
-                Only {p.stock_count} left in stock
+
+            {hasVariants && (
+              <div className="pdp-variants" style={{ marginBottom: 16 }}>
+                <div style={{ marginBottom: 12 }}>
+                  <div style={{ fontSize: 12, color: "var(--ink2)", marginBottom: 6 }}>
+                    Colour:{" "}
+                    {colours.find((c) => c.id === selectedColourId)?.name ?? "Select an option"}
+                  </div>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                    {colours.map((c) => {
+                      const outOfStock = colourStock(c.id) === 0;
+                      const selected = selectedColourId === c.id;
+                      return (
+                        <button
+                          key={c.id}
+                          type="button"
+                          disabled={outOfStock}
+                          onClick={() => {
+                            setSelectedColourId(c.id);
+                            setSelectedSizeId(null);
+                          }}
+                          title={outOfStock ? `${c.name} — out of stock` : c.name}
+                          aria-label={c.name}
+                          style={{
+                            width: 32,
+                            height: 32,
+                            borderRadius: "50%",
+                            background: c.hex_code,
+                            border: selected ? "2px solid var(--ink)" : "1px solid var(--line)",
+                            outline: selected ? "1px solid var(--gold)" : "none",
+                            outlineOffset: 2,
+                            cursor: outOfStock ? "not-allowed" : "pointer",
+                            opacity: outOfStock ? 0.35 : 1,
+                            position: "relative",
+                          }}
+                        />
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {hasSizeVariants && (
+                  <div>
+                    <div style={{ fontSize: 12, color: "var(--ink2)", marginBottom: 6 }}>
+                      Size:{" "}
+                      {sizes.find((s) => s.id === selectedSizeId)?.label ?? "Select an option"}
+                    </div>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                      {sizes.map((s) => {
+                        const available =
+                          !!selectedColourId && sizeStockForSelectedColour(s.id) > 0;
+                        const disabled = !selectedColourId || !available;
+                        const selected = selectedSizeId === s.id;
+                        return (
+                          <button
+                            key={s.id}
+                            type="button"
+                            className={selected ? "btn-ink" : "btn-outline"}
+                            disabled={disabled}
+                            onClick={() => setSelectedSizeId(s.id)}
+                            title={
+                              !selectedColourId
+                                ? "Select a colour first"
+                                : !available
+                                  ? `${s.label} — out of stock`
+                                  : s.label
+                            }
+                            style={{
+                              opacity: disabled ? 0.4 : 1,
+                              fontSize: 12,
+                              padding: "6px 10px",
+                            }}
+                          >
+                            {s.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
-            {p.stock_count === 0 && (
+
+            {effectiveStock <= 5 && effectiveStock > 0 && (!hasVariants || selectionComplete) && (
+              <div className="pdp-stock">
+                <IconAlertCircle />
+                Only {effectiveStock} left in stock
+              </div>
+            )}
+            {effectiveStock === 0 && (!hasVariants || selectionComplete) && (
               <div className="pdp-stock">
                 <IconAlertCircle />
                 Currently out of stock
@@ -250,14 +371,30 @@ function PDP() {
                 </span>
               )}
             </div>
-            <button className="cta-primary" onClick={addAndToast} disabled={p.stock_count === 0}>
+            {hasVariants && !selectionComplete && (
+              <p style={{ fontSize: 11, color: "var(--ink3)", marginBottom: 6 }}>
+                Select a colour{hasSizeVariants ? " and size" : ""} to add to bag.
+              </p>
+            )}
+            <button className="cta-primary" onClick={addAndToast} disabled={!canAddToBag}>
               Add to bag
             </button>
             <Link
               to="/cart"
               className="cta-gold-full"
-              onClick={addAndToast}
-              style={{ display: "inline-block", textAlign: "center" }}
+              onClick={(e) => {
+                if (!canAddToBag) {
+                  e.preventDefault();
+                  return;
+                }
+                addAndToast();
+              }}
+              style={{
+                display: "inline-block",
+                textAlign: "center",
+                opacity: canAddToBag ? 1 : 0.5,
+                pointerEvents: canAddToBag ? "auto" : "none",
+              }}
             >
               Buy now
             </Link>

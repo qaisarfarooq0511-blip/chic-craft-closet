@@ -2,11 +2,14 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import type {
   Category,
+  ColourOption,
   Product,
   ProductImage,
   ProductInclude,
   ProductPiece,
+  ProductVariant,
   Review,
+  SizeOption,
 } from "@/types/database";
 
 export type ProductDetail = Product & {
@@ -15,13 +18,14 @@ export type ProductDetail = Product & {
   pieces: ProductPiece[];
   includes: ProductInclude[];
   reviews: (Review & { customer: { full_name: string | null } | null })[];
+  variants: (ProductVariant & { colour: ColourOption | null; size: SizeOption | null })[];
 };
 
 async function fetchProduct(slug: string): Promise<ProductDetail | null> {
   const { data, error } = await supabase
     .from("products")
     .select(
-      "*, category:categories(*), images:product_images(*), pieces:product_pieces(*), includes:product_includes(*), reviews:reviews(*, customer:profiles(full_name))",
+      "*, category:categories(*), images:product_images(*), pieces:product_pieces(*), includes:product_includes(*), reviews:reviews(*, customer:profiles(full_name)), variants:product_variants(*, colour:colour_options(*), size:size_options(*))",
     )
     .eq("slug", slug)
     .eq("status", "active")
@@ -46,6 +50,9 @@ async function fetchProduct(slug: string): Promise<ProductDetail | null> {
   detail.includes = (detail.includes ?? [])
     .filter((i) => !i.deleted_at)
     .sort((a, b) => a.sort_order - b.sort_order);
+  // RLS's product_variants_select_public policy already restricts this to
+  // is_active + non-deleted rows of an active/non-deleted product.
+  detail.variants = (detail.variants ?? []).sort((a, b) => a.sort_order - b.sort_order);
 
   return detail;
 }
