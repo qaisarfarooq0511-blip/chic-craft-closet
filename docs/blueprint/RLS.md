@@ -9,28 +9,34 @@ The `is_admin()` helper function checks `profiles.role = 'admin'` for the curren
 
 ## Policy matrix
 
-| Table              | anon SELECT | customer SELECT | customer WRITE           | admin SELECT | admin WRITE                 |
-| ------------------ | ----------- | --------------- | ------------------------ | ------------ | --------------------------- |
-| profiles           | ❌          | Own only        | Own (can't self-promote) | All          | ❌                          |
-| categories         | ✅ active   | ✅ active       | ❌                       | All          | ✅                          |
-| products           | ✅ active   | ✅ active       | ❌                       | All          | ✅                          |
-| product_pieces     | ✅          | ✅              | ❌                       | All          | ✅                          |
-| product_images     | ✅          | ✅              | ❌                       | All          | ✅                          |
-| product_includes   | ✅          | ✅              | ❌                       | All          | ✅                          |
-| product_variants   | ✅ active¹  | ✅ active¹      | ❌                       | All          | ✅                          |
-| fabric_options     | ✅ active   | ✅ active       | ❌                       | All          | ✅                          |
-| colour_options     | ✅ active   | ✅ active       | ❌                       | All          | ✅                          |
-| size_scales        | ✅          | ✅              | ❌                       | All          | ✅                          |
-| size_options       | ✅          | ✅              | ❌                       | All          | ✅                          |
-| addresses          | ❌          | Own only        | Own only                 | All          | ❌                          |
-| orders             | ❌          | Own only        | Own (INSERT)             | All          | ✅                          |
-| order_items        | ❌          | Own orders      | Own orders               | All          | ❌                          |
-| cart_items         | ❌          | Own only        | Own only                 | ❌           | ❌                          |
-| reviews            | ✅ approved | Own + approved  | Own (before approval)    | All          | ✅                          |
-| audit_logs         | ❌          | ❌              | ❌                       | SELECT only  | ❌ (INSERT via trigger)     |
-| notification_queue | ❌          | ❌              | Own (INSERT)             | SELECT only  | Any (INSERT) + service_role |
-| redirects          | ✅ active   | ✅ active       | ❌                       | All          | ✅                          |
-| site_settings      | ✅          | ✅              | ❌                       | All          | ✅                          |
+| Table              | anon SELECT   | customer SELECT | customer WRITE           | admin SELECT | admin WRITE                 |
+| ------------------ | ------------- | --------------- | ------------------------ | ------------ | --------------------------- |
+| profiles           | ❌            | Own only        | Own (can't self-promote) | All          | ❌                          |
+| categories         | ✅ active     | ✅ active       | ❌                       | All          | ✅                          |
+| products           | ✅ active     | ✅ active       | ❌                       | All          | ✅                          |
+| product_pieces     | ✅            | ✅              | ❌                       | All          | ✅                          |
+| product_images     | ✅            | ✅              | ❌                       | All          | ✅                          |
+| product_includes   | ✅            | ✅              | ❌                       | All          | ✅                          |
+| product_variants   | ✅ active¹    | ✅ active¹      | ❌                       | All          | ✅                          |
+| fabric_options     | ✅ active     | ✅ active       | ❌                       | All          | ✅                          |
+| colour_options     | ✅ active     | ✅ active       | ❌                       | All          | ✅                          |
+| size_scales        | ✅            | ✅              | ❌                       | All          | ✅                          |
+| size_options       | ✅            | ✅              | ❌                       | All          | ✅                          |
+| addresses          | ❌            | Own only        | Own only                 | All          | ❌                          |
+| orders             | ❌            | Own only        | Own (INSERT)             | All          | ✅                          |
+| order_items        | ❌            | Own orders      | Own orders               | All          | ❌                          |
+| cart_items         | ❌            | Own only        | Own only                 | ❌           | ❌                          |
+| reviews            | ✅ approved   | Own + approved  | Own (before approval)    | All          | ✅                          |
+| audit_logs         | ❌            | ❌              | ❌                       | SELECT only  | ❌ (INSERT via trigger)     |
+| notification_queue | ❌            | ❌              | Own (INSERT)             | SELECT only  | Any (INSERT) + service_role |
+| redirects          | ✅ active     | ✅ active       | ❌                       | All          | ✅                          |
+| site_settings      | ✅            | ✅              | ❌                       | All          | ✅                          |
+| static_pages       | ✅ published² | ✅ published²   | ❌                       | All          | UPDATE only²                |
+
+² `static_pages` — public/customer SELECT requires `is_published = true`; admins can SELECT every
+non-deleted row (including unpublished drafts) but there is no admin INSERT or DELETE policy at
+all — the 5 rows (`about`, `terms`, `privacy-policy`, `returns-policy`, `faqs`) are fixed by
+product decision and seeded directly by the migration, not through the app.
 
 ## Critical rules
 
