@@ -1,6 +1,6 @@
 # Yaawun — RLS Policy Map
 
-Last updated: 2025-08-01
+Last updated: 2026-08-03
 
 ## Principle: Default Deny (framework §2)
 
@@ -52,6 +52,24 @@ The `is_admin()` helper function checks `profiles.role = 'admin'` for the curren
    `COALESCE`-to-sentinel-UUID partial unique index, not a bare `UNIQUE` constraint —
    Postgres treats every `NULL` as distinct, so a plain constraint would not have
    caught duplicate colour/size-less variant rows for the same product.
+7. **`profiles_select_admin` must call `is_admin()` — never inline its own admin check.**
+   (Fixed 2026-08-03, migration `20260803000001`.) The original policy used its own
+   `EXISTS (SELECT 1 FROM profiles p WHERE p.id = auth.uid() AND p.role = 'admin')`
+   directly in the `USING` clause instead of calling the existing `is_admin()` helper.
+   Because that subquery targets `profiles` from within a policy _on_ `profiles`, with
+   no `SECURITY DEFINER` function-call boundary in between, Postgres's RLS recursion
+   guard fires (`42P17: infinite recursion detected in policy for relation "profiles"`)
+   any time the policy is evaluated for a row other than the caller's own — i.e. any
+   embedded `customer:profiles(...)` join (order detail, order list, review
+   moderation), for any authenticated user, admin or not. A plain own-row lookup
+   (`.eq("id", authUserId)`, as `auth-store.ts` does) never triggered it, because
+   `profiles_select_own` short-circuits the OR'd policy set before the broken branch
+   is reached — which is why this went unnoticed all the way until an actual
+   cross-user profile read happened. `is_admin()` itself was never the problem: it's
+   `SECURITY DEFINER` and already used correctly, with no recursion, by every other
+   table's admin policy (categories, products, orders, static_pages, etc.) — the fix
+   was routing `profiles_select_admin` through that same existing helper instead of
+   duplicating its logic inline.
 
 ## Testing RLS (automated — see CI)
 

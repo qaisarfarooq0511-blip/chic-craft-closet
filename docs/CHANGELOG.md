@@ -4,6 +4,50 @@ Format: Problem / Root Cause / Fix / Risk / Rollback
 Lane: Fast Lane (FL) or Full Lane (FullL)
 ---
 
+## 2026-08-03 — Fix profiles RLS infinite recursion
+
+### [FullL] profiles_select_admin policy used inline self-referential EXISTS subquery causing infinite recursion (42P17) on any cross-user profile read
+
+**Problem:** `profiles_select_admin` policy used inline self-referential EXISTS
+subquery causing infinite recursion (42P17) on any cross-user profile read.
+
+**Root Cause:** policy never called `is_admin()` — it duplicated the logic
+inline, bypassing the `SECURITY DEFINER` boundary. Because the duplicated
+`EXISTS (SELECT 1 FROM profiles p WHERE p.id = auth.uid() AND p.role = 'admin')`
+queried `profiles` directly from within a policy on `profiles`, with no
+function-call boundary to break the cycle, Postgres's RLS recursion guard
+fired for any row other than the caller's own (i.e. any embedded
+`customer:profiles(...)` join — order detail, order list, review
+moderation — for any authenticated user, admin or not). A plain own-row
+lookup never triggered it, since `profiles_select_own` short-circuits the
+OR'd policy set first — which is why this was invisible all session until an
+admin session actually hit a cross-user profile read.
+
+**Fix:** replaced inline subquery with `is_admin()` call, matching the
+pattern used correctly by all other tables. `is_admin()` itself was never
+broken — it's `SECURITY DEFINER` and already used successfully, with no
+recursion, by ~10 other tables' admin policies (categories, products, orders,
+static_pages, etc.). Verified via 5 rolled-back test transactions simulating
+the `authenticated` role before writing the real migration, then confirmed
+live: `pg_policies.qual` for `profiles_select_admin` now shows `is_admin()`,
+and an unfiltered `SELECT * FROM profiles` (the exact shape that previously
+recursed) now returns all rows cleanly under the real policy.
+
+**Risk:** Low — `is_admin()` already proven correct on 10+ other table
+policies; this only changes how `profiles_select_admin` checks admin status,
+not what it grants access to.
+
+**Rollback:** restore the old DROP/CREATE in reverse:
+
+```sql
+DROP POLICY "profiles_select_admin" ON profiles;
+CREATE POLICY "profiles_select_admin"
+  ON profiles FOR SELECT TO authenticated
+  USING (EXISTS (SELECT 1 FROM profiles p WHERE p.id = auth.uid() AND p.role = 'admin'));
+```
+
+---
+
 ## 2026-08-02 — Sprint 2C: Customer experience improvements
 
 ### [FastL] Order history, product search, and WhatsApp enquiry button
