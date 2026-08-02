@@ -1,3 +1,14 @@
+// FORM SECTIONS (in order):
+// 1. Basic info (name, subtitle, category, status, slug)
+// 2. Pricing (price, compare_price, badge, stock)
+// 3. Description + AI assist stub
+// 4. Category-specific (fabric/embroidery/care — visibility controlled by CATEGORY_CONFIG)
+// 5. Variants (colours + sizes)
+// 6. Pieces (unstitched Dress Material only)
+// 7. Package includes (unstitched only)
+// 8. Images
+// 9. SEO — collapsible (meta_title, meta_description, TLDR placeholder pending migration)
+
 import { useEffect, useState } from "react";
 import { IconPlus, IconTrash, IconX } from "@tabler/icons-react";
 import { supabase } from "@/lib/supabase";
@@ -12,6 +23,79 @@ import { deleteProductImage } from "@/lib/product-images";
 import { ProductImageUploader, type ProductImageDraft } from "./ProductImageUploader";
 
 const BADGES = ["", "New in", "Bestseller", "Sale", "Limited"];
+
+// Per-category field visibility + smart defaults for the admin product form.
+// Keyed by category slug. Unknown/unselected categories fall back to
+// DEFAULT_CATEGORY_CONFIG (show everything) so the form never hides a field
+// for a category we don't have an explicit rule for.
+interface CategoryFieldConfig {
+  showUnstitched: boolean; // toggle + pieces section (pieces also require the toggle to be ON)
+  showSizeVariants: boolean; // nested per-size rows inside a colour variant
+  showFabric: boolean;
+  showEmbroidery: boolean;
+  showCare: boolean;
+  defaults: { fabric?: string; care?: string };
+}
+
+const DEFAULT_CATEGORY_CONFIG: CategoryFieldConfig = {
+  showUnstitched: true,
+  showSizeVariants: true,
+  showFabric: true,
+  showEmbroidery: true,
+  showCare: true,
+  defaults: {},
+};
+
+const CATEGORY_CONFIG: Record<string, CategoryFieldConfig> = {
+  "kashmiri-shawls": {
+    showUnstitched: false,
+    showSizeVariants: false,
+    showFabric: true,
+    showEmbroidery: true,
+    showCare: true,
+    defaults: { fabric: "Pure Pashmina", care: "Dry clean only" },
+  },
+  "dress-material": {
+    showUnstitched: true,
+    showSizeVariants: false,
+    showFabric: true,
+    showEmbroidery: true,
+    showCare: true,
+    defaults: {},
+  },
+  kidswear: {
+    showUnstitched: false,
+    showSizeVariants: true,
+    showFabric: true,
+    showEmbroidery: false,
+    showCare: true,
+    defaults: { fabric: "Soft cotton", care: "Machine wash 30°C" },
+  },
+  accessories: {
+    showUnstitched: false,
+    showSizeVariants: false,
+    showFabric: false,
+    showEmbroidery: false,
+    showCare: true,
+    defaults: { care: "Handle with care" },
+  },
+};
+
+const UNSTITCHED_PIECE_DEFAULTS = [
+  { piece_name: "Top (Kameez fabric)", length: "3.0 m", width: "1.0 m", weight: "" },
+  { piece_name: "Bottom (Salwar fabric)", length: "2.0 m", width: "1.0 m", weight: "" },
+  { piece_name: "Dupatta", length: "3.0 m", width: "1.0 m", weight: "" },
+];
+
+const UNSTITCHED_INCLUDE_DEFAULTS = [
+  "Top fabric — 3 m × 1 m",
+  "Bottom fabric — 2 m × 1 m",
+  "Dupatta — 3 m × 1 m",
+  "Yaawun branded packaging",
+  "Care & wash instruction card",
+];
+
+const AI_KEY_PLACEHOLDER = "your-key-here";
 
 interface PieceRow {
   id?: string;
@@ -35,6 +119,7 @@ interface VariantRow {
 interface FormState {
   name: string;
   subtitle: string;
+  slug: string;
   categoryId: string;
   price: string; // rupees, as typed
   comparePrice: string;
@@ -51,11 +136,16 @@ interface FormState {
   images: ProductImageDraft[];
   variantColourIds: string[];
   variants: VariantRow[];
+  metaTitle: string;
+  metaDescription: string;
 }
+
+const BLANK_PIECE_ROW: PieceRow = { piece_name: "", length: "", width: "", weight: "" };
 
 const emptyForm: FormState = {
   name: "",
   subtitle: "",
+  slug: "",
   categoryId: "",
   price: "",
   comparePrice: "",
@@ -67,12 +157,18 @@ const emptyForm: FormState = {
   isUnstitched: false,
   stockCount: "0",
   status: "draft",
-  pieces: [{ piece_name: "", length: "", width: "", weight: "" }],
+  pieces: [{ ...BLANK_PIECE_ROW }],
   includes: [],
   images: [],
   variantColourIds: [],
   variants: [],
+  metaTitle: "",
+  metaDescription: "",
 };
+
+function isBlankPieceRow(p: PieceRow) {
+  return !p.piece_name.trim() && !p.length.trim() && !p.width.trim() && !p.weight.trim();
+}
 
 async function generateUniqueSlug(base: string): Promise<string> {
   const root = slugify(base) || "product";
@@ -103,11 +199,16 @@ export function ProductForm({ productId, onSaved, submitLabel }: Props) {
   const [form, setForm] = useState<FormState>(emptyForm);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [seoOpen, setSeoOpen] = useState(false);
 
   const selectedCategory = categories.find((c) => c.id === form.categoryId);
+  const categoryConfig = CATEGORY_CONFIG[selectedCategory?.slug ?? ""] ?? DEFAULT_CATEGORY_CONFIG;
   const scaleId = selectedCategory?.default_size_scale_id ?? null;
   const { data: sizeOptions = [] } = useSizeOptionsByScale(scaleId);
-  const hasSizeScale = sizeOptions.length > 0;
+  const showSizes = categoryConfig.showSizeVariants && sizeOptions.length > 0;
+
+  const aiKey = import.meta.env.VITE_ANTHROPIC_API_KEY as string | undefined;
+  const aiAssistEnabled = !!aiKey && aiKey !== AI_KEY_PLACEHOLDER;
 
   useEffect(() => {
     if (!existing) return;
@@ -119,6 +220,7 @@ export function ProductForm({ productId, onSaved, submitLabel }: Props) {
     setForm({
       name: existing.name,
       subtitle: existing.subtitle ?? "",
+      slug: existing.slug,
       categoryId: existing.category_id,
       price: String(existing.price / 100),
       comparePrice: existing.compare_price ? String(existing.compare_price / 100) : "",
@@ -138,7 +240,7 @@ export function ProductForm({ productId, onSaved, submitLabel }: Props) {
             width: p.width ?? "",
             weight: p.weight ?? "",
           }))
-        : [{ piece_name: "", length: "", width: "", weight: "" }],
+        : [{ ...BLANK_PIECE_ROW }],
       includes: existing.includes.map((i) => ({ id: i.id, description: i.description })),
       images: existing.images.map((i) => ({
         id: i.id,
@@ -158,15 +260,62 @@ export function ProductForm({ productId, onSaved, submitLabel }: Props) {
           stockCount: String(v.stock_count),
           priceOverride: v.price_override ? String(v.price_override / 100) : "",
         })),
+      metaTitle: existing.meta_title ?? "",
+      metaDescription: existing.meta_description ?? "",
     });
   }, [existing, fabricOptions]);
 
   const set = <K extends keyof FormState>(key: K, value: FormState[K]) =>
     setForm((f) => ({ ...f, [key]: value }));
 
+  // Slug auto-fills from the name on blur, only in create mode, and only while
+  // the slug is still empty — it never overwrites a value the admin has typed.
+  const handleNameBlur = () => {
+    if (!productId && !form.slug.trim() && form.name.trim()) {
+      set("slug", slugify(form.name.trim()));
+    }
+  };
+
+  // Category selection applies category-specific smart defaults, but only to
+  // fields that are still blank -- an admin's existing entry is never touched.
+  const handleCategoryChange = (categoryId: string) => {
+    const cat = categories.find((c) => c.id === categoryId);
+    const config = CATEGORY_CONFIG[cat?.slug ?? ""] ?? DEFAULT_CATEGORY_CONFIG;
+    setForm((f) => {
+      const next = { ...f, categoryId };
+      if (config.defaults.fabric && !f.fabricId) {
+        const match = fabricOptions.find(
+          (fo) => fo.name.toLowerCase() === config.defaults.fabric!.toLowerCase(),
+        );
+        if (match) next.fabricId = match.id;
+      }
+      if (config.defaults.care && !f.care.trim()) {
+        next.care = config.defaults.care;
+      }
+      return next;
+    });
+  };
+
+  // Toggling unstitched ON pre-fills the 3 standard piece rows and the
+  // matching package-includes list -- but only when those sections are still
+  // at their untouched blank/empty state, so it never clobbers real edits.
+  const handleUnstitchedToggle = (checked: boolean) => {
+    setForm((f) => {
+      const next = { ...f, isUnstitched: checked };
+      if (checked) {
+        const piecesAreBlank = f.pieces.length <= 1 && f.pieces.every(isBlankPieceRow);
+        if (piecesAreBlank) next.pieces = UNSTITCHED_PIECE_DEFAULTS.map((p) => ({ ...p }));
+        if (f.includes.length === 0) {
+          next.includes = UNSTITCHED_INCLUDE_DEFAULTS.map((description) => ({ description }));
+        }
+      }
+      return next;
+    });
+  };
+
   const addPiece = () => {
     if (form.pieces.length >= 3) return;
-    set("pieces", [...form.pieces, { piece_name: "", length: "", width: "", weight: "" }]);
+    set("pieces", [...form.pieces, { ...BLANK_PIECE_ROW }]);
   };
   const updatePiece = (i: number, patch: Partial<PieceRow>) =>
     set(
@@ -192,13 +341,14 @@ export function ProductForm({ productId, onSaved, submitLabel }: Props) {
     );
 
   // --- variants: colour is the primary axis; size nests under a colour only when
-  // the category has a size scale with options (e.g. dress_material has none) ---
+  // the category is configured to show size variants AND has a size scale with
+  // options (e.g. dress_material and kashmiri-shawls never nest by size) ---
   const addColour = (colourId: string) => {
     if (form.variantColourIds.includes(colourId)) return;
     setForm((f) => ({
       ...f,
       variantColourIds: [...f.variantColourIds, colourId],
-      variants: hasSizeScale
+      variants: showSizes
         ? f.variants
         : [...f.variants, { colourId, sizeId: null, stockCount: "0", priceOverride: "" }],
     }));
@@ -279,11 +429,13 @@ export function ProductForm({ productId, onSaved, submitLabel }: Props) {
         is_unstitched: form.isUnstitched,
         stock_count: parseInt(form.stockCount, 10) || 0,
         status: form.status,
+        meta_title: form.metaTitle.trim() || null,
+        meta_description: form.metaDescription.trim() || null,
       };
 
       let id = productId;
       if (!id) {
-        const slug = await generateUniqueSlug(form.name);
+        const slug = await generateUniqueSlug(form.slug || form.name);
         const { data, error } = await supabase
           .from("products")
           .insert({ ...payload, slug })
@@ -398,8 +550,11 @@ export function ProductForm({ productId, onSaved, submitLabel }: Props) {
 
   if (productId && loadingExisting) return <p style={{ color: "var(--ink3)" }}>Loading…</p>;
 
+  const showPieces = categoryConfig.showUnstitched && form.isUnstitched;
+
   return (
     <form onSubmit={submit} style={{ display: "grid", gap: 20, maxWidth: 720 }}>
+      {/* 1. Basic info */}
       <div className="admin-card">
         <div className="form-field">
           <label className="form-label">Name *</label>
@@ -407,6 +562,7 @@ export function ProductForm({ productId, onSaved, submitLabel }: Props) {
             className="form-input"
             value={form.name}
             onChange={(e) => set("name", e.target.value)}
+            onBlur={handleNameBlur}
             required
           />
         </div>
@@ -423,7 +579,7 @@ export function ProductForm({ productId, onSaved, submitLabel }: Props) {
           <select
             className="form-input"
             value={form.categoryId}
-            onChange={(e) => set("categoryId", e.target.value)}
+            onChange={(e) => handleCategoryChange(e.target.value)}
             required
           >
             <option value="">Select a category</option>
@@ -434,6 +590,36 @@ export function ProductForm({ productId, onSaved, submitLabel }: Props) {
             ))}
           </select>
         </div>
+        <div className="form-field">
+          <label className="form-label">Slug</label>
+          <input
+            className="form-input"
+            value={form.slug}
+            onChange={(e) => set("slug", e.target.value)}
+            disabled={!!productId}
+            placeholder="auto-generated from name"
+          />
+          <p style={{ fontSize: 11, color: "var(--ink3)", marginTop: 4 }}>
+            {productId
+              ? "Changing the slug of a live product affects its URL — not editable here."
+              : `yaawun.com/product/${form.slug || "…"}`}
+          </p>
+        </div>
+        <div className="form-field" style={{ marginTop: 10 }}>
+          <label className="form-label">Status</label>
+          <select
+            className="form-input"
+            value={form.status}
+            onChange={(e) => set("status", e.target.value as "draft" | "active")}
+          >
+            <option value="draft">Draft (hidden from storefront)</option>
+            <option value="active">Active (live on storefront)</option>
+          </select>
+        </div>
+      </div>
+
+      {/* 2. Pricing */}
+      <div className="admin-card">
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
           <div className="form-field">
             <label className="form-label">Price (₹) *</label>
@@ -487,191 +673,123 @@ export function ProductForm({ productId, onSaved, submitLabel }: Props) {
             />
           </div>
         </div>
-        <div className="form-field">
-          <label className="form-label">Description</label>
-          <textarea
-            className="form-textarea"
-            value={form.description}
-            onChange={(e) => set("description", e.target.value)}
-          />
-        </div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
-          <div className="form-field">
-            <label className="form-label">Fabric</label>
-            <select
-              className="form-input"
-              value={form.fabricId}
-              onChange={(e) => set("fabricId", e.target.value)}
-            >
-              <option value="">Select a fabric</option>
-              {fabricOptions.map((f) => (
-                <option key={f.id} value={f.id}>
-                  {f.name}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="form-field">
-            <label className="form-label">Embroidery</label>
-            <input
-              className="form-input"
-              value={form.embroidery}
-              onChange={(e) => set("embroidery", e.target.value)}
-            />
-          </div>
-          <div className="form-field">
-            <label className="form-label">Care</label>
-            <input
-              className="form-input"
-              value={form.care}
-              onChange={(e) => set("care", e.target.value)}
-            />
-          </div>
-        </div>
-        <label
+      </div>
+
+      {/* 3. Description + AI assist stub */}
+      <div className="admin-card">
+        <div
           style={{
             display: "flex",
             alignItems: "center",
-            gap: 8,
-            fontSize: 13,
-            color: "var(--ink2)",
-            marginTop: 4,
+            justifyContent: "space-between",
+            marginBottom: 6,
           }}
         >
-          <input
-            type="checkbox"
-            checked={form.isUnstitched}
-            onChange={(e) => set("isUnstitched", e.target.checked)}
-          />
-          Unstitched (dimensions below are fabric cut lengths)
-        </label>
-        <div className="form-field" style={{ marginTop: 10 }}>
-          <label className="form-label">Status</label>
-          <select
-            className="form-input"
-            value={form.status}
-            onChange={(e) => set("status", e.target.value as "draft" | "active")}
-          >
-            <option value="draft">Draft (hidden from storefront)</option>
-            <option value="active">Active (live on storefront)</option>
-          </select>
-        </div>
-      </div>
-
-      <div className="admin-card">
-        <div className="cart-sum-title" style={{ marginBottom: 10 }}>
-          Pieces &amp; dimensions
-        </div>
-        {form.pieces.map((p, i) => (
-          <div
-            key={p.id ?? i}
-            style={{
-              display: "grid",
-              gridTemplateColumns: "1fr 1fr 1fr 1fr auto",
-              gap: 8,
-              marginBottom: 10,
-              alignItems: "end",
-            }}
-          >
-            <div className="form-field" style={{ margin: 0 }}>
-              <label className="form-label">Piece {i + 1} name</label>
-              <input
-                className="form-input"
-                value={p.piece_name}
-                onChange={(e) => updatePiece(i, { piece_name: e.target.value })}
-                placeholder="e.g. Shawl, Top"
-              />
-            </div>
-            <div className="form-field" style={{ margin: 0 }}>
-              <label className="form-label">Length</label>
-              <input
-                className="form-input"
-                value={p.length}
-                onChange={(e) => updatePiece(i, { length: e.target.value })}
-                placeholder="2.5 m"
-              />
-            </div>
-            <div className="form-field" style={{ margin: 0 }}>
-              <label className="form-label">Width</label>
-              <input
-                className="form-input"
-                value={p.width}
-                onChange={(e) => updatePiece(i, { width: e.target.value })}
-                placeholder="1 m"
-              />
-            </div>
-            <div className="form-field" style={{ margin: 0 }}>
-              <label className="form-label">Weight</label>
-              <input
-                className="form-input"
-                value={p.weight}
-                onChange={(e) => updatePiece(i, { weight: e.target.value })}
-                placeholder="180 g"
-              />
-            </div>
-            <button
-              type="button"
-              className="btn-text-rust"
-              onClick={() => removePiece(i)}
-              aria-label="Remove piece"
-              style={{ marginBottom: 10 }}
-            >
-              <IconTrash size={16} />
-            </button>
-          </div>
-        ))}
-        {form.pieces.length < 3 && (
+          <label className="form-label" style={{ margin: 0 }}>
+            Description
+          </label>
           <button
             type="button"
             className="btn-outline"
-            onClick={addPiece}
-            style={{ display: "inline-flex", alignItems: "center", gap: 6 }}
+            disabled={!aiAssistEnabled}
+            title={aiAssistEnabled ? undefined : "Add VITE_ANTHROPIC_API_KEY to enable"}
+            onClick={() => toast("AI assist coming soon")}
+            style={{ fontSize: 12, padding: "6px 10px" }}
           >
-            <IconPlus size={14} /> Add piece
+            AI assist — Generate copy
           </button>
-        )}
-      </div>
-
-      <div className="admin-card">
-        <div className="cart-sum-title" style={{ marginBottom: 10 }}>
-          What's in the package
         </div>
-        {form.includes.map((inc, i) => (
-          <div key={inc.id ?? i} style={{ display: "flex", gap: 8, marginBottom: 8 }}>
-            <input
-              className="form-input"
-              value={inc.description}
-              onChange={(e) => updateInclude(i, e.target.value)}
-              placeholder="e.g. Top fabric — 3 m × 1 m"
-            />
-            <button
-              type="button"
-              className="btn-text-rust"
-              onClick={() => removeInclude(i)}
-              aria-label="Remove item"
-            >
-              <IconTrash size={16} />
-            </button>
-          </div>
-        ))}
-        <button
-          type="button"
-          className="btn-outline"
-          onClick={addInclude}
-          style={{ display: "inline-flex", alignItems: "center", gap: 6 }}
-        >
-          <IconPlus size={14} /> Add item
-        </button>
+        <textarea
+          className="form-textarea"
+          value={form.description}
+          onChange={(e) => set("description", e.target.value)}
+        />
       </div>
 
+      {/* 4. Category-specific fields */}
+      {(categoryConfig.showFabric || categoryConfig.showEmbroidery || categoryConfig.showCare) && (
+        <div className="admin-card">
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: `repeat(${
+                [
+                  categoryConfig.showFabric,
+                  categoryConfig.showEmbroidery,
+                  categoryConfig.showCare,
+                ].filter(Boolean).length
+              }, 1fr)`,
+              gap: 12,
+            }}
+          >
+            {categoryConfig.showFabric && (
+              <div className="form-field" style={{ margin: 0 }}>
+                <label className="form-label">Fabric</label>
+                <select
+                  className="form-input"
+                  value={form.fabricId}
+                  onChange={(e) => set("fabricId", e.target.value)}
+                >
+                  <option value="">Select a fabric</option>
+                  {fabricOptions.map((f) => (
+                    <option key={f.id} value={f.id}>
+                      {f.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+            {categoryConfig.showEmbroidery && (
+              <div className="form-field" style={{ margin: 0 }}>
+                <label className="form-label">Embroidery</label>
+                <input
+                  className="form-input"
+                  value={form.embroidery}
+                  onChange={(e) => set("embroidery", e.target.value)}
+                />
+              </div>
+            )}
+            {categoryConfig.showCare && (
+              <div className="form-field" style={{ margin: 0 }}>
+                <label className="form-label">Care</label>
+                <input
+                  className="form-input"
+                  value={form.care}
+                  onChange={(e) => set("care", e.target.value)}
+                />
+              </div>
+            )}
+          </div>
+          {categoryConfig.showUnstitched && (
+            <label
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                fontSize: 13,
+                color: "var(--ink2)",
+                marginTop: 14,
+              }}
+            >
+              <input
+                type="checkbox"
+                checked={form.isUnstitched}
+                onChange={(e) => handleUnstitchedToggle(e.target.checked)}
+              />
+              Unstitched (dimensions below are fabric cut lengths)
+            </label>
+          )}
+        </div>
+      )}
+
+      {/* 5. Variants */}
       <div className="admin-card">
         <div className="cart-sum-title" style={{ marginBottom: 4 }}>
           Variants
         </div>
         <p style={{ fontSize: 11, color: "var(--ink3)", marginBottom: 12 }}>
           Leave empty to manage stock at the product level above. Add a colour to create colour
-          {hasSizeScale ? "/size" : ""} variants, each with its own stock and optional price
-          override.
+          {showSizes ? "/size" : ""} variants, each with its own stock and optional price override.
         </p>
 
         <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 16 }}>
@@ -728,7 +846,7 @@ export function ProductForm({ productId, onSaved, submitLabel }: Props) {
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "space-between",
-                  marginBottom: hasSizeScale ? 10 : 0,
+                  marginBottom: showSizes ? 10 : 0,
                 }}
               >
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -754,7 +872,7 @@ export function ProductForm({ productId, onSaved, submitLabel }: Props) {
                 </button>
               </div>
 
-              {hasSizeScale ? (
+              {showSizes ? (
                 <>
                   {colourVariants.map((v) => {
                     const size = sizeOptions.find((s) => s.id === v.sizeId);
@@ -867,8 +985,170 @@ export function ProductForm({ productId, onSaved, submitLabel }: Props) {
         })}
       </div>
 
+      {/* 6. Pieces (unstitched only, per CATEGORY_CONFIG.showUnstitched) */}
+      {showPieces && (
+        <div className="admin-card">
+          <div className="cart-sum-title" style={{ marginBottom: 10 }}>
+            Pieces &amp; dimensions
+          </div>
+          {form.pieces.map((p, i) => (
+            <div
+              key={p.id ?? i}
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr 1fr 1fr auto",
+                gap: 8,
+                marginBottom: 10,
+                alignItems: "end",
+              }}
+            >
+              <div className="form-field" style={{ margin: 0 }}>
+                <label className="form-label">Piece {i + 1} name</label>
+                <input
+                  className="form-input"
+                  value={p.piece_name}
+                  onChange={(e) => updatePiece(i, { piece_name: e.target.value })}
+                  placeholder="e.g. Shawl, Top"
+                />
+              </div>
+              <div className="form-field" style={{ margin: 0 }}>
+                <label className="form-label">Length</label>
+                <input
+                  className="form-input"
+                  value={p.length}
+                  onChange={(e) => updatePiece(i, { length: e.target.value })}
+                  placeholder="2.5 m"
+                />
+              </div>
+              <div className="form-field" style={{ margin: 0 }}>
+                <label className="form-label">Width</label>
+                <input
+                  className="form-input"
+                  value={p.width}
+                  onChange={(e) => updatePiece(i, { width: e.target.value })}
+                  placeholder="1 m"
+                />
+              </div>
+              <div className="form-field" style={{ margin: 0 }}>
+                <label className="form-label">Weight</label>
+                <input
+                  className="form-input"
+                  value={p.weight}
+                  onChange={(e) => updatePiece(i, { weight: e.target.value })}
+                  placeholder="180 g"
+                />
+              </div>
+              <button
+                type="button"
+                className="btn-text-rust"
+                onClick={() => removePiece(i)}
+                aria-label="Remove piece"
+                style={{ marginBottom: 10 }}
+              >
+                <IconTrash size={16} />
+              </button>
+            </div>
+          ))}
+          {form.pieces.length < 3 && (
+            <button
+              type="button"
+              className="btn-outline"
+              onClick={addPiece}
+              style={{ display: "inline-flex", alignItems: "center", gap: 6 }}
+            >
+              <IconPlus size={14} /> Add piece
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* 7. Package includes (unstitched only) */}
+      {showPieces && (
+        <div className="admin-card">
+          <div className="cart-sum-title" style={{ marginBottom: 10 }}>
+            What's in the package
+          </div>
+          {form.includes.map((inc, i) => (
+            <div key={inc.id ?? i} style={{ display: "flex", gap: 8, marginBottom: 8 }}>
+              <input
+                className="form-input"
+                value={inc.description}
+                onChange={(e) => updateInclude(i, e.target.value)}
+                placeholder="e.g. Top fabric — 3 m × 1 m"
+              />
+              <button
+                type="button"
+                className="btn-text-rust"
+                onClick={() => removeInclude(i)}
+                aria-label="Remove item"
+              >
+                <IconTrash size={16} />
+              </button>
+            </div>
+          ))}
+          <button
+            type="button"
+            className="btn-outline"
+            onClick={addInclude}
+            style={{ display: "inline-flex", alignItems: "center", gap: 6 }}
+          >
+            <IconPlus size={14} /> Add item
+          </button>
+        </div>
+      )}
+
+      {/* 8. Images */}
       <div className="admin-card">
         <ProductImageUploader value={form.images} onChange={(images) => set("images", images)} />
+      </div>
+
+      {/* 9. SEO — collapsible */}
+      <div className="admin-card">
+        <button
+          type="button"
+          onClick={() => setSeoOpen((v) => !v)}
+          style={{
+            background: "none",
+            border: "none",
+            cursor: "pointer",
+            padding: 0,
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
+            fontSize: 13,
+            fontWeight: 500,
+            color: "var(--ink)",
+          }}
+        >
+          <span>{seoOpen ? "▾" : "▸"}</span> SEO
+        </button>
+        {seoOpen && (
+          <div style={{ marginTop: 12, display: "grid", gap: 12 }}>
+            <div className="form-field" style={{ margin: 0 }}>
+              <label className="form-label">Meta title</label>
+              <input
+                className="form-input"
+                value={form.metaTitle}
+                onChange={(e) => set("metaTitle", e.target.value)}
+                placeholder="Defaults to product name if left blank"
+              />
+            </div>
+            <div className="form-field" style={{ margin: 0 }}>
+              <label className="form-label">Meta description</label>
+              <textarea
+                className="form-textarea"
+                value={form.metaDescription}
+                onChange={(e) => set("metaDescription", e.target.value)}
+                placeholder="Defaults to the product description if left blank"
+              />
+            </div>
+            {/* TLDR / AEO field placeholder — add a "Product highlight" input here
+                once a `tldr` (or `highlight`) column exists on `products`. That
+                column does not exist yet: adding it is Full Lane work (migration +
+                RLS + docs), scoped separately. Do not add the field here without
+                the migration landing first. */}
+          </div>
+        )}
       </div>
 
       {error && (
