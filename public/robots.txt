@@ -157,4 +157,4 @@ Allow: /
 User-agent: Diffbot
 Allow: /
 
-Sitemap: https://yaawun.in/sitemap.xml
+Sitemap: https://yaawun.com/sitemap.xml

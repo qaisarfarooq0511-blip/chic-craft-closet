@@ -6,9 +6,16 @@
 
 ## Identity
 
-- Project: Yaawun (yaawun.in) — women's fashion e-commerce, Sopore, J&K
+- Project: Yaawun (yaawun.com) — women's fashion e-commerce, Sopore, J&K
 - Stack: React 19 + Vite + TanStack Router/Start + Supabase (Postgres + Auth + Storage) + Tailwind v4 + shadcn/ui
 - Framework: Product & Engineering Excellence Framework (docs/blueprint/FRAMEWORK.md)
+
+---
+
+## DOMAIN ARCHITECTURE
+
+Admin subdomain (ops.yaawun.com or similar) is planned but not yet implemented.
+Currently served at yaawun.com/admin. Subdomain split is a future Full Lane sprint.
 
 ---
 

@@ -1,7 +1,7 @@
 import type { Product, ProductImage, Category } from "@/types/database";
 import { productImageUrl } from "@/lib/product-images";
 
-export const SITE_URL = "https://yaawun.in";
+export const SITE_URL = "https://yaawun.com";
 
 export const abs = (path: string) => {
   if (!path) return SITE_URL;
