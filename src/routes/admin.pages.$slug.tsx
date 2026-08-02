@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { IconArrowLeft } from "@tabler/icons-react";
+import { IconArrowLeft, IconExternalLink } from "@tabler/icons-react";
 import { useAdminStaticPage, updateStaticPage } from "@/hooks/useAdminStaticPages";
 import { useToast } from "@/lib/toast";
 
@@ -100,6 +100,8 @@ function PageEditor() {
     );
   }
 
+  const livePath = page.slug === "about" ? "/about" : `/pages/${page.slug}`;
+
   return (
     <>
       <BackLink />
@@ -120,7 +122,20 @@ function PageEditor() {
         </span>
       </div>
       <p className="admin-sub">
-        URL: <code>{page.slug === "about" ? "/about" : `/pages/${page.slug}`}</code>
+        URL: <code>{livePath}</code>{" "}
+        <a
+          href={livePath}
+          target="_blank"
+          rel="noreferrer"
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 4,
+            color: "var(--ink2)",
+          }}
+        >
+          <IconExternalLink size={14} /> View live
+        </a>
       </p>
 
       <div className="admin-card">

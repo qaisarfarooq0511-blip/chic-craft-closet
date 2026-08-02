@@ -449,7 +449,7 @@ export function Footer() {
         <div>
           <div className="footer-col-title">Information</div>
           {pages.map((p) => (
-            <Link key={p.slug} to="/page/$slug" params={{ slug: p.slug }} className="footer-link">
+            <Link key={p.slug} to="/pages/$slug" params={{ slug: p.slug }} className="footer-link">
               {p.title}
             </Link>
           ))}
