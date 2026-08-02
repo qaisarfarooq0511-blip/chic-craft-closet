@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   IconSearch,
   IconHeart,
@@ -7,9 +7,10 @@ import {
   IconMenu2,
   IconX,
   IconUser,
+  IconLoader2,
 } from "@tabler/icons-react";
 import { useCart } from "@/hooks/useCart";
-import { useProducts } from "@/hooks/useProducts";
+import { useProductSearch, SEARCH_MIN_LENGTH } from "@/hooks/useProductSearch";
 import { useSupabaseAuth } from "@/hooks/useSupabaseAuth";
 import { supabase } from "@/lib/supabase";
 import { formatPrice } from "@/types/database";
@@ -144,24 +145,14 @@ function SearchMenu() {
     if (open) setTimeout(() => inputRef.current?.focus(), 10);
   }, [open]);
 
-  const { data: allProducts = [] } = useProducts({});
-  const results = useMemo(() => {
-    const term = q.trim().toLowerCase();
-    if (!term) return [];
-    return allProducts
-      .filter((p) => {
-        const hay = `${p.name} ${p.subtitle ?? ""} ${p.description ?? ""}`.toLowerCase();
-        return hay.includes(term);
-      })
-      .slice(0, 8);
-  }, [q, allProducts]);
+  const { results, isLoading } = useProductSearch(q);
+  const term = q.trim();
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
-    const term = q.trim();
-    if (!term) return;
+    if (term.length < SEARCH_MIN_LENGTH) return;
     setOpen(false);
-    navigate({ to: "/shop", search: { q: term } as never });
+    navigate({ to: "/search", search: { q: term } });
   };
 
   const go = (slug: string) => {
@@ -215,79 +206,91 @@ function SearchMenu() {
               </button>
             )}
           </form>
-          {q.trim() && (
+          {term.length >= SEARCH_MIN_LENGTH && (
             <div style={{ marginTop: 10, maxHeight: 360, overflowY: "auto" }}>
-              {results.length === 0 ? (
+              {isLoading ? (
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "center",
+                    padding: "16px 4px",
+                    color: "var(--ink3)",
+                  }}
+                >
+                  <IconLoader2 className="spin" size={18} />
+                </div>
+              ) : results.length === 0 ? (
                 <div style={{ fontSize: 12, color: "var(--ink3)", padding: "12px 4px" }}>
-                  No products match "{q}".
+                  No products match "{term}".
                 </div>
               ) : (
-                results.map((p) => (
-                  <button
-                    key={p.id}
-                    onClick={() => go(p.slug)}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 10,
-                      width: "100%",
-                      padding: 8,
-                      background: "transparent",
-                      border: "none",
-                      borderRadius: 6,
-                      cursor: "pointer",
-                      textAlign: "left",
-                    }}
-                  >
-                    <div
+                results.map((p) => {
+                  const img = productImageUrl(p.images.find((i) => i.is_primary) ?? p.images[0]);
+                  return (
+                    <button
+                      key={p.id}
+                      onClick={() => go(p.slug)}
                       style={{
-                        width: 40,
-                        height: 40,
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 10,
+                        width: "100%",
+                        padding: 8,
+                        background: "transparent",
+                        border: "none",
                         borderRadius: 6,
-                        background: "var(--cream2)",
-                        flexShrink: 0,
-                        overflow: "hidden",
+                        cursor: "pointer",
+                        textAlign: "left",
                       }}
                     >
-                      {(() => {
-                        const img = productImageUrl(
-                          p.images.find((i) => i.is_primary) ?? p.images[0],
-                        );
-                        return (
-                          img && (
-                            <img
-                              src={img}
-                              alt=""
-                              style={{ width: "100%", height: "100%", objectFit: "cover" }}
-                            />
-                          )
-                        );
-                      })()}
-                    </div>
-                    <div style={{ minWidth: 0, flex: 1 }}>
                       <div
                         style={{
-                          fontSize: 13,
-                          color: "var(--ink)",
-                          whiteSpace: "nowrap",
+                          width: 40,
+                          height: 40,
+                          borderRadius: 6,
+                          background: "var(--cream2)",
+                          flexShrink: 0,
                           overflow: "hidden",
-                          textOverflow: "ellipsis",
                         }}
                       >
-                        {p.name}
+                        {img && (
+                          <img
+                            src={img}
+                            alt=""
+                            style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                          />
+                        )}
                       </div>
-                      <div style={{ fontSize: 11, color: "var(--ink3)" }}>
-                        {formatPrice(p.price)}
+                      <div style={{ minWidth: 0, flex: 1 }}>
+                        <div
+                          style={{
+                            fontSize: 13,
+                            color: "var(--ink)",
+                            whiteSpace: "nowrap",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                          }}
+                        >
+                          {p.name}
+                        </div>
+                        <div style={{ fontSize: 11, color: "var(--ink3)" }}>
+                          {p.category?.name} · {formatPrice(p.price)}
+                        </div>
                       </div>
-                    </div>
-                  </button>
-                ))
+                    </button>
+                  );
+                })
               )}
-              {results.length > 0 && (
-                <button
-                  type="button"
-                  onClick={submit as unknown as () => void}
+              {!isLoading && (
+                <Link
+                  to="/search"
+                  search={{ q: term }}
+                  onClick={() => {
+                    setOpen(false);
+                    setQ("");
+                  }}
                   style={{
+                    display: "block",
                     marginTop: 6,
                     width: "100%",
                     padding: 8,
@@ -295,12 +298,13 @@ function SearchMenu() {
                     background: "var(--cream)",
                     border: "1px solid var(--line)",
                     borderRadius: 6,
-                    cursor: "pointer",
+                    textAlign: "center",
                     color: "var(--ink)",
+                    textDecoration: "none",
                   }}
                 >
-                  See all results
-                </button>
+                  See all results for "{term}"
+                </Link>
               )}
             </div>
           )}
@@ -374,6 +378,21 @@ function AccountMenu() {
           <div style={{ fontSize: 11, color: "var(--ink3)", marginBottom: 10 }}>
             {session.user.email || session.user.phone}
           </div>
+          <Link
+            to="/account/orders"
+            onClick={() => setOpen(false)}
+            style={{
+              display: "block",
+              padding: "8px 10px",
+              fontSize: 12,
+              color: "var(--ink)",
+              textDecoration: "none",
+              borderRadius: 6,
+              marginBottom: 6,
+            }}
+          >
+            My Orders
+          </Link>
           <button
             onClick={() => {
               setOpen(false);

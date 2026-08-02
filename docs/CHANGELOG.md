@@ -4,6 +4,71 @@ Format: Problem / Root Cause / Fix / Risk / Rollback
 Lane: Fast Lane (FL) or Full Lane (FullL)
 ---
 
+## 2026-08-02 — Sprint 2C: Customer experience improvements
+
+### [FastL] Order history, product search, and WhatsApp enquiry button
+
+**Problem:** Three customer-facing gaps. (1) `/account/orders` still rendered
+the pre-Sprint-1 mock `Inquiry`-based order history (localStorage, fake
+invoice modal) with no real order data and no detail view. (2) The navbar
+search dropdown fetched every active product client-side and filtered with a
+JS substring match — no debounce, fired from the first keystroke, never used
+the `idx_products_name_trgm` index, and had no dedicated results page. (3)
+There was no way for a customer to enquire about a specific product on
+WhatsApp — PDP had no such button at all.
+
+**Root Cause:** (1)/(2) are carry-over gaps from the pre-Supabase mock era,
+same category as the product-catalogue migration two entries above — nobody
+had gone back to check whether these specific pages/components were ever
+updated when the storefront moved to live Supabase queries. (3) is net-new
+scope, not a bug.
+
+**Fix:**
+
+- **Order history** (`useMyOrders.ts`, `account.orders.tsx`,
+  `account.orders.$orderNumber.tsx`): real `orders`/`order_items`/`addresses`
+  data, scoped by the existing `orders_select_own` RLS policy with no
+  client-side filtering. List shows order number, date, status badge, total,
+  item count; detail view adds line items (`variant_label` shown when
+  present, same pattern as the admin order detail page), shipping address,
+  payment method, and tracking number (clickable link only when
+  `tracking_url` is set, plain text otherwise). Status badges use exact
+  spec colours — amber/blue/purple/green/red/grey — reusing `--gold` and
+  `--rust` where they match and plain inline colours (no new CSS vars) for
+  blue/purple/green. `Chrome.tsx`'s `AccountMenu` dropdown had no orders
+  link at all (just sign out) — added "My Orders".
+- **Product search** (`useProductSearch.ts`, `Chrome.tsx`, `search.tsx`):
+  replaced the client-side filter with a server-side
+  `.ilike("name", "%term%")` query joined to category (uses the existing
+  trigram index automatically, no migration needed) — 300ms debounce, 2-char
+  minimum, capped at 8 for the dropdown. New `/search?q=` page reuses the
+  same `ProductCard`/grid as `/shop`, URL-driven and shareable, capped at 48
+  with no pagination.
+- **WhatsApp enquiry button** (`useStoreWhatsapp.ts`, `product.$slug.tsx`):
+  ghost-style "Ask on WhatsApp" button below Buy now, pre-filled message,
+  `wa.me` link opened in a new tab. All hide-condition validation
+  (unset/empty, `{{ }}` placeholders, the known dummy seed number
+  `919000000000`, `91XXXXXXXXXX`-style placeholders, fewer than 10 digits)
+  lives in the hook, which returns the number pre-stripped to digits only —
+  the route only ever checks `if (whatsapp)`.
+
+**Risk:** Low — all three are additive UI/query changes against existing
+tables, no schema/RLS/migration touched. Order history and WhatsApp button
+were verified live in the browser where possible (search and PDP are public;
+order history required real customer auth, so verification there relied on
+`tsc`/`eslint`/`vite build` plus code review against the spec, same
+constraint as every other admin/account-gated page this session). The
+WhatsApp button's full validation logic was verified via an isolated unit
+test rather than temporarily overwriting the live `site_settings` row.
+
+**Rollback:** Revert the eight touched/added files (`useMyOrders.ts`,
+`account.orders.tsx`, `account.orders.$orderNumber.tsx`,
+`useProductSearch.ts`, `search.tsx`, `useStoreWhatsapp.ts`,
+`product.$slug.tsx`, `Chrome.tsx`) to their pre-2026-08-02 versions; no
+migration to roll back.
+
+---
+
 ## 2026-08-02 — Data migration: legacy mock content → live database (data only, no code changes)
 
 ### [FastL] Migrated the 8 legacy mock products into the real `products` table; flagged static/legal pages as unmigrated
