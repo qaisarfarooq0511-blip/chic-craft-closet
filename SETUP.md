@@ -78,19 +78,19 @@ variant management, PDP colour/size selectors, cart/checkout variant wiring.
 
 SSR loaders, Schema.org JSON-LD, real meta tags/OG, sitemap.xml, robots.txt.
 
-### Sprint 2B — IN PROGRESS
+### Sprint 2B — DONE
 
 Admin panel completion (delta pass — most of this sprint's pages already
-existed from an earlier round; current work is targeted gaps only):
+existed from an earlier round; work was targeted gaps only):
 
-- [ ] Categories: product count per category, soft-deleted visibility +
+- [x] Categories: product count per category, soft-deleted visibility +
       restore, slug-uniqueness pre-check
-- [ ] Site settings: seo_site_name/seo_site_description fields, Hero banner
+- [x] Site settings: seo_site_name/seo_site_description fields, Hero banner
       section, per-row save
 - [x] Dashboard analytics — already complete, no changes needed
-- [ ] Order detail: variant_label on line items, delivered → refunded
+- [x] Order detail: variant_label on line items, delivered → refunded
       transition
-- [ ] Stock management: variant-aware display, amber/red thresholds
+- [x] Stock management: variant-aware display, amber/red thresholds
 
 ### Sprint 2C, 2D — UPCOMING
 
