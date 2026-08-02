@@ -5,8 +5,7 @@ interface Props {
   title: string;
   subtitle: string;
   /** Relative path the magic link should land the visitor on once clicked — the
-   * absolute origin is added at submit time (client-only; `window` doesn't exist
-   * during this page's SSR render). */
+   * absolute origin (VITE_APP_URL) is prepended at submit time. */
   redirectPath: string;
 }
 
@@ -26,7 +25,7 @@ export function MagicLinkForm({ title, subtitle, redirectPath }: Props) {
     setBusy(true);
     const { error } = await supabase.auth.signInWithOtp({
       email: email.trim(),
-      options: { emailRedirectTo: `${window.location.origin}${redirectPath}` },
+      options: { emailRedirectTo: `${import.meta.env.VITE_APP_URL}${redirectPath}` },
     });
     setBusy(false);
     if (error) {
