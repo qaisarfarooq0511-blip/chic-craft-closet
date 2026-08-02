@@ -8,37 +8,16 @@ import {
   IconX,
   IconUser,
   IconLoader2,
+  IconBrandWhatsapp,
 } from "@tabler/icons-react";
 import { useCart } from "@/hooks/useCart";
+import { useCategories } from "@/hooks/useCategories";
 import { useProductSearch, SEARCH_MIN_LENGTH } from "@/hooks/useProductSearch";
+import { useStoreWhatsapp } from "@/hooks/useStoreWhatsapp";
 import { useSupabaseAuth } from "@/hooks/useSupabaseAuth";
 import { supabase } from "@/lib/supabase";
 import { formatPrice } from "@/types/database";
 import { productImageUrl } from "@/lib/product-images";
-import { getCategoriesStore, getPages } from "@/lib/storage";
-import { seedCategories, seedPages } from "@/lib/seed";
-
-function useCategoriesLive() {
-  const [cats, setCats] = useState(seedCategories);
-  useEffect(() => {
-    setCats(getCategoriesStore());
-    const refresh = () => setCats(getCategoriesStore());
-    window.addEventListener("storage", refresh);
-    return () => window.removeEventListener("storage", refresh);
-  }, []);
-  return cats;
-}
-
-function usePagesLive() {
-  const [pages, setPages] = useState(seedPages);
-  useEffect(() => {
-    setPages(getPages());
-    const refresh = () => setPages(getPages());
-    window.addEventListener("storage", refresh);
-    return () => window.removeEventListener("storage", refresh);
-  }, []);
-  return pages;
-}
 
 export function Topbar() {
   return (
@@ -52,7 +31,7 @@ export function Topbar() {
 export function Navbar() {
   const { count } = useCart();
   const [open, setOpen] = useState(false);
-  const cats = useCategoriesLive();
+  const { data: cats = [] } = useCategories();
 
   const close = () => setOpen(false);
 
@@ -419,8 +398,14 @@ function AccountMenu() {
 }
 
 export function Footer() {
-  const cats = useCategoriesLive();
-  const pages = usePagesLive();
+  const { data: cats = [] } = useCategories();
+  const { whatsapp } = useStoreWhatsapp();
+  const whatsappHref = whatsapp
+    ? `https://wa.me/${whatsapp}?text=${encodeURIComponent(
+        "Hi, I have a question about Yaawun. Can you help me?",
+      )}`
+    : null;
+
   return (
     <footer className="footer">
       <div className="footer-top">
@@ -447,24 +432,39 @@ export function Footer() {
           ))}
         </div>
         <div>
-          <div className="footer-col-title">Information</div>
-          {pages.map((p) => (
-            <Link key={p.slug} to="/pages/$slug" params={{ slug: p.slug }} className="footer-link">
-              {p.title}
-            </Link>
-          ))}
-        </div>
-        <div>
           <div className="footer-col-title">Help</div>
+          <Link to="/pages/$slug" params={{ slug: "returns-policy" }} className="footer-link">
+            Returns Policy
+          </Link>
+          <Link to="/pages/$slug" params={{ slug: "faqs" }} className="footer-link">
+            FAQs
+          </Link>
           <Link to="/contact" className="footer-link">
             Contact us
           </Link>
-          <Link to="/shop" className="footer-link">
-            All products
+          {whatsappHref && (
+            <a
+              href={whatsappHref}
+              className="footer-link"
+              target="_blank"
+              rel="noreferrer"
+              style={{ display: "inline-flex", alignItems: "center", gap: 6 }}
+            >
+              <IconBrandWhatsapp size={14} /> WhatsApp us
+            </a>
+          )}
+        </div>
+        <div>
+          <div className="footer-col-title">Legal</div>
+          <Link to="/pages/$slug" params={{ slug: "terms" }} className="footer-link">
+            Terms of Use
           </Link>
-          <a href="https://wa.me/" className="footer-link" target="_blank" rel="noreferrer">
-            WhatsApp
-          </a>
+          <Link to="/pages/$slug" params={{ slug: "privacy-policy" }} className="footer-link">
+            Privacy Policy
+          </Link>
+        </div>
+        <div>
+          <div className="footer-col-title">Connect</div>
           <a href="https://instagram.com/" className="footer-link" target="_blank" rel="noreferrer">
             Instagram
           </a>
