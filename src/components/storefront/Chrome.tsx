@@ -374,6 +374,21 @@ function AccountMenu() {
           <div style={{ fontSize: 11, color: "var(--ink3)", marginBottom: 10 }}>
             {session.user.email || session.user.phone}
           </div>
+          <Link
+            to="/account/orders"
+            onClick={() => setOpen(false)}
+            style={{
+              display: "block",
+              padding: "8px 10px",
+              fontSize: 12,
+              color: "var(--ink)",
+              textDecoration: "none",
+              borderRadius: 6,
+              marginBottom: 6,
+            }}
+          >
+            My Orders
+          </Link>
           <button
             onClick={() => {
               setOpen(false);
