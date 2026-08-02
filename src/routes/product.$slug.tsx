@@ -7,9 +7,11 @@ import {
   IconShieldCheck,
   IconAlertCircle,
   IconCircleCheck,
+  IconBrandWhatsapp,
 } from "@tabler/icons-react";
 import { useProduct, fetchProduct } from "@/hooks/useProduct";
 import { useCart } from "@/hooks/useCart";
+import { useStoreWhatsapp } from "@/hooks/useStoreWhatsapp";
 import { useToast } from "@/lib/toast";
 import { Stars } from "@/components/storefront/ProductCard";
 import { formatPrice, discountPercent } from "@/types/database";
@@ -80,6 +82,7 @@ function PDP() {
   const [selectedSizeId, setSelectedSizeId] = useState<string | null>(null);
   const { add } = useCart();
   const toast = useToast();
+  const { whatsapp } = useStoreWhatsapp();
 
   if (isLoading) {
     return (
@@ -462,6 +465,33 @@ function PDP() {
             >
               Buy now
             </Link>
+            {whatsapp && (
+              <a
+                href={`https://wa.me/${whatsapp}?text=${encodeURIComponent(
+                  `Hi, I'm interested in ${p.name} on Yaawun. Can you help me?`,
+                )}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 8,
+                  width: "100%",
+                  padding: "12px 16px",
+                  marginTop: 10,
+                  background: "transparent",
+                  border: "1px solid var(--line)",
+                  borderRadius: 4,
+                  color: "var(--ink2)",
+                  fontSize: 13,
+                  textDecoration: "none",
+                }}
+              >
+                <IconBrandWhatsapp size={18} />
+                Ask on WhatsApp
+              </a>
+            )}
             <div className="pdp-trust">
               <span className="pdp-trust-item">
                 <IconTruck />
