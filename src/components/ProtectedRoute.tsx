@@ -1,7 +1,8 @@
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { useSupabaseAuth } from "@/hooks/useSupabaseAuth";
+import { authStore } from "@/lib/auth-store";
 
 interface Props {
   children: ReactNode;
@@ -16,7 +17,10 @@ export function ProtectedRoute({ children, role, loginPath = "/login" }: Props) 
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
 
-  const roleMismatch = !loading && isAuthenticated && role && profile?.role !== role;
+  const [refreshing, setRefreshing] = useState(false);
+  const hasRefreshed = useRef(false);
+
+  const roleMismatch = !loading && isAuthenticated && !!role && profile?.role !== role;
 
   useEffect(() => {
     if (loading) return;
@@ -25,7 +29,19 @@ export function ProtectedRoute({ children, role, loginPath = "/login" }: Props) 
     }
   }, [loading, isAuthenticated, navigate, loginPath, pathname]);
 
-  if (loading) {
+  // A role mismatch might just be a stale in-memory profile -- e.g. an admin
+  // role was granted in the DB after this session's profile was already
+  // loaded into auth-store. Re-check once against the DB before concluding
+  // access is actually denied.
+  useEffect(() => {
+    if (roleMismatch && !hasRefreshed.current) {
+      hasRefreshed.current = true;
+      setRefreshing(true);
+      void authStore.refreshProfile().finally(() => setRefreshing(false));
+    }
+  }, [roleMismatch]);
+
+  if (loading || (roleMismatch && refreshing)) {
     return (
       <div
         style={{

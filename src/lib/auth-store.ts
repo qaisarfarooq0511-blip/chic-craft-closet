@@ -90,10 +90,17 @@ export const authStore = {
     listeners.add(listener);
     return () => listeners.delete(listener);
   },
-  /** Re-fetch the profile row (e.g. after a signup trigger just created it). */
-  async refreshProfile() {
-    if (!state.session) return;
+  /**
+   * Re-fetch the profile row -- e.g. after a signup trigger just created it,
+   * or after a role change lands in the DB while this session is already
+   * active (see ProtectedRoute.tsx, which calls this once before treating a
+   * role mismatch as a real access denial). Returns the freshly loaded
+   * profile directly so a caller can check it without waiting on a re-render.
+   */
+  async refreshProfile(): Promise<Profile | null> {
+    if (!state.session) return state.profile;
     const profile = await loadProfile(state.session.user.id);
     setState({ profile });
+    return profile;
   },
 };
