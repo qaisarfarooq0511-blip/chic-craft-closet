@@ -4,7 +4,11 @@ import type { Category, Product, ProductImage } from "@/types/database";
 
 export const ADMIN_PAGE_SIZE = 50;
 
-export type AdminProductRow = Product & { category: Category | null; images: ProductImage[] };
+export type AdminProductRow = Product & {
+  category: Category | null;
+  images: ProductImage[];
+  variant_count: number;
+};
 
 export interface UseAdminProductsOptions {
   page: number; // 0-based
@@ -21,7 +25,10 @@ async function fetchAdminProducts(
 
   let query = supabase
     .from("products")
-    .select("*, category:categories(*), images:product_images(*)", { count: "exact" })
+    .select(
+      "*, category:categories(*), images:product_images(*), variants:product_variants(count)",
+      { count: "exact" },
+    )
     .is("deleted_at", null)
     .order("created_at", { ascending: false })
     .range(from, to);
@@ -32,7 +39,13 @@ async function fetchAdminProducts(
 
   const { data, error, count } = await query;
   if (error) throw error;
-  return { rows: (data ?? []) as unknown as AdminProductRow[], total: count ?? 0 };
+  const rows = (data ?? []).map((row) => {
+    const { variants, ...rest } = row as unknown as AdminProductRow & {
+      variants: { count: number }[];
+    };
+    return { ...rest, variant_count: variants?.[0]?.count ?? 0 };
+  });
+  return { rows, total: count ?? 0 };
 }
 
 /** Admin products table — paginated (50/page), filterable by category/status, searchable by name. */

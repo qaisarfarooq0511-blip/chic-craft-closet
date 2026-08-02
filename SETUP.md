@@ -59,30 +59,48 @@ See docs/CHANGELOG.md for completed work.
 - NotificationService abstraction
 - docs/blueprint/ (SCHEMA.md, RLS.md)
 
-### Sprint 1 — IN PROGRESS
+### Sprint 1 — DONE
 
 Connect React frontend to live Supabase DB:
 
-- [ ] Replace hardcoded product arrays with live Supabase queries (TanStack Query hooks)
-- [ ] Auth — customer signup/login pages, admin login
-- [ ] Admin panel v1 — product CRUD with Cloudinary image upload
-- [ ] Cart — migrate from localStorage to server-side cart_items table
-- [ ] Checkout → Razorpay integration
+- [x] Replace hardcoded product arrays with live Supabase queries (TanStack Query hooks)
+- [x] Auth — customer signup/login pages, admin login (magic-link email; phone OTP dormant)
+- [x] Admin panel v1 — product CRUD with Supabase Storage image upload
+- [x] Cart — migrate from localStorage to server-side cart_items table
+- [x] Checkout → COD (Razorpay pending, see below)
 
-### Sprint 2 — UPCOMING
+### Product variants — DONE
 
-- SSR activation (TanStack Start) for SEO
-- Schema.org JSON-LD on product/category/home pages
-- NotificationService wired to Resend + Twilio
-- Idempotency keys on order mutations
-- Supabase rate limiting via Edge Functions
+Colours, sizes, fabric options — product_variants schema, admin product form
+variant management, PDP colour/size selectors, cart/checkout variant wiring.
 
-### Sprint 3 — FUTURE
+### Sprint 2A — DONE
 
-- Analytics dashboard (materialized views)
-- WhatsApp order updates
-- Playwright E2E tests
-- Sentry error monitoring
+SSR loaders, Schema.org JSON-LD, real meta tags/OG, sitemap.xml, robots.txt.
+
+### Sprint 2B — IN PROGRESS
+
+Admin panel completion (delta pass — most of this sprint's pages already
+existed from an earlier round; current work is targeted gaps only):
+
+- [ ] Categories: product count per category, soft-deleted visibility +
+      restore, slug-uniqueness pre-check
+- [ ] Site settings: seo_site_name/seo_site_description fields, Hero banner
+      section, per-row save
+- [x] Dashboard analytics — already complete, no changes needed
+- [ ] Order detail: variant_label on line items, delivered → refunded
+      transition
+- [ ] Stock management: variant-aware display, amber/red thresholds
+
+### Sprint 2C, 2D — UPCOMING
+
+Not yet scoped.
+
+### Pending on external accounts
+
+- Razorpay payment integration — waiting on Razorpay account
+- SMS provider (Twilio/MSG91) — waiting on account, blocks activating phone
+  OTP (currently dormant; magic-link email is the live auth path)
 
 ## Database schema (summary)
 

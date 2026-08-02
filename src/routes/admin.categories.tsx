@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { IconTrash, IconGripVertical, IconArrowUp, IconArrowDown } from "@tabler/icons-react";
 import { supabase } from "@/lib/supabase";
-import { useAdminCategories } from "@/hooks/useAdminCategories";
+import { useAdminCategories, type AdminCategoryRow } from "@/hooks/useAdminCategories";
 import { categorySlug } from "@/lib/types";
 import { useToast } from "@/lib/toast";
 import type { Category } from "@/types/database";
@@ -16,7 +16,8 @@ function CategoriesAdmin() {
   const toast = useToast();
   const queryClient = useQueryClient();
   const { data: serverCats = [], isLoading } = useAdminCategories();
-  const [cats, setCats] = useState<Category[]>([]);
+  const [cats, setCats] = useState<AdminCategoryRow[]>([]);
+  const [slugErrors, setSlugErrors] = useState<Record<string, string>>({});
 
   // Resync local draft from the server whenever fresh data arrives (after any
   // mutation invalidates the query, or on first load).
@@ -68,11 +69,54 @@ function CategoriesAdmin() {
     void persistField(id, { name: c.name, slug: c.slug });
   };
 
-  const onSlugChange = (id: string, slug: string) => updateLocal(id, { slug });
-  const onSlugBlur = (id: string) => {
+  const onSlugChange = (id: string, slug: string) => {
+    updateLocal(id, { slug });
+    setSlugErrors((prev) => {
+      if (!prev[id]) return prev;
+      const next = { ...prev };
+      delete next[id];
+      return next;
+    });
+  };
+
+  const clearSlugError = (id: string) =>
+    setSlugErrors((prev) => {
+      if (!(id in prev)) return prev;
+      const next = { ...prev };
+      delete next[id];
+      return next;
+    });
+
+  const onSlugBlur = async (id: string) => {
     const c = cats.find((x) => x.id === id);
     if (!c) return;
-    void persistField(id, { slug: c.slug });
+    const trimmed = c.slug.trim();
+    if (!trimmed) {
+      setSlugErrors((prev) => ({ ...prev, [id]: "Slug is required" }));
+      return;
+    }
+
+    // Pre-check against the DB's own unique constraint (which doesn't care
+    // about deleted_at either) so a collision shows an inline error instead
+    // of a raw Postgres error toast. Own row excluded so re-saving the
+    // current value doesn't false-positive.
+    const { data: conflict, error: checkError } = await supabase
+      .from("categories")
+      .select("id")
+      .eq("slug", trimmed)
+      .neq("id", id)
+      .maybeSingle();
+    if (checkError) {
+      toast(checkError.message);
+      return;
+    }
+    if (conflict) {
+      setSlugErrors((prev) => ({ ...prev, [id]: "This slug is already in use" }));
+      return;
+    }
+
+    clearSlugError(id);
+    void persistField(id, { slug: trimmed });
   };
 
   const onDescriptionChange = (id: string, description: string) =>
@@ -125,6 +169,16 @@ function CategoriesAdmin() {
     toast("Category deleted");
   };
 
+  const restore = async (id: string) => {
+    const { error } = await supabase.from("categories").update({ deleted_at: null }).eq("id", id);
+    if (error) {
+      toast(error.message);
+      return;
+    }
+    invalidate();
+    toast("Category restored");
+  };
+
   return (
     <>
       <div
@@ -155,77 +209,98 @@ function CategoriesAdmin() {
               <th>Name</th>
               <th>Slug (URL)</th>
               <th>Description</th>
+              <th>Products</th>
               <th></th>
             </tr>
           </thead>
           <tbody>
             {isLoading && (
               <tr>
-                <td colSpan={5} style={{ textAlign: "center", padding: 40, color: "var(--ink3)" }}>
+                <td colSpan={6} style={{ textAlign: "center", padding: 40, color: "var(--ink3)" }}>
                   Loading…
                 </td>
               </tr>
             )}
             {!isLoading &&
-              cats.map((c, i) => (
-                <tr key={c.id}>
-                  <td style={{ whiteSpace: "nowrap" }}>
-                    <IconGripVertical size={14} style={{ color: "var(--ink3)" }} />
-                    <button
-                      className="btn-text-ink"
-                      disabled={i === 0}
-                      onClick={() => move(c.id, -1)}
-                      title="Move up"
-                      style={{ marginLeft: 6 }}
-                    >
-                      <IconArrowUp size={14} />
-                    </button>
-                    <button
-                      className="btn-text-ink"
-                      disabled={i === cats.length - 1}
-                      onClick={() => move(c.id, 1)}
-                      title="Move down"
-                      style={{ marginLeft: 6 }}
-                    >
-                      <IconArrowDown size={14} />
-                    </button>
-                  </td>
-                  <td>
-                    <input
-                      className="form-input"
-                      value={c.name}
-                      onChange={(e) => onNameChange(c.id, e.target.value)}
-                      onBlur={() => onNameBlur(c.id)}
-                    />
-                  </td>
-                  <td>
-                    <input
-                      className="form-input"
-                      style={{ fontFamily: "monospace", fontSize: 11 }}
-                      value={c.slug}
-                      onChange={(e) => onSlugChange(c.id, e.target.value)}
-                      onBlur={() => onSlugBlur(c.id)}
-                    />
-                  </td>
-                  <td>
-                    <input
-                      className="form-input"
-                      value={c.description ?? ""}
-                      onChange={(e) => onDescriptionChange(c.id, e.target.value)}
-                      onBlur={() => onDescriptionBlur(c.id)}
-                      placeholder="Optional"
-                    />
-                  </td>
-                  <td style={{ textAlign: "right" }}>
-                    <button className="btn-text-rust" onClick={() => remove(c.id)}>
-                      <IconTrash size={14} />
-                    </button>
-                  </td>
-                </tr>
-              ))}
+              cats.map((c, i) => {
+                const isDeleted = !!c.deleted_at;
+                return (
+                  <tr key={c.id} style={isDeleted ? { opacity: 0.5 } : undefined}>
+                    <td style={{ whiteSpace: "nowrap" }}>
+                      <IconGripVertical size={14} style={{ color: "var(--ink3)" }} />
+                      <button
+                        className="btn-text-ink"
+                        disabled={i === 0}
+                        onClick={() => move(c.id, -1)}
+                        title="Move up"
+                        style={{ marginLeft: 6 }}
+                      >
+                        <IconArrowUp size={14} />
+                      </button>
+                      <button
+                        className="btn-text-ink"
+                        disabled={i === cats.length - 1}
+                        onClick={() => move(c.id, 1)}
+                        title="Move down"
+                        style={{ marginLeft: 6 }}
+                      >
+                        <IconArrowDown size={14} />
+                      </button>
+                    </td>
+                    <td>
+                      <input
+                        className="form-input"
+                        value={c.name}
+                        onChange={(e) => onNameChange(c.id, e.target.value)}
+                        onBlur={() => onNameBlur(c.id)}
+                      />
+                      {isDeleted && (
+                        <div style={{ fontSize: 10, color: "var(--ink3)", marginTop: 2 }}>
+                          Deleted
+                        </div>
+                      )}
+                    </td>
+                    <td>
+                      <input
+                        className="form-input"
+                        style={{ fontFamily: "monospace", fontSize: 11 }}
+                        value={c.slug}
+                        onChange={(e) => onSlugChange(c.id, e.target.value)}
+                        onBlur={() => void onSlugBlur(c.id)}
+                      />
+                      {slugErrors[c.id] && (
+                        <div style={{ color: "#b91c1c", fontSize: 11, marginTop: 4 }}>
+                          {slugErrors[c.id]}
+                        </div>
+                      )}
+                    </td>
+                    <td>
+                      <input
+                        className="form-input"
+                        value={c.description ?? ""}
+                        onChange={(e) => onDescriptionChange(c.id, e.target.value)}
+                        onBlur={() => onDescriptionBlur(c.id)}
+                        placeholder="Optional"
+                      />
+                    </td>
+                    <td>{c.product_count}</td>
+                    <td style={{ textAlign: "right" }}>
+                      {isDeleted ? (
+                        <button className="btn-text-ink" onClick={() => restore(c.id)}>
+                          Restore
+                        </button>
+                      ) : (
+                        <button className="btn-text-rust" onClick={() => remove(c.id)}>
+                          <IconTrash size={14} />
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
             {!isLoading && cats.length === 0 && (
               <tr>
-                <td colSpan={5} style={{ textAlign: "center", padding: 40, color: "var(--ink3)" }}>
+                <td colSpan={6} style={{ textAlign: "center", padding: 40, color: "var(--ink3)" }}>
                   No categories yet. Add the first one above.
                 </td>
               </tr>
