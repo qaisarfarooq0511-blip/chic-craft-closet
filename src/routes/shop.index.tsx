@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { ProductCard } from "@/components/storefront/ProductCard";
 import { useCategories, fetchCategories } from "@/hooks/useCategories";
 import { useProducts, fetchProducts } from "@/hooks/useProducts";
-import { breadcrumbLd } from "@/lib/jsonld";
+import { breadcrumbLd, abs } from "@/lib/jsonld";
 
 type PriceFilter = "all" | "under1000" | "1000-2500" | "2500-5000" | "above5000";
 type RatingFilter = "any" | "4plus" | "3plus";
@@ -273,18 +273,25 @@ export const Route = createFileRoute("/shop/")({
       }),
     ]);
   },
-  head: () => ({
-    meta: [
-      { title: "Shop all — Yaawun" },
-      {
-        name: "description",
-        content:
-          "Shop the full Yaawun collection — Kashmiri shawls, unstitched dress material, kidswear and accessories.",
-      },
-    ],
-    // Breadcrumb JSON-LD rendered directly in ShopAllRoute() below — see
-    // __root.tsx's RootComponent comment for why head().scripts isn't used.
-  }),
+  head: () => {
+    const title = "Shop all — Yaawun";
+    const description =
+      "Shop the full Yaawun collection — Kashmiri shawls, unstitched dress material, kidswear and accessories.";
+    const url = abs("/shop");
+    return {
+      meta: [
+        { title },
+        { name: "description", content: description },
+        { property: "og:title", content: title },
+        { property: "og:description", content: description },
+        { property: "og:image", content: abs("/icon-512.png") },
+        { property: "og:url", content: url },
+      ],
+      links: [{ rel: "canonical", href: url }],
+      // Breadcrumb JSON-LD rendered directly in ShopAllRoute() below — see
+      // __root.tsx's RootComponent comment for why head().scripts isn't used.
+    };
+  },
   component: ShopAllRoute,
 });
 

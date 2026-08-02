@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { fetchCategories } from "@/hooks/useCategories";
 import { fetchProducts } from "@/hooks/useProducts";
-import { breadcrumbLd } from "@/lib/jsonld";
+import { breadcrumbLd, abs } from "@/lib/jsonld";
 import { PLP } from "./shop.index";
 
 export const Route = createFileRoute("/shop/$category")({
@@ -19,14 +19,19 @@ export const Route = createFileRoute("/shop/$category")({
   },
   head: ({ params, loaderData }) => {
     const name = loaderData?.category?.name ?? params.category;
+    const description = loaderData?.category?.description || `Shop ${name} at Yaawun`;
+    const title = `${name} — Yaawun`;
+    const url = abs(`/shop/${params.category}`);
     return {
       meta: [
-        { title: `${name} — Yaawun` },
-        {
-          name: "description",
-          content: `Browse this collection at Yaawun. Curated pieces, crafted with care.`,
-        },
+        { title },
+        { name: "description", content: description },
+        { property: "og:title", content: title },
+        { property: "og:description", content: description },
+        { property: "og:image", content: abs("/icon-512.png") },
+        { property: "og:url", content: url },
       ],
+      links: [{ rel: "canonical", href: url }],
       // Breadcrumb JSON-LD rendered directly in CategoryPage() below — see
       // __root.tsx's RootComponent comment for why head().scripts isn't used.
     };

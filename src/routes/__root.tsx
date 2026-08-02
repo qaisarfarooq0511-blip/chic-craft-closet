@@ -18,7 +18,7 @@ import { Topbar, Navbar, Footer } from "@/components/storefront/Chrome";
 import { AddPhonePrompt } from "@/components/AddPhonePrompt";
 import { ThemeProvider } from "@/lib/theme-context";
 import { UserAuthProvider } from "@/lib/user-auth";
-import { organizationLd, websiteLd, STORE } from "@/lib/jsonld";
+import { organizationLd, websiteLd, STORE, abs } from "@/lib/jsonld";
 
 function NotFoundComponent() {
   return (
@@ -85,41 +85,28 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: `${STORE.name} — ${STORE.tagline}` },
+      { title: "Yaawun — Kashmiri Shawls, Dress Material & Women's Fashion" },
       { name: "description", content: STORE.description },
       { property: "og:site_name", content: STORE.name },
       { property: "og:type", content: "website" },
+      {
+        property: "og:title",
+        content: "Yaawun — Kashmiri Shawls, Dress Material & Women's Fashion",
+      },
+      { property: "og:description", content: STORE.description },
+      { property: "og:image", content: abs("/icon-512.png") },
       { name: "twitter:card", content: "summary_large_image" },
+      {
+        name: "twitter:title",
+        content: "Yaawun — Kashmiri Shawls, Dress Material & Women's Fashion",
+      },
+      { name: "twitter:description", content: STORE.description },
+      { name: "twitter:image", content: abs("/icon-512.png") },
       { name: "theme-color", content: "#1C1410" },
       { name: "apple-mobile-web-app-capable", content: "yes" },
       { name: "apple-mobile-web-app-status-bar-style", content: "black-translucent" },
       { name: "apple-mobile-web-app-title", content: "Yaawun" },
       { name: "mobile-web-app-capable", content: "yes" },
-      { title: "Yaawun" },
-      { property: "og:title", content: "Yaawun" },
-      { name: "twitter:title", content: "Yaawun" },
-      {
-        name: "description",
-        content: "Chic Threads Boutique is an e-commerce website for a women's fashion store.",
-      },
-      {
-        property: "og:description",
-        content: "Chic Threads Boutique is an e-commerce website for a women's fashion store.",
-      },
-      {
-        name: "twitter:description",
-        content: "Chic Threads Boutique is an e-commerce website for a women's fashion store.",
-      },
-      {
-        property: "og:image",
-        content:
-          "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/d0bdf464-74fa-4b16-997a-b9ad5d701840/id-preview-f6c4b3c9--0d862b0c-e625-491f-9108-62963d7c2619.lovable.app-1782296443594.png",
-      },
-      {
-        name: "twitter:image",
-        content:
-          "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/d0bdf464-74fa-4b16-997a-b9ad5d701840/id-preview-f6c4b3c9--0d862b0c-e625-491f-9108-62963d7c2619.lovable.app-1782296443594.png",
-      },
     ],
     links: [
       { rel: "stylesheet", href: appCss },

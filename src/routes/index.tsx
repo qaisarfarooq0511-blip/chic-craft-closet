@@ -23,12 +23,14 @@ export const Route = createFileRoute("/")({
   },
   head: () => ({
     meta: [
-      {
-        title: `${STORE.name} — Crafted with care · Kashmiri shawls, dress material, kidswear & accessories`,
-      },
+      { title: "Yaawun — Kashmiri Shawls, Dress Material & Women's Fashion" },
       { name: "description", content: STORE.description },
-      { property: "og:title", content: `${STORE.name} — Crafted with care` },
+      {
+        property: "og:title",
+        content: "Yaawun — Kashmiri Shawls, Dress Material & Women's Fashion",
+      },
       { property: "og:description", content: STORE.description },
+      { property: "og:image", content: abs("/icon-512.png") },
       { property: "og:url", content: abs("/") },
     ],
     links: [{ rel: "canonical", href: abs("/") }],

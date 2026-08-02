@@ -15,8 +15,9 @@ export const abs = (path: string) => {
 export const STORE = {
   name: "Yaawun",
   tagline: "Crafted with care",
+  // Matches site_settings.seo_site_description exactly (seeded in Sprint 2B).
   description:
-    "Yaawun curates unstitched dress materials, Kashmiri shawls, kidswear and handpicked accessories for the modern Indian woman.",
+    "Kashmiri shawls, unstitched dress materials, kidswear and accessories. Crafted with care, delivered to your door.",
   logo: abs("/icon-512.png"), // placeholder — no dedicated logo asset yet
   sameAs: ["https://www.instagram.com/yaawun", "https://www.facebook.com/yaawun"],
 };

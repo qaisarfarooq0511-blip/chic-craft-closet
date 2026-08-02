@@ -14,9 +14,18 @@ import { useToast } from "@/lib/toast";
 import { Stars } from "@/components/storefront/ProductCard";
 import { formatPrice, discountPercent } from "@/types/database";
 import { productImageUrl } from "@/lib/product-images";
-import { productLd, breadcrumbLd } from "@/lib/jsonld";
+import { productLd, breadcrumbLd, STORE, abs } from "@/lib/jsonld";
 
 const MAX_QTY_PER_ITEM = 10;
+
+function productMetaDescription(product: {
+  meta_description: string | null;
+  description: string | null;
+}): string {
+  if (product.meta_description?.trim()) return product.meta_description.trim();
+  if (product.description?.trim()) return product.description.trim().slice(0, 150);
+  return STORE.description;
+}
 
 export const Route = createFileRoute("/product/$slug")({
   loader: async ({ params, context: { queryClient } }) => {
@@ -26,14 +35,39 @@ export const Route = createFileRoute("/product/$slug")({
     });
     return { product };
   },
-  head: () => ({
-    meta: [
-      { title: "Product — Yaawun" },
-      { name: "description", content: "Yaawun product detail." },
-    ],
-    // Product + breadcrumb JSON-LD rendered directly in PDP() below — see
-    // __root.tsx's RootComponent comment for why head().scripts isn't used.
-  }),
+  head: ({ params, loaderData }) => {
+    const product = loaderData?.product;
+    const url = abs(`/product/${params.slug}`);
+    if (!product) {
+      return {
+        meta: [
+          { title: "Product — Yaawun" },
+          { name: "description", content: STORE.description },
+          { property: "og:url", content: url },
+        ],
+        links: [{ rel: "canonical", href: url }],
+      };
+    }
+    const title = `${product.name} — Yaawun`;
+    const description = productMetaDescription(product);
+    const primaryImage = product.images.find((i) => i.is_primary) ?? product.images[0];
+    const image = primaryImage
+      ? (productImageUrl(primaryImage) ?? abs("/icon-512.png"))
+      : abs("/icon-512.png");
+    return {
+      meta: [
+        { title },
+        { name: "description", content: description },
+        { property: "og:title", content: title },
+        { property: "og:description", content: description },
+        { property: "og:image", content: image },
+        { property: "og:url", content: url },
+      ],
+      links: [{ rel: "canonical", href: url }],
+      // Product + breadcrumb JSON-LD rendered directly in PDP() below — see
+      // __root.tsx's RootComponent comment for why head().scripts isn't used.
+    };
+  },
   component: PDP,
 });
 
