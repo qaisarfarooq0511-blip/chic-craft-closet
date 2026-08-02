@@ -21,7 +21,8 @@ export type ProductDetail = Product & {
   variants: (ProductVariant & { colour: ColourOption | null; size: SizeOption | null })[];
 };
 
-async function fetchProduct(slug: string): Promise<ProductDetail | null> {
+/** Exported so route loaders can ensureQueryData() with the exact same queryFn as useProduct(). */
+export async function fetchProduct(slug: string): Promise<ProductDetail | null> {
   const { data, error } = await supabase
     .from("products")
     .select(

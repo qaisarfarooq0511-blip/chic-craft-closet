@@ -10,6 +10,8 @@ Disallow: /cart
 Disallow: /checkout
 Disallow: /auth
 Disallow: /api/
+Disallow: /login
+Disallow: /order-confirmation/
 
 # Search engines
 User-agent: Googlebot
@@ -20,6 +22,8 @@ Disallow: /cart
 Disallow: /checkout
 Disallow: /auth
 Disallow: /api/
+Disallow: /login
+Disallow: /order-confirmation/
 
 User-agent: Bingbot
 Allow: /
@@ -29,6 +33,8 @@ Disallow: /cart
 Disallow: /checkout
 Disallow: /auth
 Disallow: /api/
+Disallow: /login
+Disallow: /order-confirmation/
 
 # AI / answer engines — explicitly allowed to read public content
 User-agent: GPTBot
@@ -151,4 +157,4 @@ Allow: /
 User-agent: Diffbot
 Allow: /
 
-Sitemap: https://yaawun.com/sitemap.xml
+Sitemap: https://yaawun.in/sitemap.xml

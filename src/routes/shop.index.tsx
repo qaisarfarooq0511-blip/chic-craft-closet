@@ -2,8 +2,9 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { IconFilter } from "@tabler/icons-react";
 import { useEffect, useMemo, useState } from "react";
 import { ProductCard } from "@/components/storefront/ProductCard";
-import { useCategories } from "@/hooks/useCategories";
-import { useProducts } from "@/hooks/useProducts";
+import { useCategories, fetchCategories } from "@/hooks/useCategories";
+import { useProducts, fetchProducts } from "@/hooks/useProducts";
+import { breadcrumbLd, abs } from "@/lib/jsonld";
 
 type PriceFilter = "all" | "under1000" | "1000-2500" | "2500-5000" | "above5000";
 type RatingFilter = "any" | "4plus" | "3plus";
@@ -263,20 +264,55 @@ export function PLP({ categorySlug, query }: { categorySlug: string | null; quer
 export const Route = createFileRoute("/shop/")({
   validateSearch: (search: Record<string, unknown>): { q?: string } =>
     typeof search.q === "string" ? { q: search.q } : {},
-  head: () => ({
-    meta: [
-      { title: "Shop all — Yaawun" },
-      {
-        name: "description",
-        content:
-          "Shop the full Yaawun collection — Kashmiri shawls, unstitched dress material, kidswear and accessories.",
-      },
-    ],
-  }),
+  loader: async ({ context: { queryClient } }) => {
+    await Promise.all([
+      queryClient.ensureQueryData({ queryKey: ["categories"], queryFn: fetchCategories }),
+      queryClient.ensureQueryData({
+        queryKey: ["products", null],
+        queryFn: () => fetchProducts({}),
+      }),
+    ]);
+  },
+  head: () => {
+    const title = "Shop all — Yaawun";
+    const description =
+      "Shop the full Yaawun collection — Kashmiri shawls, unstitched dress material, kidswear and accessories.";
+    const url = abs("/shop");
+    return {
+      meta: [
+        { title },
+        { name: "description", content: description },
+        { property: "og:title", content: title },
+        { property: "og:description", content: description },
+        { property: "og:image", content: abs("/icon-512.png") },
+        { property: "og:url", content: url },
+      ],
+      links: [{ rel: "canonical", href: url }],
+      // Breadcrumb JSON-LD rendered directly in ShopAllRoute() below — see
+      // __root.tsx's RootComponent comment for why head().scripts isn't used.
+    };
+  },
   component: ShopAllRoute,
 });
 
 function ShopAllRoute() {
   const { q } = Route.useSearch();
-  return <PLP categorySlug={null} query={q} />;
+  return (
+    <>
+      <script
+        id="jsonld-breadcrumb-shop"
+        type="application/ld+json"
+        suppressHydrationWarning
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(
+            breadcrumbLd([
+              { name: "Home", url: "/" },
+              { name: "Shop", url: "/shop" },
+            ]),
+          ),
+        }}
+      />
+      <PLP categorySlug={null} query={q} />
+    </>
+  );
 }

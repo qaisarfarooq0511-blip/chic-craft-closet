@@ -11,7 +11,10 @@ interface UseProductsOptions {
   categoryId?: string | null;
 }
 
-async function fetchProducts({ categoryId }: UseProductsOptions): Promise<ProductWithRelations[]> {
+/** Exported so route loaders can ensureQueryData() with the exact same queryFn as useProducts(). */
+export async function fetchProducts({
+  categoryId,
+}: UseProductsOptions): Promise<ProductWithRelations[]> {
   let query = supabase
     .from("products")
     .select("*, category:categories(*), images:product_images(*)")
