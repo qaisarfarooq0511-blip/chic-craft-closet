@@ -30,6 +30,7 @@ owner before this migration was written)
 | `notification_queue` | Async outbox for email/SMS/WhatsApp delivery                                    | ✅  | —           | —     |
 | `redirects`          | SEO 301/302 redirect rules                                                      | ✅  | —           | —     |
 | `site_settings`      | Admin-configurable key-value store (announcement bar, thresholds)               | ✅  | —           | —     |
+| `static_pages`       | Legal/informational pages (About, Terms, Privacy, Returns, FAQs) — 5 fixed rows | ✅  | ✅          | ✅    |
 
 ## Product variants (added 2026-08-01, Sprint 2C)
 
@@ -54,6 +55,31 @@ needs no change yet. Migrating the PDP to read via the FK join is a deferred fol
 `order_items.variant_id` + `order_items.variant_label` follow this table's existing
 snapshot-at-purchase-time principle (same as `product_name`/`product_slug`/`unit_price`) — a later
 colour/size rename or deletion must not alter historical orders.
+
+## Static pages (added 2026-08-02, Static Pages sprint)
+
+`static_pages` holds exactly 5 fixed rows — `about`, `terms`, `privacy-policy`,
+`returns-policy`, `faqs` — seeded directly in the migration from the legacy
+`src/lib/seed.ts` mock content (which previously lived only in localStorage,
+with no server rendering and no real database backing). `content` is raw HTML
+(the same shape the mock data already used — `<p>`, `<h2>`, `<ul>/<li>`,
+`<a href>`, `<table>` for the privacy policy's cookie section), rendered via
+`dangerouslySetInnerHTML`, not markdown — there is no markdown renderer in
+this project and converting five real legal-content bodies to markdown by
+hand was judged not worth the risk of dropping content versus keeping the
+exact existing HTML.
+
+There is deliberately no `INSERT` RLS policy — the 5 rows are fixed by
+product decision (no add/delete in the admin UI); the seed rows are inserted
+directly by the migration under the privileged migration role, not through
+the app. Same reasoning for no `DELETE` policy beyond the standard soft-delete
+convention.
+
+`/contact` was explicitly excluded from this table — unlike the other 5 pages
+it's not prose, it's a small tiles component with one live data source
+(`site_settings.store_whatsapp`) mixed with hardcoded placeholders. Folding
+it into a generic content model would mean losing the dynamic WhatsApp tile.
+Left as its own component; scoped as a smaller future Fast Lane pass instead.
 
 ## Key design decisions
 

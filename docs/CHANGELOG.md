@@ -4,6 +4,77 @@ Format: Problem / Root Cause / Fix / Risk / Rollback
 Lane: Fast Lane (FL) or Full Lane (FullL)
 ---
 
+## 2026-08-03 — Static Pages sprint: real About/Terms/Privacy/Returns/FAQs (Stages A–D)
+
+### [FullL] New static_pages table, admin editor, SSR customer routes, footer rewiring
+
+**Problem:** About, Terms of Use, Privacy Policy, Returns Policy, and FAQs
+existed only as mock localStorage data (`src/lib/storage.ts`/`seed.ts`) with
+no real database table, no server rendering, and no SEO — flagged as a gap
+during the earlier product-catalogue data migration. `/about` was hardcoded
+JSX; `/page/$slug` (singular) was 100% client-only, reading `getPage()` from
+localStorage; the admin editor at `/admin/pages` wrote to the same mock
+store; the footer's "Information" column and its WhatsApp link were
+similarly mock-driven or unconfigured.
+
+**Root Cause:** Carry-over from the pre-Supabase Lovable era — same category
+of gap as the earlier product data migration, just never addressed for
+these five pages specifically. `/contact` was investigated and deliberately
+excluded from this table: it's a tiles component with one live data source
+(`site_settings.store_whatsapp`), not prose, and folding it into a generic
+content model would have meant losing that.
+
+**Fix — four stages, each independently committed and verified:**
+
+- **Stage A** (`7150070`) — new `static_pages` table (`slug`, `title`,
+  `content` as raw HTML — no markdown renderer exists in this project, and
+  converting five real legal-content bodies by hand risked dropping content
+  such as the privacy policy's `<table>` cookie section — `meta_title`,
+  `meta_description`, `is_published`, `sort_order`, full scale hooks). RLS:
+  public/customer SELECT requires `is_published=true`; admin SELECT sees all
+  non-deleted rows; admin UPDATE only; no INSERT/DELETE policy — the 5 rows
+  (`about`, `terms`, `privacy-policy`, `returns-policy`, `faqs`) are fixed by
+  product decision and seeded directly in this migration from the exact
+  `seed.ts` HTML bodies (the `terms-and-conditions` duplicate was dropped,
+  not seeded). Audit trigger wired via the existing `log_admin_action()`,
+  same pattern as `product_variants`. Migration filename note: the plan
+  specified `20260801100014`, already taken by an already-applied migration
+  from the variants work — used `20260801100015` instead.
+- **Stage B** (`d4a276c`) — rewrote `/admin/pages` and `/admin/pages/$slug`
+  from the mock editor to the real table: list with inline publish-toggle,
+  full edit form (title, HTML textarea with a live preview panel rendered
+  via the same `dangerouslySetInnerHTML` approach the real customer route
+  uses, meta fields with a 160-char counter), `beforeunload` warning on
+  unsaved edits. No add/delete UI — the 5 pages are fixed.
+- **Stage C** (`f7d5d0d`) — real SSR: `/about` now reads
+  `static_pages(slug='about')` (falls back to a plain "About Yaawun" heading
+  - the Sopore address if missing/unpublished — never blank); new
+    `/pages/$slug` route (`terms`, `privacy-policy`, `returns-policy`, `faqs`)
+    with loader + `ensureQueryData`, `meta_description`-or-stripped-content
+    fallback, canonical, OG, BreadcrumbList JSON-LD, and a graceful "Page not
+    found" UI (HTTP 200, not a thrown error) for missing/unpublished slugs.
+    Removed the old mock `/page/$slug` (singular) route entirely.
+- **Stage D** (`82858ee`) — footer rewired: Shop unchanged (now backed by the
+  real `useCategories()` hook, the last remaining mock import in this file);
+  new Help group (Returns Policy, FAQs, Contact us, WhatsApp us — same
+  `useStoreWhatsapp` hook/hide-logic as the PDP button); new Legal group
+  (Terms of Use, Privacy Policy); Instagram and Store admin moved into a new
+  Connect group. Removed the generic unconfigured `wa.me/` link and every
+  remaining `src/lib/storage.ts`/`seed.ts` import from `Chrome.tsx`.
+
+**Risk:** Low-to-moderate for Stage A (new table + RLS, but purely additive,
+no existing table touched); low for B–D (frontend/query changes against the
+new table). Known content change: `/about`'s real content is shorter than
+the old hardcoded page — the "What we sell" bullet list and "Visit us"
+address were never part of the seeded `about-us` body and are now gone from
+the live page (easy to re-add via the Stage B admin editor if wanted).
+
+**Rollback:** Stages B–D: revert the touched files to their pre-2026-08-03
+versions (no migration involved). Stage A: `DROP TABLE static_pages;` (see
+migration file header).
+
+---
+
 ## 2026-08-02 — Sprint 2C: Customer experience improvements
 
 ### [FastL] Order history, product search, and WhatsApp enquiry button
