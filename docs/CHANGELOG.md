@@ -26,6 +26,18 @@ images are local Vite build assets, not uploadable URLs; photos will be
 uploaded via the admin form. Categories and hero `site_settings` needed no
 changes — both already match the mock seed values from earlier sprints.
 
+**Flagged, not migrated — reviews:** `seed.ts` contains 18 mock reviews
+across 6 of the 8 products. Not migrated — the real `reviews` table requires
+`customer_id` to reference a real `profiles` row, which in turn requires a
+real `auth.users` row, and carries a `UNIQUE (product_id, customer_id)`
+constraint. Bulk-inserting these under one or more synthetic placeholder
+accounts would mean creating fabricated `auth.users` rows in the production
+project purely for data attribution — incorrect, and explicitly ruled out.
+Correct fix: add a separate `editorial_reviews` table (`id`, `product_id`,
+`reviewer_name`, `reviewer_location`, `rating`, `body`, `is_approved`,
+`created_at`) with no `auth.users` dependency, for curated showcase reviews.
+Scope as a Fast Lane addition after the admin panel fix sprint.
+
 **Flagged, not migrated — static/legal pages:** `seed.ts` contains real
 content for About, Terms of Use, Privacy Policy, Terms & Conditions,
 Returns/Refunds/Cancellation, and FAQs (with real contact details). Checked
