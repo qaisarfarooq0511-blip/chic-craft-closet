@@ -205,25 +205,40 @@ function ProductsList() {
                     <td>{p.category?.name}</td>
                     <td>{formatPrice(p.price)}</td>
                     <td>
-                      <input
-                        className="form-input"
-                        type="number"
-                        min={0}
-                        step={1}
-                        style={{
-                          width: 64,
-                          padding: "4px 6px",
-                          color: p.stock_count <= 5 ? "var(--rust)" : undefined,
-                        }}
-                        value={stockDrafts[p.id] ?? String(p.stock_count)}
-                        onChange={(e) =>
-                          setStockDrafts((prev) => ({ ...prev, [p.id]: e.target.value }))
-                        }
-                        onBlur={() => void saveStock(p.id, p.stock_count)}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") e.currentTarget.blur();
-                        }}
-                      />
+                      {p.variant_count > 0 ? (
+                        <Link
+                          to="/admin/products/$id"
+                          params={{ id: p.id }}
+                          className="btn-text-ink"
+                        >
+                          Manage variants
+                        </Link>
+                      ) : (
+                        <input
+                          className="form-input"
+                          type="number"
+                          min={0}
+                          step={1}
+                          style={{
+                            width: 64,
+                            padding: "4px 6px",
+                            color:
+                              p.stock_count === 0
+                                ? "var(--rust)"
+                                : p.stock_count < 5
+                                  ? "var(--gold)"
+                                  : undefined,
+                          }}
+                          value={stockDrafts[p.id] ?? String(p.stock_count)}
+                          onChange={(e) =>
+                            setStockDrafts((prev) => ({ ...prev, [p.id]: e.target.value }))
+                          }
+                          onBlur={() => void saveStock(p.id, p.stock_count)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") e.currentTarget.blur();
+                          }}
+                        />
+                      )}
                     </td>
                     <td>
                       <span
