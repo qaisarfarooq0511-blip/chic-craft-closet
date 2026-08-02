@@ -17,6 +17,7 @@ export type NotificationEventType =
   | "order_dispatched"
   | "order_delivered"
   | "order_cancelled"
+  | "refund_processed"
   | "review_approved"
   | "welcome";
 
@@ -71,6 +72,8 @@ class NotificationServiceClass {
       case "order_delivered":
         return ["whatsapp"];
       case "order_cancelled":
+        return ["sms"];
+      case "refund_processed":
         return ["sms"];
       case "review_approved":
         return ["whatsapp"];

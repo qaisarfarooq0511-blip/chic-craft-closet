@@ -113,6 +113,23 @@ function OrderDetail() {
     toast("Order cancelled");
   };
 
+  const refundOrder = async () => {
+    if (!confirm("Mark this order as refunded? This cannot be undone.")) return;
+    setBusy(true);
+    const { error } = await supabase.from("orders").update({ status: "refunded" }).eq("id", id);
+    setBusy(false);
+    if (error) {
+      toast(error.message);
+      return;
+    }
+    await NotificationService.send(order.customer_id, "refund_processed", {
+      order_number: order.order_number,
+      customer_name: customerName,
+    });
+    invalidate();
+    toast("Order marked refunded");
+  };
+
   return (
     <>
       <Link
@@ -205,7 +222,12 @@ function OrderDetail() {
           <tbody>
             {order.items?.map((item) => (
               <tr key={item.id}>
-                <td>{item.product_name}</td>
+                <td>
+                  <div>{item.product_name}</div>
+                  {item.variant_label && (
+                    <div style={{ fontSize: 11, color: "var(--ink3)" }}>{item.variant_label}</div>
+                  )}
+                </td>
                 <td>{item.quantity}</td>
                 <td>{formatPrice(item.unit_price)}</td>
                 <td>{formatPrice(item.total_price)}</td>
@@ -302,9 +324,13 @@ function OrderDetail() {
           </button>
         )}
 
-        {(order.status === "delivered" ||
-          order.status === "cancelled" ||
-          order.status === "refunded") && (
+        {order.status === "delivered" && (
+          <button className="btn-text-rust" onClick={refundOrder} disabled={busy}>
+            Mark refunded
+          </button>
+        )}
+
+        {(order.status === "cancelled" || order.status === "refunded") && (
           <p style={{ color: "var(--ink3)", fontSize: 13 }}>
             This order is {order.status} — no further status changes here.
           </p>
