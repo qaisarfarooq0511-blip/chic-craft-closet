@@ -4,6 +4,67 @@ Format: Problem / Root Cause / Fix / Risk / Rollback
 Lane: Fast Lane (FL) or Full Lane (FullL)
 ---
 
+## 2026-08-02 — Data migration: legacy mock content → live database (data only, no code changes)
+
+### [FastL] Migrated the 8 legacy mock products into the real `products` table; flagged static/legal pages as unmigrated
+
+**Problem:** `src/lib/storage.ts` and `src/lib/seed.ts` (the pre-Supabase
+localStorage-backed mock data layer) still held the original 8 catalogue
+products, plus other content that was never carried over when the storefront
+moved to live Supabase queries in Sprint 1.
+
+**Root Cause:** Not a bug — a straightforward carry-over gap from the
+Lovable-era mock data to the real schema; nobody had gone back to check what
+of the original content was still only sitting in mock files.
+
+**Fix:** Inserted the 8 mock products (with subtitle, description, price,
+compare_price, badge, fabric, embroidery, care, stock_count, meta_description)
+into `products`, matched to existing categories by name; per-piece dimension
+breakdowns for the two unstitched 3-piece sets into `product_pieces`; package
+contents into `product_includes`. No product images were migrated — the mock
+images are local Vite build assets, not uploadable URLs; photos will be
+uploaded via the admin form. Categories and hero `site_settings` needed no
+changes — both already match the mock seed values from earlier sprints.
+
+**Flagged, not migrated — reviews:** `seed.ts` contains 18 mock reviews
+across 6 of the 8 products. Not migrated — the real `reviews` table requires
+`customer_id` to reference a real `profiles` row, which in turn requires a
+real `auth.users` row, and carries a `UNIQUE (product_id, customer_id)`
+constraint. Bulk-inserting these under one or more synthetic placeholder
+accounts would mean creating fabricated `auth.users` rows in the production
+project purely for data attribution — incorrect, and explicitly ruled out.
+Correct fix: add a separate `editorial_reviews` table (`id`, `product_id`,
+`reviewer_name`, `reviewer_location`, `rating`, `body`, `is_approved`,
+`created_at`) with no `auth.users` dependency, for curated showcase reviews.
+Scope as a Fast Lane addition after the admin panel fix sprint.
+
+**Flagged, not migrated — static/legal pages:** `seed.ts` contains real
+content for About, Terms of Use, Privacy Policy, Terms & Conditions,
+Returns/Refunds/Cancellation, and FAQs (with real contact details). Checked
+where this currently lives: `/page/$slug` and `/admin/pages` (`page.$slug.tsx`,
+`admin.pages.index.tsx`) still read/write **only `localStorage`** via
+`src/lib/storage.ts` — there is no `static_pages` table in the real schema.
+Right now the Terms of Service, Privacy Policy, and Returns Policy exist only
+per-browser (seeded client-side on first visit): not server-rendered, not
+indexable by search engines, and not centrally admin-editable across devices.
+This needs a new `static_pages` table + RLS + admin editor + SSR routes —
+Full Lane work, scoped as a future sprint, not done here.
+
+**Risk:** Legal/SEO risk from the unmigrated static pages is unchanged by this
+entry — it existed before, this just makes it visible and tracked. Product
+migration itself carries no risk: purely additive INSERTs into existing
+tables, no schema/RLS touched, no existing rows modified.
+
+**Rollback:** `UPDATE products SET deleted_at = now(), status = 'archived'
+WHERE slug IN ('pashmina-weave-shawl', 'chikankari-unstitched-suit',
+'kundan-drop-earrings', 'embroidered-frock', 'silk-thread-hairpin-set',
+'sozni-hand-embroidered-wrap', 'banarasi-silk-suit', 'glass-bangle-set');`
+(soft delete only, per CLAUDE.md — `product_pieces`/`product_includes`
+cascade-delete on hard delete only, so they're left in place and simply
+become orphaned-but-harmless under the soft-deleted parent).
+
+---
+
 ## 2026-08-02 — Sprint 2B: Admin panel completion (delta pass)
 
 ### [FastL] Categories, site settings, order detail, and stock display updated for gaps left by earlier sprints
