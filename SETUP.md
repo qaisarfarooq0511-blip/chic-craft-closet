@@ -4,7 +4,7 @@
 
 ## What this project is
 
-Yaawun (yaawun.in) — women's fashion e-commerce store based in Sopore, Jammu & Kashmir, India.
+Yaawun (yaawun.com) — women's fashion e-commerce store based in Sopore, Jammu & Kashmir, India.
 Products: Kashmiri shawls, unstitched dress material, kidswear, ladies accessories (bangles, earrings, hairpins).
 Owner/operator: Qaisar (solo, non-technical — all engineering done via Claude Code and Lovable).
 
