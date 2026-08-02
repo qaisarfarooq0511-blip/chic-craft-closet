@@ -4,6 +4,71 @@ Format: Problem / Root Cause / Fix / Risk / Rollback
 Lane: Fast Lane (FL) or Full Lane (FullL)
 ---
 
+## 2026-08-02 — Sprint 2B: Admin panel completion (delta pass)
+
+### [FastL] Categories, site settings, order detail, and stock display updated for gaps left by earlier sprints
+
+**Problem:** An earlier Sprint 2B round (2026-08-01) already built real admin
+pages for categories, site settings, order detail, and product stock — but
+each had gaps relative to what the admin panel now actually needs, mostly
+because product variants (2026-08-01, later that same day) and Sprint 2A's
+hero `site_settings` rows (2026-08-01) didn't exist yet when those pages
+were first built. Dashboard analytics (the would-be Item 3) was checked
+against the current spec and found to already fully match it — skipped
+entirely, no changes.
+
+**Root Cause:** Not a bug — admin pages built before variants/hero-settings
+existed couldn't have accounted for either. Also, `SETUP.md` still showed
+Sprint 1 "IN PROGRESS" and Sprint 2 "UPCOMING" despite Sprint 1, product
+variants, and Sprint 2A all being done and merged — restored verbatim from
+an old snapshot earlier in this project's history and never updated since.
+
+**Fix:**
+
+- `SETUP.md` sprint-status section rewritten to reflect actual state.
+- **Categories** (`useAdminCategories.ts`, `admin.categories.tsx`): added a
+  per-category non-deleted product count via PostgREST's embedded
+  `products(count)` (single query, no per-row fetch); soft-deleted
+  categories now show in the list at reduced opacity with a "Deleted" label
+  and a Restore button (Delete never shows on an already-deleted row,
+  Restore never shows on an active one); slug uniqueness is pre-checked on
+  blur (excluding the row's own id) with an inline error, instead of a raw
+  Postgres unique-violation toast.
+- **Site settings** (`admin.settings.tsx`): restructured into three cards,
+  each with its own save button scoped to only its own keys —
+  "Announcement & delivery" (unchanged fields), "SEO" (`seo_site_name`,
+  `seo_site_description` — new, no admin UI existed before), "Hero banner"
+  (`hero_eyebrow` through both CTA label/href pairs — these `site_settings`
+  rows have existed since Sprint 2A for the storefront's read side, but had
+  no admin UI to edit them until now).
+- **Order detail** (`admin.orders.$id.tsx`, `NotificationService.ts`): line
+  items now show `variant_label` when present (nothing rendered when null);
+  added `delivered → refunded` as a real transition (confirm dialog, updates
+  `orders.status` only — no `refunded_at` column exists, none added — and
+  fires a new `refund_processed` notification event, channels `['sms']` to
+  match `order_cancelled` exactly).
+- **Stock display** (`useAdminProducts.ts`, `admin.products.index.tsx`):
+  products with any variants now show a "Manage variants" link (same
+  destination as Edit — the product edit form's Variants section is where
+  per-variant stock actually lives) instead of an editable top-level stock
+  input, since that field is no longer meaningful once a product has
+  variants. Variant-less products keep the existing inline edit, with
+  corrected colour thresholds reusing existing design tokens: 0 → red
+  (`--rust`), 1–4 → amber (`--gold`), 5+ → default.
+
+**Risk:** Low — additive UI/query changes only, no schema/RLS changes, no
+new migration. The variant-count check is unfiltered by `deleted_at` (a
+product whose variants were all soft-deleted would still show "Manage
+variants" instead of the stock input) — accepted as a known simplification
+for this delta pass, not worth a filtered/inner-join query for the edge case.
+
+**Rollback:** Revert the seven touched files (`useAdminCategories.ts`,
+`admin.categories.tsx`, `admin.settings.tsx`, `admin.orders.$id.tsx`,
+`NotificationService.ts`, `useAdminProducts.ts`, `admin.products.index.tsx`)
+to their pre-2026-08-02 versions; no migration to roll back.
+
+---
+
 ## 2026-08-01 — Sprint 2C: Product variants schema (colours, sizes, fabrics)
 
 ### [FullL] Stage A — migration for product_variants, colour/size/fabric catalogs
