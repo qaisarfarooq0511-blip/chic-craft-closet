@@ -49,12 +49,14 @@ export function ProductCard({ p }: { p: ProductWithRelations }) {
           {p.name}
           {p.subtitle ? ` — ${p.subtitle}` : ""}
         </div>
-        <div className="pc-stars">
-          <Stars rating={p.rating_avg} />
-          <span className="pc-rc">
-            {p.rating_avg.toFixed(1)} ({p.rating_count})
-          </span>
-        </div>
+        {p.effectiveRatingCount > 0 && (
+          <div className="pc-stars">
+            <Stars rating={p.effectiveRatingAvg} />
+            <span className="pc-rc">
+              {p.effectiveRatingAvg.toFixed(1)} ({p.effectiveRatingCount})
+            </span>
+          </div>
+        )}
         <div className="pc-foot">
           <div>
             <span className="pc-price">{formatPrice(p.price)}</span>

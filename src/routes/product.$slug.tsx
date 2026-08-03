@@ -110,7 +110,7 @@ function PDP() {
   const off = p.compare_price ? discountPercent(p.price, p.compare_price) : null;
   const gallery = p.images;
   const distrib = [0, 0, 0, 0, 0];
-  p.reviews.forEach((r) => {
+  p.displayReviews.forEach((r) => {
     distrib[r.rating - 1]++;
   });
 
@@ -230,11 +230,13 @@ function PDP() {
                 </>
               )}
             </h1>
-            <div className="pdp-rating-row">
-              <Stars rating={p.rating_avg} size={14} />
-              <span className="pdp-rating-score">{p.rating_avg.toFixed(1)}</span>
-              <span className="pdp-rating-count">{p.rating_count} reviews</span>
-            </div>
+            {p.effectiveRatingCount > 0 && (
+              <div className="pdp-rating-row">
+                <Stars rating={p.effectiveRatingAvg} size={14} />
+                <span className="pdp-rating-score">{p.effectiveRatingAvg.toFixed(1)}</span>
+                <span className="pdp-rating-count">{p.effectiveRatingCount} reviews</span>
+              </div>
+            )}
             <div className="pdp-price-row">
               <span className="pdp-price">{formatPrice(p.price)}</span>
               {p.compare_price && (
@@ -513,37 +515,41 @@ function PDP() {
           <div className="pdp-rev-head">
             <h2 className="pdp-rev-title">Customer reviews</h2>
           </div>
-          <div className="rev-summary">
-            <div className="rev-big">
-              <div className="rev-big-score">{p.rating_avg.toFixed(1)}</div>
-              <div style={{ margin: "4px 0" }}>
-                <Stars rating={p.rating_avg} size={16} />
+          {p.effectiveRatingCount > 0 && (
+            <div className="rev-summary">
+              <div className="rev-big">
+                <div className="rev-big-score">{p.effectiveRatingAvg.toFixed(1)}</div>
+                <div style={{ margin: "4px 0" }}>
+                  <Stars rating={p.effectiveRatingAvg} size={16} />
+                </div>
+                <div className="rev-big-count">{p.effectiveRatingCount} reviews</div>
               </div>
-              <div className="rev-big-count">{p.rating_count} reviews</div>
-            </div>
-            <div>
-              {[5, 4, 3, 2, 1].map((n) => {
-                const cnt = distrib[n - 1];
-                const pct = p.reviews.length ? Math.round((cnt / p.reviews.length) * 100) : 0;
-                return (
-                  <div key={n} className="bar-row">
-                    <span className="bar-lbl">{n}★</span>
-                    <div className="bar-track">
-                      <div className="bar-fill" style={{ width: `${pct}%` }} />
+              <div>
+                {[5, 4, 3, 2, 1].map((n) => {
+                  const cnt = distrib[n - 1];
+                  const pct = p.displayReviews.length
+                    ? Math.round((cnt / p.displayReviews.length) * 100)
+                    : 0;
+                  return (
+                    <div key={n} className="bar-row">
+                      <span className="bar-lbl">{n}★</span>
+                      <div className="bar-track">
+                        <div className="bar-fill" style={{ width: `${pct}%` }} />
+                      </div>
+                      <span className="bar-cnt">{cnt}</span>
                     </div>
-                    <span className="bar-cnt">{cnt}</span>
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
             </div>
-          </div>
+          )}
           <div className="rev-cards-grid">
-            {p.reviews.slice(0, 6).map((r) => (
+            {p.displayReviews.slice(0, 6).map((r) => (
               <div key={r.id} className="rev-c">
                 <div className="rev-c-top">
-                  <span className="rev-c-name">{r.customer?.full_name || "Verified customer"}</span>
+                  <span className="rev-c-name">{r.reviewerName}</span>
                   <span className="rev-c-date">
-                    {new Date(r.created_at).toLocaleDateString("en-IN", {
+                    {new Date(r.createdAt).toLocaleDateString("en-IN", {
                       day: "numeric",
                       month: "short",
                       year: "numeric",
@@ -557,7 +563,7 @@ function PDP() {
                   </p>
                 )}
                 <p className="rev-c-text">{r.body}</p>
-                {r.is_verified && (
+                {r.isVerified && (
                   <div className="rev-verified">
                     <IconCircleCheck />
                     Verified purchase
@@ -565,7 +571,7 @@ function PDP() {
                 )}
               </div>
             ))}
-            {p.reviews.length === 0 && (
+            {p.displayReviews.length === 0 && (
               <p style={{ color: "var(--ink3)", fontSize: 13 }}>
                 No reviews yet. Be the first to write one.
               </p>

@@ -4,6 +4,77 @@ Format: Problem / Root Cause / Fix / Risk / Rollback
 Lane: Fast Lane (FL) or Full Lane (FullL)
 ---
 
+## 2026-08-03 — Editorial reviews + contact page real details
+
+### [FullL] editorial_reviews table, PDP/card display, admin management, and real phone/email on /contact
+
+**Problem:** Two long-flagged gaps. (1) The 18 mock reviews in `seed.ts`
+were flagged as unmigrated back during the product data migration --
+the real `reviews` table's `customer_id` FK chain
+(`profiles`/`auth.users`) and its `UNIQUE(product_id, customer_id)`
+constraint made a shared placeholder account impossible for the 5 of 8
+products with more than one review. (2) `/contact` has shown hardcoded
+"Coming soon" for phone and email since it was built, despite the real
+values (`help@yaawun.com`, `+91 99107 84574`) existing in `seed.ts` /
+the `static_pages` legal content this whole time.
+
+**Root Cause:** Both are carry-over gaps from the pre-Supabase mock era
+-- not bugs, just content that was never given a real home.
+
+**Fix:**
+
+- **Editorial reviews** (Task 1): new `editorial_reviews` table --
+  no `customer_id`, no uniqueness constraint, purely admin-curated
+  showcase content. RLS: public SELECT requires `is_approved=true`;
+  admin gets full `FOR ALL`; no audit trigger (editorial content, not
+  operational data, same as `site_settings`/`redirects`). Seeded all 18
+  mock reviews matched to real products by name -- 17 `is_approved=true`,
+  1 (the mock "Anonymous Visitor", originally "pending") seeded
+  `is_approved=false`. `products.rating_avg`/`rating_count` are
+  untouched -- still computed only from real `reviews` via the existing
+  trigger. The blend happens entirely in application code
+  (`useProduct.ts`, `useProducts.ts`, `useProductSearch.ts`): real
+  reviews always take full precedence; editorial only fills in the
+  rating when `rating_count` is 0. The rating summary is hidden
+  entirely (not "0.0 (0 reviews)") whenever the effective count is 0.
+  On the PDP, editorial reviews render after real reviews with no
+  visual distinction (rendered with `isVerified=false`, so no "Verified
+  purchase" badge -- same as any real unverified review). New
+  "Editorial reviews" section added to `admin.reviews.tsx`: list,
+  add/edit form, approve toggle, soft delete.
+- **Contact page** (Task 2): new `site_settings` keys `store_phone`
+  (`919910784574`) and `store_email` (`help@yaawun.com`). New
+  `useContactDetails.ts` hook fetches all 3 contact keys
+  (`store_whatsapp`/`store_phone`/`store_email`) in one query, same
+  hide-if-placeholder logic as the existing WhatsApp button. `/contact`
+  now omits a tile entirely (not "Coming soon") when its value is
+  null; Call tile shows `+91 99107 84574` (`tel:+919910784574`), Email
+  shows `help@yaawun.com` (`mailto:help@yaawun.com`).
+
+**Risk:** Low for both -- purely additive (new table / new
+`site_settings` rows), no existing table or RLS policy modified.
+Necessary fallout, not scope creep: `ProductCard.tsx`'s prop type change
+required updating `useProductSearch.ts` too, since `search.tsx` reuses
+`ProductCard` with search results.
+
+**Verification:** Both fully public routes, verified live in the
+browser. `/product/pashmina-weave-shawl` correctly averages only its 4
+approved editorial reviews (4.5, excludes the unapproved one), matching
+star distribution, no visual distinction from a real review. `/shop`
+grid shows correct fallback ratings on all 8 cards. `/contact` shows
+WhatsApp tile correctly absent (still the placeholder value), Call/Email
+tiles with correct formatting and hrefs. Zero console errors throughout.
+`admin.reviews.tsx`'s new section is auth-gated -- verified via
+`tsc`/`eslint`/build + code review only, same constraint as every other
+admin page this session.
+
+**Rollback:** Task 1: `DROP TABLE editorial_reviews;` plus revert the
+8 touched app files. Task 2: `DELETE FROM site_settings WHERE key IN
+('store_phone', 'store_email');` plus revert `contact.tsx` and delete
+`useContactDetails.ts`.
+
+---
+
 ## 2026-08-03 — Static Pages sprint: real About/Terms/Privacy/Returns/FAQs (Stages A–D)
 
 ### [FullL] New static_pages table, admin editor, SSR customer routes, footer rewiring
