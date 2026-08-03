@@ -1,22 +1,14 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
 import { IconBrandWhatsapp, IconMail, IconPhone, IconMapPin } from "@tabler/icons-react";
-import { supabase } from "@/lib/supabase";
+import { useContactDetails } from "@/hooks/useContactDetails";
 import { STORE, breadcrumbLd, abs } from "@/lib/jsonld";
 
 const STORE_ADDRESS = "Sopore, Baramulla, Jammu & Kashmir";
-// The store_whatsapp site_setting is still seeded to this placeholder — treat it
-// as "not set yet" until an admin puts in a real number via /admin/settings.
-const PLACEHOLDER_WHATSAPP = "919000000000";
 
-async function fetchStoreWhatsapp(): Promise<string | null> {
-  const { data } = await supabase
-    .from("site_settings")
-    .select("value")
-    .eq("key", "store_whatsapp")
-    .maybeSingle();
-  const value = typeof data?.value === "string" ? data.value : null;
-  return value && value !== PLACEHOLDER_WHATSAPP ? value : null;
+/** "919910784574" -> "+91 99107 84574" (country code + 5+5 grouping). Falls back to the raw digits if the shape is unexpected. */
+function formatIndianPhone(digits: string): string {
+  const match = /^91(\d{5})(\d{5})$/.exec(digits);
+  return match ? `+91 ${match[1]} ${match[2]}` : `+${digits}`;
 }
 
 export const Route = createFileRoute("/contact")({
@@ -39,22 +31,35 @@ export const Route = createFileRoute("/contact")({
 });
 
 function Contact() {
-  const { data: whatsapp } = useQuery({
-    queryKey: ["site-setting", "store_whatsapp"],
-    queryFn: fetchStoreWhatsapp,
-  });
+  const { whatsapp, phone, email } = useContactDetails();
 
   const tiles = [
-    {
+    whatsapp && {
       icon: <IconBrandWhatsapp />,
       label: "WhatsApp",
-      value: whatsapp ?? "Coming soon",
-      href: whatsapp ? `https://wa.me/${whatsapp.replace(/\D/g, "")}` : undefined,
+      value: whatsapp,
+      href: `https://wa.me/${whatsapp}`,
     },
-    { icon: <IconPhone />, label: "Call", value: "Coming soon", href: undefined },
-    { icon: <IconMail />, label: "Email", value: "Coming soon", href: undefined },
-    { icon: <IconMapPin />, label: "Visit", value: STORE_ADDRESS, href: undefined },
-  ];
+    phone && {
+      icon: <IconPhone />,
+      label: "Call",
+      value: formatIndianPhone(phone),
+      href: `tel:+${phone}`,
+    },
+    email && {
+      icon: <IconMail />,
+      label: "Email",
+      value: email,
+      href: `mailto:${email}`,
+    },
+    {
+      icon: <IconMapPin />,
+      label: "Visit",
+      value: STORE_ADDRESS,
+      href: undefined,
+    },
+  ].filter(Boolean) as { icon: React.ReactNode; label: string; value: string; href?: string }[];
+
   return (
     <div className="cart-wrap-page">
       <script
