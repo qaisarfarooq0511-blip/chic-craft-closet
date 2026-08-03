@@ -31,6 +31,27 @@ owner before this migration was written)
 | `redirects`          | SEO 301/302 redirect rules                                                      | ✅  | —           | —     |
 | `site_settings`      | Admin-configurable key-value store (announcement bar, thresholds)               | ✅  | —           | —     |
 | `static_pages`       | Legal/informational pages (About, Terms, Privacy, Returns, FAQs) — 5 fixed rows | ✅  | ✅          | ✅    |
+| `editorial_reviews`  | Curated showcase reviews — no auth dependency, admin-managed                    | ✅  | ✅          | —     |
+
+## Editorial reviews (added 2026-08-03)
+
+`editorial_reviews` exists because the 18 mock reviews in `src/lib/seed.ts`
+could never be migrated into the real `reviews` table: `reviews.customer_id`
+requires a real `profiles`/`auth.users` row, and `reviews` carries a
+`UNIQUE (product_id, customer_id)` constraint that would reject a shared
+placeholder account for any product with more than one review (5 of the 8
+products have 2+). `editorial_reviews` has no `customer_id` and no
+uniqueness constraint at all — it's purely admin-curated showcase content,
+not a real customer-submission record, so neither restriction applies or is
+wanted.
+
+`products.rating_avg`/`rating_count` are **not** touched by this table —
+they remain auto-computed from `reviews` only, via the existing
+`refresh_product_rating()` trigger (unchanged). Blending in editorial
+reviews for display (PDP rating summary, product card stars) happens
+entirely in application code (`useProduct.ts`, `useProducts.ts`), and only
+as a fallback when the real `rating_count` is `0` — real reviews always take
+full precedence when any exist.
 
 ## Product variants (added 2026-08-01, Sprint 2C)
 

@@ -6,6 +6,9 @@ import type { Category, Product, ProductImage } from "@/types/database";
 export type ProductSearchResult = Product & {
   category: Category | null;
   images: ProductImage[];
+  /** Real rating always takes precedence; editorial only fills in when rating_count is 0. */
+  effectiveRatingAvg: number;
+  effectiveRatingCount: number;
 };
 
 export const SEARCH_MIN_LENGTH = 2;
@@ -17,14 +20,33 @@ const DROPDOWN_LIMIT = 8;
 async function searchProducts(term: string, limit: number): Promise<ProductSearchResult[]> {
   const { data, error } = await supabase
     .from("products")
-    .select("*, category:categories(*), images:product_images(*)")
+    .select(
+      "*, category:categories(*), images:product_images(*), editorial_reviews:editorial_reviews(rating, is_approved, deleted_at)",
+    )
     .eq("status", "active")
     .is("deleted_at", null)
     .ilike("name", `%${term}%`)
     .order("created_at", { ascending: false })
     .limit(limit);
   if (error) throw error;
-  return data as unknown as ProductSearchResult[];
+
+  return (data ?? []).map((row) => {
+    const { editorial_reviews, ...rest } = row as unknown as ProductSearchResult & {
+      editorial_reviews: { rating: number; is_approved: boolean; deleted_at: string | null }[];
+    };
+    const approvedEditorial = (editorial_reviews ?? []).filter(
+      (e) => e.is_approved && !e.deleted_at,
+    );
+    const effectiveRatingAvg =
+      rest.rating_count > 0
+        ? rest.rating_avg
+        : approvedEditorial.length > 0
+          ? approvedEditorial.reduce((sum, e) => sum + e.rating, 0) / approvedEditorial.length
+          : 0;
+    const effectiveRatingCount =
+      rest.rating_count > 0 ? rest.rating_count : approvedEditorial.length;
+    return { ...rest, effectiveRatingAvg, effectiveRatingCount };
+  });
 }
 
 function useDebouncedValue<T>(value: T, delayMs: number): T {

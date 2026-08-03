@@ -32,11 +32,16 @@ The `is_admin()` helper function checks `profiles.role = 'admin'` for the curren
 | redirects          | ✅ active     | ✅ active       | ❌                       | All          | ✅                          |
 | site_settings      | ✅            | ✅              | ❌                       | All          | ✅                          |
 | static_pages       | ✅ published² | ✅ published²   | ❌                       | All          | UPDATE only²                |
+| editorial_reviews  | ✅ approved³  | ✅ approved³    | ❌                       | All          | ✅                          |
 
 ² `static_pages` — public/customer SELECT requires `is_published = true`; admins can SELECT every
 non-deleted row (including unpublished drafts) but there is no admin INSERT or DELETE policy at
 all — the 5 rows (`about`, `terms`, `privacy-policy`, `returns-policy`, `faqs`) are fixed by
 product decision and seeded directly by the migration, not through the app.
+³ `editorial_reviews` — public/customer SELECT requires `is_approved = true AND deleted_at IS
+NULL`; admins get full `FOR ALL` (`is_admin()`) covering SELECT/INSERT/UPDATE/soft-DELETE. No
+`customer_id` column at all, so no self-referential/own-row policy exists here — unlike `reviews`,
+there's no "own" concept for this table.
 
 ## Critical rules
 
