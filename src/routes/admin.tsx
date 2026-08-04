@@ -13,6 +13,7 @@ import {
   IconFileText,
   IconSettings,
   IconUsers,
+  IconUserCog,
   IconTicket,
   IconAdjustmentsHorizontal,
 } from "@tabler/icons-react";
@@ -53,6 +54,7 @@ function AdminShell() {
     { to: "/admin/reviews", label: "Reviews", icon: <IconStar /> },
     { to: "/admin/orders", label: "Orders", icon: <IconReceipt /> },
     { to: "/admin/customers", label: "Customers", icon: <IconUsers /> },
+    { to: "/admin/users", label: "Users", icon: <IconUserCog /> },
     { to: "/admin/coupons", label: "Coupons", icon: <IconTicket /> },
     { to: "/admin/settings", label: "Store settings", icon: <IconAdjustmentsHorizontal /> },
     { to: "/admin/config", label: "Configuration", icon: <IconSettings /> },

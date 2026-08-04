@@ -1,6 +1,6 @@
 # Yaawun — Database Schema Blueprint
 
-Last updated: 2026-08-01
+Last updated: 2026-08-04
 Migration count: 12 (includes 20260801100000_retire_legacy_lovable_schema.sql, which drops the
 original Lovable-scaffolded products/categories/orders/customers/addresses/reviews/coupons/
 sections/pages/wishlist/settings tables — dummy data only, confirmed disposable by the project
@@ -10,7 +10,7 @@ owner before this migration was written)
 
 | Table                | Purpose                                                                         | RLS | Soft Delete | Audit |
 | -------------------- | ------------------------------------------------------------------------------- | --- | ----------- | ----- |
-| `profiles`           | Extends `auth.users` — customer and admin profiles                              | ✅  | ✅          | —     |
+| `profiles`           | Extends `auth.users` — customer and admin profiles                              | ✅  | ✅          | Role¹ |
 | `categories`         | Product categories (Kashmiri Shawls, Dress Material, Kidswear, Accessories)     | ✅  | ✅          | ✅    |
 | `products`           | Product catalogue — all items for sale                                          | ✅  | ✅          | ✅    |
 | `product_pieces`     | Per-piece dimension specs (length, width, weight) for 1–3 piece sets            | ✅  | ✅          | —     |
@@ -32,6 +32,28 @@ owner before this migration was written)
 | `site_settings`      | Admin-configurable key-value store (announcement bar, thresholds)               | ✅  | —           | —     |
 | `static_pages`       | Legal/informational pages (About, Terms, Privacy, Returns, FAQs) — 5 fixed rows | ✅  | ✅          | ✅    |
 | `editorial_reviews`  | Curated showcase reviews — no auth dependency, admin-managed                    | ✅  | ✅          | —     |
+
+¹ `profiles` audit is scoped to `role` changes only (`profiles_role_audit` trigger, `WHEN (OLD.role
+IS DISTINCT FROM NEW.role)`) — full_name/phone self-edits are not logged. See "Admin user
+management" below.
+
+## Admin user management (added 2026-08-04)
+
+`/admin/users` replaces manual SQL for admin promotions. No new table — two new pieces on top of
+`profiles`:
+
+- **`admin_list_users(p_search, p_limit, p_offset)`** — `SECURITY DEFINER` `plpgsql` function
+  (not `sql`, to keep a hard function-call boundary rather than a planner-inlineable one). It's
+  the only way this app reads `auth.users`: PostgREST never exposes the `auth` schema directly, so
+  joining `profiles.id = auth.users.id` for `email`/`last_sign_in_at` has to happen server-side.
+  Raises if the caller isn't `is_admin()`. `REVOKE ... FROM PUBLIC` / `GRANT ... TO authenticated`,
+  same pattern as `is_admin()` itself.
+- **Role changes** go through a normal `profiles` UPDATE (`profiles_update_admin` policy) rather
+  than a second RPC — see RLS.md rule 8 for why a policy alone wasn't enough and what
+  `block_self_role_change` adds.
+
+`products.rating_avg`/`rating_count` and every other table are untouched by this — this section is
+purely about reading/writing the `profiles.role` column safely.
 
 ## Editorial reviews (added 2026-08-03)
 
