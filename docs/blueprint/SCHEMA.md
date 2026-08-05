@@ -1,6 +1,6 @@
 # Yaawun — Database Schema Blueprint
 
-Last updated: 2026-08-04
+Last updated: 2026-08-05
 Migration count: 12 (includes 20260801100000_retire_legacy_lovable_schema.sql, which drops the
 original Lovable-scaffolded products/categories/orders/customers/addresses/reviews/coupons/
 sections/pages/wishlist/settings tables — dummy data only, confirmed disposable by the project
@@ -36,6 +36,40 @@ owner before this migration was written)
 ¹ `profiles` audit is scoped to `role` changes only (`profiles_role_audit` trigger, `WHEN (OLD.role
 IS DISTINCT FROM NEW.role)`) — full_name/phone self-edits are not logged. See "Admin user
 management" below.
+
+## Notification worker (Sprint 2D, added 2026-08-05)
+
+No new table — `notification_queue` (migration `20260801100006`) already had everything the
+worker needs. What's new:
+
+- **`claim_notification_batch(p_limit)`** — `SECURITY DEFINER` `plpgsql`, `service_role`-only.
+  Atomically claims up to `p_limit` queued/due/under-attempt-cap rows via a single
+  `UPDATE ... FROM (SELECT ... FOR UPDATE SKIP LOCKED)` statement — see RLS.md rule 9 for why
+  the claim marker is a `process_after` lease, not a new status value.
+- **`notif_queue_admin_retry`** RLS policy — narrow admin `UPDATE`, see RLS.md rule/footnote 5.
+- **`pg_cron` + `pg_net`** extensions enabled (were available but not installed). A `cron.schedule`
+  job calls the `process-notifications` Edge Function every 5 minutes via `net.http_post`; the
+  Bearer token is read from Supabase Vault by name at run time, never written into the migration
+  file (see the migration's own comment for the one-time Vault population step, run directly in
+  the Dashboard SQL Editor — the real service_role key never enters git).
+- **`supabase/functions/process-notifications/`** — the worker itself. Dispatches by channel:
+  `sms`/`email` look up the destination (`profiles.phone`, or the caller's email via the GoTrue
+  Admin API) and call the relevant provider; `whatsapp` and `push` are always skipped this sprint
+  (no provider integration yet). Order-lifecycle events (`order_confirmed`,
+  `order_dispatched`, etc.) re-fetch the order/items/address fresh at send time by
+  `payload.order_number` rather than requiring every `NotificationService.send()` call site to
+  embed a full snapshot — `otp_request` is the one exception, since its `code` only ever exists in
+  the payload (only a bcrypt hash is stored in `otp_codes`).
+- **`supabase/functions/_shared/notification-service.ts`** — extended with `sendEmail()` (Resend)
+  and a `sendSmsRaw()` extracted from the existing `sendSms()` used by `otp-request`. Both throw
+  `ProviderNotConfiguredError` when their secret is unset, which the worker catches specifically to
+  mark a row `skipped` (not `failed`). Note: `otp-request`'s OTP SMS now actually attempts real
+  Twilio delivery if `TWILIO_*` secrets are ever set — previously that path always stub-failed
+  regardless of configuration; this was necessary to keep one Twilio integration point rather than
+  two, per the NotificationService law.
+- **`src/services/NotificationService.ts`** — `email` added to the default channel list for the 5
+  order-lifecycle events (wherever a real email template exists). `otp_request`/`review_approved`/
+  `welcome` are unchanged.
 
 ## Admin user management (added 2026-08-04)
 

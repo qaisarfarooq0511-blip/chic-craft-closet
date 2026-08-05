@@ -62,19 +62,24 @@ class NotificationServiceClass {
   }
 
   private getDefaultChannels(eventType: NotificationEventType): NotificationChannel[] {
+    // Sprint 2D: email added wherever process-notifications has a real email
+    // template (order lifecycle events) — see supabase/functions/_shared/templates.ts.
+    // otp_request stays SMS-only: email OTP would be redundant with the magic-link
+    // email flow Supabase Auth already handles outside this queue. review_approved/
+    // welcome have no email template yet, so they're left as-is too.
     switch (eventType) {
       case "otp_request":
         return ["sms"];
       case "order_confirmed":
-        return ["sms", "whatsapp"];
+        return ["sms", "whatsapp", "email"];
       case "order_dispatched":
-        return ["sms", "whatsapp"];
+        return ["sms", "whatsapp", "email"];
       case "order_delivered":
-        return ["whatsapp"];
+        return ["whatsapp", "email"];
       case "order_cancelled":
-        return ["sms"];
+        return ["sms", "email"];
       case "refund_processed":
-        return ["sms"];
+        return ["sms", "email"];
       case "review_approved":
         return ["whatsapp"];
       case "welcome":

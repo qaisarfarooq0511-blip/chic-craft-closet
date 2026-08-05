@@ -4,6 +4,87 @@ Format: Problem / Root Cause / Fix / Risk / Rollback
 Lane: Fast Lane (FL) or Full Lane (FullL)
 ---
 
+## 2026-08-05 — Sprint 2D: notification queue processor
+
+### [FullL] process-notifications worker — pg_cron, atomic claim, email/SMS templates, admin monitoring
+
+**Problem:** `notification_queue` rows have been piling up since Sprint 1 with nothing to
+process them — `NotificationService.send()` writes rows, but no worker ever reads them.
+Twilio/Resend aren't configured yet either, so the worker also has to degrade gracefully
+rather than assume they exist.
+
+**Root Cause:** Not a bug — the worker was simply never built (SETUP.md listed Sprint 2D
+as "not yet scoped").
+
+**Fix:**
+
+- Migration `20260805000001`: enabled `pg_cron`/`pg_net` (available but not installed);
+  `claim_notification_batch(p_limit)` — `SECURITY DEFINER`, `service_role`-only, atomically
+  claims queued/due/under-attempt-cap rows via `UPDATE ... FROM (SELECT ... FOR UPDATE SKIP
+LOCKED)` in one statement (PostgREST can't express row locking through the query builder
+  directly, hence the function). Claimed rows are marked via a 10-minute `process_after`
+  lease rather than a new status value — self-healing if the worker crashes mid-batch,
+  since `notification_status` has no `'processing'` state and one would need its own cleanup
+  job. `notif_queue_admin_retry` RLS policy added for the dashboard retry button — narrow
+  `WITH CHECK (is_admin() AND status='queued' AND attempts=0)`, can't be used to forge any
+  other column. `cron.schedule` calls `process-notifications` every 5 minutes; the Bearer
+  token is read from Supabase Vault by name — the real service_role key is never written into
+  this (or any) migration file. See the migration's own comment for the one-time Vault
+  population step, run directly in the Dashboard SQL Editor.
+- `supabase/functions/process-notifications/index.ts`: batch size 50, dispatches by channel.
+  `whatsapp`/`push` always skip (no provider integration this sprint). `sms`/`email` look up
+  the destination (`profiles.phone`; email via the GoTrue Admin API since `auth.users` isn't
+  otherwise reachable) and call the provider; a missing destination is a skip, not a failure.
+  Order-lifecycle events re-fetch the order/items/address fresh by `payload.order_number`
+  rather than requiring every call site to embed a full snapshot. On failure: `attempts++`,
+  exponential backoff (`process_after = now() + 2^attempts minutes`), terminal `'failed'` at
+  5 attempts. Returns `{ sent, skipped, failed }`.
+- `supabase/functions/_shared/notification-service.ts`: added `sendEmail()` (Resend);
+  extracted `sendSmsRaw()` from the existing `sendSms()` (used by `otp-request`) so both the
+  worker and OTP flow share one Twilio integration point. Both throw
+  `ProviderNotConfiguredError` when their secret is unset, caught by the worker to mark
+  `skipped` rather than `failed`. **Behavior change:** `otp-request`'s OTP SMS now actually
+  attempts real Twilio delivery if `TWILIO_*` secrets are ever set — it previously always
+  stub-failed regardless of configuration.
+- `supabase/functions/_shared/templates.ts`: all 6 email templates, all 4 SMS templates
+  (`order_cancelled`/`refund_processed` have no SMS template, per spec — SMS-only for the
+  events listed). `review_approved`/`welcome` return `null` for both — worker skips with a
+  logged reason rather than erroring on an unhandled event type.
+- `src/services/NotificationService.ts`: `email` added to the default channel list for all 5
+  order-lifecycle events (wherever a real template exists) — `otp_request` stays SMS-only
+  (email OTP would duplicate the magic-link email flow Supabase Auth already handles outside
+  this queue).
+- Admin dashboard (`admin.index.tsx` + new `useNotificationQueue.ts`): queued count, failed
+  count, last-processed timestamp, failed-notifications table (event, channel, attempts,
+  last_error, created) with a per-row Retry button.
+- `.env.example`: added `RESEND_API_KEY`, `RAZORPAY_WEBHOOK_SECRET` (the latter for the
+  upcoming Razorpay item, added now while touching this file).
+
+**Risk:** Medium. New `service_role`-only function and RLS policy; cron calls a
+publicly-routable Edge Function URL, gated by a Vault-stored Bearer token (not committed
+anywhere). Twilio/Resend are still unconfigured in production, so in practice every
+`sms`/`email` row will land as `skipped` until those secrets are set — this is the intended
+graceful-degradation behavior, not a bug.
+
+**Verification:** No separate staging project (see the profiles-RLS-recursion and
+admin-user-management entries for the same caveat) — verified via `supabase db query
+--linked` rolled-back-transaction tests of `claim_notification_batch()` and
+`notif_queue_admin_retry`, plus `deno check`/`tsc`/`eslint`/build locally before applying.
+
+**Rollback:**
+
+```sql
+SELECT cron.unschedule('process-notifications-every-5-min');
+DROP FUNCTION IF EXISTS claim_notification_batch(int);
+DROP POLICY IF EXISTS "notif_queue_admin_retry" ON notification_queue;
+```
+
+Plus revert `NotificationService.ts`, `_shared/notification-service.ts`, delete
+`_shared/templates.ts`, `process-notifications/`, `useNotificationQueue.ts`, revert
+`admin.index.tsx` and `.env.example`.
+
+---
+
 ## 2026-08-04 — Admin user management page
 
 ### [FullL] `/admin/users` — replaces manual SQL for admin promotions
