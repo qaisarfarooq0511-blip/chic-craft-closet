@@ -1,6 +1,6 @@
 # Yaawun — RLS Policy Map
 
-Last updated: 2026-08-04
+Last updated: 2026-08-05
 
 ## Principle: Default Deny (framework §2)
 
@@ -28,7 +28,7 @@ The `is_admin()` helper function checks `profiles.role = 'admin'` for the curren
 | cart_items         | ❌            | Own only        | Own only                 | ❌           | ❌                          |
 | reviews            | ✅ approved   | Own + approved  | Own (before approval)    | All          | ✅                          |
 | audit_logs         | ❌            | ❌              | ❌                       | SELECT only  | ❌ (INSERT via trigger)     |
-| notification_queue | ❌            | ❌              | Own (INSERT)             | SELECT only  | Any (INSERT) + service_role |
+| notification_queue | ❌            | ❌              | Own (INSERT)             | Retry only⁵  | Any (INSERT) + service_role |
 | redirects          | ✅ active     | ✅ active       | ❌                       | All          | ✅                          |
 | site_settings      | ✅            | ✅              | ❌                       | All          | ✅                          |
 | static_pages       | ✅ published² | ✅ published²   | ❌                       | All          | UPDATE only²                |
@@ -48,6 +48,12 @@ policy's own path to self-demotion. A separate `block_self_role_change` BEFORE U
 additionally blocks ANY authenticated caller — via this policy, `profiles_update_own`, or any
 future policy — from changing their own `role` column, since permissive policies on the same table
 OR together and a hole opened by one policy isn't closed by adding another. See Critical rule 8.
+⁵ `notification_queue` admin — previously SELECT only. Added 2026-08-05 (Sprint 2D, migration
+`20260805000001`): `notif_queue_admin_retry`, `FOR UPDATE`, `WITH CHECK (is_admin() AND
+status = 'queued' AND attempts = 0)` — the admin dashboard's retry button can reset a failed row
+back into the queue, but the `WITH CHECK` shape means it cannot be used to fake a row as `sent`,
+forge an `attempts` count, or edit any other column combination. Full `FOR ALL` remains
+`service_role`-only (the worker itself).
 
 ## Critical rules
 
@@ -103,6 +109,16 @@ OR together and a hole opened by one policy isn't closed by adding another. See 
    SQL, so seeding scripts are unaffected. Role changes are audited via `profiles_role_audit`
    (`AFTER UPDATE ... WHEN (OLD.role IS DISTINCT FROM NEW.role)`, reusing `log_admin_action()`)
    so ordinary self-service edits (full_name, phone) are never logged as admin actions.
+9. **`claim_notification_batch()` is `service_role`-only, and its lock is a lease, not a
+   status.** (Added 2026-08-05, Sprint 2D.) PostgREST can't express `SELECT ... FOR UPDATE
+SKIP LOCKED` through the normal query builder, so the atomic claim step is a
+   `SECURITY DEFINER` function the worker calls via `.rpc()`. It marks claimed rows by
+   pushing `process_after` out 10 minutes rather than introducing a `'processing'` status
+   value — `notification_status` has no such value, and one would need its own cleanup
+   job for a crashed worker's stuck rows. Leaving `status='queued'` means a crashed
+   worker's claimed rows simply become eligible again once the lease expires — no separate
+   sweep required. `REVOKE ... FROM PUBLIC` / `GRANT ... TO service_role` only; this must
+   never be callable by `authenticated`.
 
 ## Testing RLS (automated — see CI)
 

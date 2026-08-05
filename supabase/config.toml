@@ -1,1 +1,9 @@
 project_id = "dqngfawkwvxxbympdqyp"
+
+# razorpay-webhook is called by Razorpay's servers, which send X-Razorpay-Signature,
+# never a Supabase JWT. verify_jwt defaults to true and would 401 every real webhook
+# delivery at the gateway before our own HMAC signature check ever runs. Recorded here
+# so a future plain `supabase functions deploy razorpay-webhook` (without remembering
+# --no-verify-jwt by hand) doesn't silently reintroduce this.
+[functions.razorpay-webhook]
+verify_jwt = false

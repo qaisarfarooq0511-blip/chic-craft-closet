@@ -1,5 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useAdminDashboard } from "@/hooks/useAdminDashboard";
+import {
+  useNotificationQueueStats,
+  useFailedNotifications,
+  useRetryNotification,
+} from "@/hooks/useNotificationQueue";
+import { useToast } from "@/lib/toast";
 import { formatPrice } from "@/types/database";
 
 export const Route = createFileRoute("/admin/")({
@@ -8,6 +14,19 @@ export const Route = createFileRoute("/admin/")({
 
 function Dashboard() {
   const { data } = useAdminDashboard();
+  const toast = useToast();
+  const { data: notifStats } = useNotificationQueueStats();
+  const { data: failedNotifs = [] } = useFailedNotifications();
+  const retryNotification = useRetryNotification();
+
+  const retry = async (id: string) => {
+    try {
+      await retryNotification(id);
+      toast("Notification requeued");
+    } catch (e) {
+      toast(e instanceof Error ? e.message : "Could not requeue notification");
+    }
+  };
 
   const stats = [
     { label: "Live products", value: data?.liveProducts ?? "—" },
@@ -124,6 +143,78 @@ function Dashboard() {
             </div>
           )}
         </div>
+      </div>
+
+      <div className="admin-card" style={{ marginBottom: 16 }}>
+        <div className="cart-sum-title" style={{ marginBottom: 12 }}>
+          Notification queue
+        </div>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fill,minmax(140px,1fr))",
+            gap: 12,
+            marginBottom: 16,
+          }}
+        >
+          <div>
+            <div className="form-label">Queued</div>
+            <div className="serif" style={{ fontSize: 24, fontWeight: 300, color: "var(--ink)" }}>
+              {notifStats?.queuedCount ?? "—"}
+            </div>
+          </div>
+          <div>
+            <div className="form-label">Failed</div>
+            <div className="serif" style={{ fontSize: 24, fontWeight: 300, color: "var(--ink)" }}>
+              {notifStats?.failedCount ?? "—"}
+            </div>
+          </div>
+          <div>
+            <div className="form-label">Last processed</div>
+            <div style={{ fontSize: 13, color: "var(--ink2)", marginTop: 6 }}>
+              {notifStats?.lastProcessedAt
+                ? new Date(notifStats.lastProcessedAt).toLocaleString("en-IN")
+                : "Never"}
+            </div>
+          </div>
+        </div>
+
+        {failedNotifs.length === 0 ? (
+          <p style={{ fontSize: 13, color: "var(--ink3)" }}>No failed notifications.</p>
+        ) : (
+          <div style={{ overflowX: "auto" }}>
+            <table className="admin-table">
+              <thead>
+                <tr>
+                  <th>Event</th>
+                  <th>Channel</th>
+                  <th>Attempts</th>
+                  <th>Last error</th>
+                  <th>Created</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                {failedNotifs.map((n) => (
+                  <tr key={n.id}>
+                    <td>{n.event_type}</td>
+                    <td style={{ textTransform: "uppercase", fontSize: 11 }}>{n.channel}</td>
+                    <td>{n.attempts}</td>
+                    <td style={{ color: "var(--ink3)", fontSize: 12 }}>{n.last_error ?? "—"}</td>
+                    <td style={{ fontSize: 12 }}>
+                      {new Date(n.created_at).toLocaleDateString("en-IN")}
+                    </td>
+                    <td style={{ textAlign: "right" }}>
+                      <button className="btn-outline" onClick={() => retry(n.id)}>
+                        Retry
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       <div className="admin-card">

@@ -10,6 +10,43 @@ import { formatPrice } from "@/types/database";
 import { useToast } from "@/lib/toast";
 import { capitalizeName, validateMobile, validateName } from "@/lib/user-auth";
 
+const RAZORPAY_PLACEHOLDER = "rzp_test_your_key_here";
+const RAZORPAY_KEY_ID = import.meta.env.VITE_RAZORPAY_KEY_ID as string | undefined;
+const RAZORPAY_ENABLED = !!RAZORPAY_KEY_ID && RAZORPAY_KEY_ID !== RAZORPAY_PLACEHOLDER;
+
+interface RazorpayCheckoutOptions {
+  key: string;
+  order_id: string;
+  amount: number;
+  currency: string;
+  name: string;
+  description: string;
+  handler: () => void;
+  modal: { ondismiss: () => void };
+}
+interface RazorpayCheckout {
+  open: () => void;
+}
+declare global {
+  interface Window {
+    Razorpay?: new (options: RazorpayCheckoutOptions) => RazorpayCheckout;
+  }
+}
+
+let razorpayScriptPromise: Promise<void> | null = null;
+function loadRazorpayScript(): Promise<void> {
+  if (window.Razorpay) return Promise.resolve();
+  if (razorpayScriptPromise) return razorpayScriptPromise;
+  razorpayScriptPromise = new Promise((resolve, reject) => {
+    const script = document.createElement("script");
+    script.src = "https://checkout.razorpay.com/v1/checkout.js";
+    script.onload = () => resolve();
+    script.onerror = () => reject(new Error("Could not load payment SDK"));
+    document.body.appendChild(script);
+  });
+  return razorpayScriptPromise;
+}
+
 export const Route = createFileRoute("/checkout")({
   head: () => ({
     meta: [
@@ -45,6 +82,9 @@ function Checkout() {
   });
   const [errors, setErrors] = useState<Partial<Record<keyof typeof form, string>>>({});
   const [placing, setPlacing] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<"razorpay" | "cod">(
+    RAZORPAY_ENABLED ? "razorpay" : "cod",
+  );
 
   useEffect(() => {
     if (profile)
@@ -114,7 +154,7 @@ function Checkout() {
           customer_id: user.id,
           shipping_address_id: address.id,
           status: "pending",
-          payment_method: "cod",
+          payment_method: paymentMethod,
           subtotal,
           delivery_charge: delivery,
           discount: 0,
@@ -144,13 +184,59 @@ function Checkout() {
       const { error: itemsError } = await supabase.from("order_items").insert(items);
       if (itemsError) throw itemsError;
 
-      await NotificationService.send(user.id, "order_confirmed", {
-        order_number: orderNumber,
-        customer_name: cleanName,
-      });
-      await clear();
+      if (paymentMethod === "cod") {
+        await NotificationService.send(user.id, "order_confirmed", {
+          order_number: orderNumber,
+          customer_name: cleanName,
+        });
+        await clear();
+        navigate({ to: "/order-confirmation/$orderNumber", params: { orderNumber } });
+        return;
+      }
 
-      navigate({ to: "/order-confirmation/$orderNumber", params: { orderNumber } });
+      // Razorpay: order already saved as pending above. order_confirmed is NOT sent
+      // here — the webhook queues it on payment.captured, once payment is real.
+      const { data: rzpData, error: rzpError } = await supabase.functions.invoke(
+        "create-razorpay-order",
+        { body: { order_id: order.id } },
+      );
+      if (rzpError || !rzpData) {
+        let message =
+          "Could not start payment. Your order is saved — you can try again from your orders page.";
+        try {
+          const body = await (rzpError as { context?: Response })?.context?.json();
+          if (body?.error) message = body.error;
+        } catch {
+          // fall back to the generic message above
+        }
+        toast(message);
+        return; // stay on checkout; order stays 'pending', not navigated away
+      }
+
+      await loadRazorpayScript();
+      if (!window.Razorpay) {
+        toast("Could not load payment SDK. Please try again.");
+        return;
+      }
+
+      const rzp = new window.Razorpay({
+        key: rzpData.key_id,
+        order_id: rzpData.razorpay_order_id,
+        amount: rzpData.amount,
+        currency: rzpData.currency,
+        name: "Yaawun",
+        description: orderNumber,
+        handler: () => {
+          void clear();
+          navigate({ to: "/order-confirmation/$orderNumber", params: { orderNumber } });
+        },
+        modal: {
+          ondismiss: () => {
+            toast("Payment cancelled");
+          },
+        },
+      });
+      rzp.open();
     } catch (err) {
       console.error(err);
       toast(err instanceof Error ? err.message : "Failed to place order");
@@ -281,12 +367,37 @@ function Checkout() {
               />
             </div>
           </div>
+          <div className="admin-card">
+            <div className="cart-sum-title" style={{ marginBottom: 8 }}>
+              Payment method
+            </div>
+            {RAZORPAY_ENABLED && (
+              <label style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+                <input
+                  type="radio"
+                  name="paymentMethod"
+                  checked={paymentMethod === "razorpay"}
+                  onChange={() => setPaymentMethod("razorpay")}
+                />
+                <span style={{ fontSize: 13 }}>Pay online (UPI, cards, netbanking)</span>
+              </label>
+            )}
+            <label style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <input
+                type="radio"
+                name="paymentMethod"
+                checked={paymentMethod === "cod"}
+                onChange={() => setPaymentMethod("cod")}
+              />
+              <span style={{ fontSize: 13 }}>Cash on delivery</span>
+            </label>
+          </div>
           <button type="submit" className="cart-cta" disabled={placing}>
             {placing ? "Placing order…" : "Place order"}
           </button>
           <div className="cart-payment-note">
             <IconLock />
-            Cash on delivery · Online payments coming soon
+            Your order is placed securely
           </div>
         </form>
         <aside className="cart-summary">
