@@ -4,6 +4,73 @@ Format: Problem / Root Cause / Fix / Risk / Rollback
 Lane: Fast Lane (FL) or Full Lane (FullL)
 ---
 
+## 2026-08-05 — Razorpay payment integration
+
+### [FullL] create-razorpay-order + razorpay-webhook Edge Functions, checkout payment method selection
+
+**Problem:** Checkout was COD-only. `orders.payment_id`/`payment_method`/`idempotency_key`
+existed in the schema since Sprint 1 but nothing populated them; `VITE_RAZORPAY_KEY_ID` sat
+in `.env.example` unused.
+
+**Root Cause:** Not a bug — waiting on the Razorpay account (SETUP.md, "Pending on external
+accounts"). Built now, shipped dark behind a feature flag, ready for the moment the account
+is approved.
+
+**Fix:**
+
+- Migration `20260805000002`: `orders.razorpay_order_id TEXT UNIQUE`, nullable — existing
+  (all-COD) orders unaffected. Distinct from `payment_id` (the _payment_ id, set post-capture);
+  this is the _order_ id, created up-front and doubling as the idempotency key.
+- `create-razorpay-order`: runs as the caller, so `orders_select_own` RLS scopes the ownership
+  check automatically (defensively also filters `customer_id = auth.uid()` explicitly, matching
+  the literal spec rather than relying on RLS alone); 404 if not found/not owned; returns the
+  existing `razorpay_order_id` immediately if one's already set (idempotent — never calls
+  Razorpay twice for the same order); 503 with a clear message if
+  `RAZORPAY_KEY_ID`/`RAZORPAY_KEY_SECRET` aren't set. The one write needs a service-role client
+  internally — `orders` has no customer UPDATE policy at all (see RLS.md), by design.
+- `razorpay-webhook`: verifies `X-Razorpay-Signature` (`HMAC-SHA256` over the raw body) before
+  touching anything; always 200 afterward, since Razorpay retries non-200 responses and
+  re-processing an already-`confirmed` order must not double-notify — guarded by checking
+  `status === 'pending'` before acting, not just by event type. `payment.captured` →
+  `status='confirmed'`, `payment_id`, `payment_method='razorpay'`, then enqueues
+  `order_confirmed` on `sms`+`whatsapp`+`email` directly (mirrors
+  `NotificationService.getDefaultChannels()` exactly — flagging this interpretation, since the
+  spec said "insert an order_confirmed row" singular; matching COD's actual 3-channel fan-out
+  seemed more correct than under-notifying Razorpay customers). `payment.failed`: logged only,
+  no order mutation.
+- `checkout.tsx`: radio selection between "Pay online" (hidden unless `VITE_RAZORPAY_KEY_ID` is
+  set and isn't the placeholder) and "Cash on delivery" (always available, default when
+  Razorpay isn't configured). COD path is byte-for-byte the pre-existing flow. Razorpay path:
+  order saved `pending` first (unchanged sequencing), then `create-razorpay-order`, then
+  `checkout.js` loaded dynamically and the modal opened; `order_confirmed` is deliberately NOT
+  sent client-side for this path — only the webhook does, once payment is real. Modal dismissal
+  → toast, stays on checkout, order remains `pending` (no auto-retry/resume this sprint — an
+  admin can follow up on stale pending orders). Edge Function error → toast, no navigation.
+- `admin.orders.$id.tsx`: gold "Paid online" / grey "Cash on delivery" badge replacing the
+  plain uppercase text; `payment_id` and `razorpay_order_id` shown as monospace text when
+  present.
+
+**Risk:** Medium — first payment-provider integration. Mitigated by: the entire "Pay online"
+option is invisible in production until `VITE_RAZORPAY_KEY_ID` is a real key (currently the
+placeholder); webhook signature verification gates all writes; idempotent order creation;
+`status === 'pending'` guard against duplicate webhook processing.
+
+**Verification:** No separate staging project (same caveat as every Full Lane item this
+sprint) — `tsc`/`eslint`/build clean locally; both Edge Functions deployed and confirmed
+`ACTIVE`; secrets set to placeholders pending the real Razorpay account, so the "Pay online"
+option stays hidden in production exactly as designed until real credentials replace them.
+
+**Rollback:**
+
+```sql
+ALTER TABLE orders DROP COLUMN razorpay_order_id;
+```
+
+Plus revert `checkout.tsx` and `admin.orders.$id.tsx`, delete `create-razorpay-order/` and
+`razorpay-webhook/`.
+
+---
+
 ## 2026-08-05 — Sprint 2D: notification queue processor
 
 ### [FullL] process-notifications worker — pg_cron, atomic claim, email/SMS templates, admin monitoring

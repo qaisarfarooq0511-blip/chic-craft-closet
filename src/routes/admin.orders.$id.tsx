@@ -176,12 +176,25 @@ function OrderDetail() {
           <div className="cart-sum-title" style={{ marginBottom: 8 }}>
             Payment
           </div>
-          <div style={{ textTransform: "uppercase", fontSize: 12, letterSpacing: 0.4 }}>
-            {order.payment_method ?? "—"}
-          </div>
+          {order.payment_method === "razorpay" ? (
+            <span className="pill pill-approved">Paid online</span>
+          ) : order.payment_method === "cod" ? (
+            <span className="pill pill-off">Cash on delivery</span>
+          ) : (
+            <span className="pill pill-off">{order.payment_method ?? "—"}</span>
+          )}
           {order.payment_id && (
-            <div style={{ color: "var(--ink3)", fontSize: 12, marginTop: 2 }}>
-              {order.payment_id}
+            <div
+              style={{ fontFamily: "monospace", color: "var(--ink3)", fontSize: 11, marginTop: 6 }}
+            >
+              Payment ID: {order.payment_id}
+            </div>
+          )}
+          {order.razorpay_order_id && (
+            <div
+              style={{ fontFamily: "monospace", color: "var(--ink3)", fontSize: 11, marginTop: 2 }}
+            >
+              Razorpay order: {order.razorpay_order_id}
             </div>
           )}
         </div>

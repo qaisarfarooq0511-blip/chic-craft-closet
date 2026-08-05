@@ -37,6 +37,35 @@ owner before this migration was written)
 IS DISTINCT FROM NEW.role)`) — full_name/phone self-edits are not logged. See "Admin user
 management" below.
 
+## Razorpay integration (added 2026-08-05)
+
+No new table — one new nullable column on `orders`:
+
+- **`orders.razorpay_order_id TEXT UNIQUE`** — the Razorpay _order_ id (distinct from
+  `payment_id`, the Razorpay _payment_ id set post-capture). Created up-front by
+  `create-razorpay-order` and used as its own idempotency check: a retried call with the same
+  internal `order_id` returns the existing Razorpay order instead of creating a second one.
+- **`supabase/functions/create-razorpay-order/`** — runs as the caller (their own JWT), so
+  `orders_select_own` RLS naturally scopes the ownership check to the caller's own orders; the
+  one write (`razorpay_order_id`) uses a service-role client internally, since `orders` has no
+  customer UPDATE policy at all (`orders_update_admin` is admin-only — see RLS.md).
+- **`supabase/functions/razorpay-webhook/`** — verifies `X-Razorpay-Signature` via
+  `HMAC-SHA256(rawBody, RAZORPAY_WEBHOOK_SECRET)` before touching anything; always returns 200
+  after that (Razorpay retries on non-200, and re-processing an already-`confirmed` order must
+  not double-notify — guarded by checking `order.status === 'pending'` before acting). On
+  `payment.captured`: `status → 'confirmed'`, `payment_id`, `payment_method = 'razorpay'`, then
+  inserts 3 `notification_queue` rows directly (`sms`/`whatsapp`/`email`) — mirrors
+  `NotificationService.getDefaultChannels("order_confirmed")` exactly, since this runs as
+  `service_role` and can't import the frontend class. `payment.failed`: logged only, order stays
+  `pending`.
+- `checkout.tsx` sends `order_confirmed` immediately only for COD, exactly as before Razorpay
+  existed; for the Razorpay path the notification is deferred entirely to the webhook, since
+  `pending` isn't a real payment confirmation. If the customer dismisses the Razorpay modal, the
+  order is left `pending` by design — no auto-retry/resume flow this sprint, matching the
+  product decision that an admin follow-up on stale pending orders is acceptable for now.
+- Feature-flagged in the UI by `VITE_RAZORPAY_KEY_ID` (hidden if unset or the placeholder value)
+  — the entire integration ships dark until a real key is added.
+
 ## Notification worker (Sprint 2D, added 2026-08-05)
 
 No new table — `notification_queue` (migration `20260801100006`) already had everything the

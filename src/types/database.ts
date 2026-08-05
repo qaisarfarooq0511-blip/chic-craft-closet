@@ -180,6 +180,7 @@ export interface Order {
   status: OrderStatus;
   payment_method: PaymentMethod | null;
   payment_id: string | null;
+  razorpay_order_id: string | null;
   idempotency_key: string | null;
   subtotal: number; // paise
   delivery_charge: number; // paise
