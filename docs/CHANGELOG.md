@@ -4,6 +4,73 @@ Format: Problem / Root Cause / Fix / Risk / Rollback
 Lane: Fast Lane (FL) or Full Lane (FullL)
 ---
 
+## 2026-08-04 — Admin user management page
+
+### [FullL] `/admin/users` — replaces manual SQL for admin promotions
+
+**Problem:** The only way to promote a customer to admin (or demote one) was a hand-run
+SQL `UPDATE profiles SET role = 'admin' ...` against the linked project — no audit trail,
+no confirmation step, no visibility into who has admin access without a manual query.
+
+**Root Cause:** Not a bug — this capability never existed in the app. Initially proposed
+as Fast Lane by the requester; corrected to Full Lane during investigation, since it
+requires reading `auth.users` (only possible via a new `SECURITY DEFINER` function — schema
+change) and adding the first-ever admin UPDATE policy on `profiles` (Auth/roles, Admin
+permissions — both explicit Full Lane triggers).
+
+**Fix:**
+
+- `admin_list_users(p_search, p_limit, p_offset)` — `SECURITY DEFINER`, `LANGUAGE plpgsql`
+  (not `sql`, for a hard function-call boundary), raises unless `is_admin()`. Joins
+  `profiles` + `auth.users` (the only place in the app that reads `auth.users`, since
+  PostgREST never exposes that schema). `REVOKE ... FROM PUBLIC` / `GRANT ... TO authenticated`.
+- New `profiles_update_admin` RLS policy: admin can UPDATE any other profile;
+  `WITH CHECK (is_admin() AND id != auth.uid())` blocks that policy's own self-demotion path.
+- Found and closed a real gap while implementing this: `profiles_update_own` (existing,
+  unchanged) was written only to block self-_promotion_, not self-_demotion_ — an admin
+  could already run `UPDATE profiles SET role='customer' WHERE id=auth.uid()` and satisfy
+  that policy's own check. Since permissive RLS policies on one table OR together, the new
+  admin policy alone couldn't close a hole opened by the older one. Added
+  `block_self_role_change`, a `BEFORE UPDATE` trigger that blocks ANY caller from changing
+  their own `role`, independent of which policy authorized the row. No recursion risk — it
+  reads no table, only compares `OLD`/`NEW` values already in hand (see RLS.md rule 8).
+- `profiles_role_audit` trigger (`AFTER UPDATE ... WHEN (OLD.role IS DISTINCT FROM
+NEW.role)`) reuses the existing `log_admin_action()` — scoped to role changes only, so
+  ordinary full_name/phone self-edits aren't logged as admin actions.
+- `src/hooks/useAdminUsers.ts`, `src/routes/admin.users.tsx` (new): searchable, paginated
+  (50/page) table — email, name, role badge (gold/grey), joined, last sign-in. Make
+  admin / Remove admin buttons, each behind a `confirm()` dialog with explicit wording;
+  both disabled on the caller's own row. No delete button. "Users" link added to the admin
+  sidebar (existing "Customers" link is the pre-existing localStorage mock system — left
+  untouched, unrelated, separate cleanup).
+
+**Risk:** Medium — first-ever admin WRITE policy on `profiles`, and a new path into
+`auth.users`. Mitigated by: `is_admin()` gate inside the function (not just RLS), the
+`WITH CHECK` self-demotion block, the independent trigger backstop, and audit logging on
+every role change.
+
+**Verification:** No separate staging Supabase project exists for this repo (single linked
+project) — CLAUDE.md's Full Lane "staging deploy" step is satisfied instead by the same
+rolled-back-transaction empirical testing used for the profiles RLS recursion fix
+(2026-08-03): `admin_list_users()` and `profiles_update_admin`/`block_self_role_change`
+tested inside `BEGIN ... SET LOCAL ROLE authenticated; SET LOCAL request.jwt.claims ...
+ROLLBACK;` blocks as a real admin, a real customer, and self-role-change attempts, before
+being applied live.
+
+**Rollback:**
+
+```sql
+DROP TRIGGER IF EXISTS profiles_role_audit ON profiles;
+DROP TRIGGER IF EXISTS profiles_block_self_role_change ON profiles;
+DROP FUNCTION IF EXISTS block_self_role_change();
+DROP POLICY IF EXISTS "profiles_update_admin" ON profiles;
+DROP FUNCTION IF EXISTS admin_list_users(text, int, int);
+```
+
+Plus revert `admin.tsx` (sidebar link), delete `useAdminUsers.ts` / `admin.users.tsx`.
+
+---
+
 ## 2026-08-03 — Editorial reviews + contact page real details
 
 ### [FullL] editorial_reviews table, PDP/card display, admin management, and real phone/email on /contact

@@ -1,6 +1,6 @@
 # Yaawun — RLS Policy Map
 
-Last updated: 2026-08-03
+Last updated: 2026-08-04
 
 ## Principle: Default Deny (framework §2)
 
@@ -11,7 +11,7 @@ The `is_admin()` helper function checks `profiles.role = 'admin'` for the curren
 
 | Table              | anon SELECT   | customer SELECT | customer WRITE           | admin SELECT | admin WRITE                 |
 | ------------------ | ------------- | --------------- | ------------------------ | ------------ | --------------------------- |
-| profiles           | ❌            | Own only        | Own (can't self-promote) | All          | ❌                          |
+| profiles           | ❌            | Own only        | Own (can't self-promote) | All          | Role only⁴                  |
 | categories         | ✅ active     | ✅ active       | ❌                       | All          | ✅                          |
 | products           | ✅ active     | ✅ active       | ❌                       | All          | ✅                          |
 | product_pieces     | ✅            | ✅              | ❌                       | All          | ✅                          |
@@ -42,6 +42,12 @@ product decision and seeded directly by the migration, not through the app.
 NULL`; admins get full `FOR ALL` (`is_admin()`) covering SELECT/INSERT/UPDATE/soft-DELETE. No
 `customer_id` column at all, so no self-referential/own-row policy exists here — unlike `reviews`,
 there's no "own" concept for this table.
+⁴ `profiles` admin WRITE — `profiles_update_admin` policy (added 2026-08-04, `/admin/users`) lets
+an admin UPDATE any OTHER profile row; `WITH CHECK (is_admin() AND id != auth.uid())` blocks the
+policy's own path to self-demotion. A separate `block_self_role_change` BEFORE UPDATE trigger
+additionally blocks ANY authenticated caller — via this policy, `profiles_update_own`, or any
+future policy — from changing their own `role` column, since permissive policies on the same table
+OR together and a hole opened by one policy isn't closed by adding another. See Critical rule 8.
 
 ## Critical rules
 
@@ -81,6 +87,22 @@ there's no "own" concept for this table.
    table's admin policy (categories, products, orders, static_pages, etc.) — the fix
    was routing `profiles_select_admin` through that same existing helper instead of
    duplicating its logic inline.
+8. **Self-demotion is blocked at two independent layers, not one.** (Added 2026-08-04,
+   migration `20260804000001`, `/admin/users`.) `profiles_update_admin`'s
+   `WITH CHECK (is_admin() AND id != auth.uid())` stops that policy's own path, but
+   `profiles_update_own` (rule 3) was written only to block self-_promotion_
+   (`WITH CHECK` requires the new `role` to be `'customer'`) — it does **not** block an
+   admin from running `UPDATE profiles SET role = 'customer' WHERE id = auth.uid()`
+   themselves, since that update trivially satisfies `profiles_update_own`'s own check.
+   Because permissive RLS policies on one table are OR'd, adding `profiles_update_admin`
+   cannot close a hole already open in a different, older policy. The real backstop is
+   `block_self_role_change`, a `BEFORE UPDATE` trigger that raises whenever
+   `OLD.id = auth.uid() AND OLD.role IS DISTINCT FROM NEW.role` — it fires regardless of
+   which policy authorized the row, and (unlike the bug in rule 7) it queries no table at
+   all, so it carries no recursion risk. `auth.uid()` is `NULL` for `service_role`/direct
+   SQL, so seeding scripts are unaffected. Role changes are audited via `profiles_role_audit`
+   (`AFTER UPDATE ... WHEN (OLD.role IS DISTINCT FROM NEW.role)`, reusing `log_admin_action()`)
+   so ordinary self-service edits (full_name, phone) are never logged as admin actions.
 
 ## Testing RLS (automated — see CI)
 
