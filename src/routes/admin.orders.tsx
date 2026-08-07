@@ -8,6 +8,8 @@ export const Route = createFileRoute("/admin/orders")({
   component: OrdersAdmin,
 });
 
+// Orders use status (cancelled/refunded) as terminal states. deleted_at is never
+// set on orders — no restore flow needed.
 const STATUS_OPTIONS: (Order["status"] | "all")[] = [
   "all",
   "pending",
