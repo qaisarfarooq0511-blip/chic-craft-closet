@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   IconScissors,
   IconTruck,
@@ -8,17 +8,33 @@ import {
   IconAlertCircle,
   IconCircleCheck,
   IconBrandWhatsapp,
+  IconHanger,
+  IconNeedleThread,
+  IconBabyCarriage,
+  IconSparkles,
+  type Icon,
 } from "@tabler/icons-react";
 import { useProduct, fetchProduct } from "@/hooks/useProduct";
 import { useCart } from "@/hooks/useCart";
 import { useStoreWhatsapp } from "@/hooks/useStoreWhatsapp";
 import { useToast } from "@/lib/toast";
 import { Stars } from "@/components/storefront/ProductCard";
+import { ImageZoomModal } from "@/components/storefront/ImageZoomModal";
 import { formatPrice, discountPercent } from "@/types/database";
 import { productImageUrl } from "@/lib/product-images";
 import { productLd, breadcrumbLd, STORE, abs } from "@/lib/jsonld";
 
 const MAX_QTY_PER_ITEM = 10;
+
+// No scarf/shawl icon exists in @tabler/icons-react — IconHanger is the closest
+// generic-apparel stand-in. Matches the category slugs CATEGORY_CONFIG in
+// ProductForm.tsx already keys off.
+const CATEGORY_ICONS: Record<string, Icon> = {
+  "kashmiri-shawls": IconHanger,
+  "dress-material": IconNeedleThread,
+  kidswear: IconBabyCarriage,
+  accessories: IconSparkles,
+};
 
 function productMetaDescription(product: {
   meta_description: string | null;
@@ -78,11 +94,28 @@ function PDP() {
   const { data: p, isLoading } = useProduct(slug);
   const [qty, setQty] = useState(1);
   const [thumb, setThumb] = useState(0);
+  const [zoomOpen, setZoomOpen] = useState(false);
   const [selectedColourId, setSelectedColourId] = useState<string | null>(null);
   const [selectedSizeId, setSelectedSizeId] = useState<string | null>(null);
   const { add } = useCart();
   const toast = useToast();
   const { whatsapp } = useStoreWhatsapp();
+
+  const addToBagBtnRef = useRef<HTMLButtonElement>(null);
+  const [mainAddToBagVisible, setMainAddToBagVisible] = useState(true);
+
+  useEffect(() => {
+    const el = addToBagBtnRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => setMainAddToBagVisible(entry.isIntersecting),
+      {
+        threshold: 0,
+      },
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [p]);
 
   if (isLoading) {
     return (
@@ -194,30 +227,52 @@ function PDP() {
       <div className="pdp-wrap">
         <div className="pdp-body">
           <div className="pdp-gallery">
-            <div
-              className="pdp-img-main"
-              style={{ background: "var(--cream2)", position: "relative" }}
-            >
-              {gallery[thumb] ? (
+            {gallery.length > 0 ? (
+              <button
+                type="button"
+                className="pdp-img-main"
+                onClick={() => setZoomOpen(true)}
+                aria-label="View full-screen image"
+              >
                 <img src={productImageUrl(gallery[thumb]) ?? undefined} alt={p.name} />
-              ) : (
-                <span className="ph">{p.name}</span>
-              )}
-            </div>
-            <div className="pdp-thumbs">
-              {gallery.slice(0, 4).map((g, i) => (
-                <button
-                  key={g.id}
-                  type="button"
-                  className={`pdp-thumb${thumb === i ? " sel" : ""}`}
-                  onClick={() => setThumb(i)}
-                  aria-label={`View image ${i + 1}`}
-                >
-                  <img src={productImageUrl(g) ?? undefined} alt="" />
-                </button>
-              ))}
-            </div>
+              </button>
+            ) : (
+              <div className="pdp-img-main">
+                <div className="pdp-img-placeholder">
+                  {(() => {
+                    const CategoryIcon = p.category ? CATEGORY_ICONS[p.category.slug] : undefined;
+                    return CategoryIcon ? (
+                      <CategoryIcon size={48} />
+                    ) : (
+                      <span>{p.name.charAt(0).toUpperCase()}</span>
+                    );
+                  })()}
+                </div>
+              </div>
+            )}
+            {gallery.length > 1 && (
+              <div className="pdp-thumbs">
+                {gallery.map((g, i) => (
+                  <button
+                    key={g.id}
+                    type="button"
+                    className={`pdp-thumb${thumb === i ? " sel" : ""}`}
+                    onClick={() => setThumb(i)}
+                    aria-label={`View image ${i + 1}`}
+                  >
+                    <img src={productImageUrl(g) ?? undefined} alt="" />
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
+          {zoomOpen && (
+            <ImageZoomModal
+              images={gallery.map((g) => productImageUrl(g)).filter((url): url is string => !!url)}
+              initialIndex={thumb}
+              onClose={() => setZoomOpen(false)}
+            />
+          )}
 
           <div>
             <div className="pdp-eyebrow eyebrow">{p.category?.name}</div>
@@ -445,7 +500,12 @@ function PDP() {
                 Select a colour{hasSizeVariants ? " and size" : ""} to add to bag.
               </p>
             )}
-            <button className="cta-primary" onClick={addAndToast} disabled={!canAddToBag}>
+            <button
+              ref={addToBagBtnRef}
+              className="cta-primary"
+              onClick={addAndToast}
+              disabled={!canAddToBag}
+            >
               Add to bag
             </button>
             <Link
@@ -579,6 +639,17 @@ function PDP() {
           </div>
         </div>
       </div>
+      {!mainAddToBagVisible && (
+        <div className="pdp-sticky-atb">
+          <div className="pdp-sticky-atb-row">
+            <span className="pdp-sticky-atb-name">{p.name}</span>
+            <span className="pdp-sticky-atb-price">{formatPrice(p.price)}</span>
+          </div>
+          <button className="cta-primary" onClick={addAndToast} disabled={!canAddToBag}>
+            Add to bag
+          </button>
+        </div>
+      )}
     </>
   );
 }

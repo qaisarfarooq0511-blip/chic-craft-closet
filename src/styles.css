@@ -956,29 +956,53 @@
   padding: 2rem 2.5rem;
 }
 .pdp-img-main {
-  background: #eee5d8;
+  background: var(--cream2);
   border-radius: var(--r3);
-  height: 380px;
+  aspect-ratio: 3 / 4;
+  width: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
   border: 0.5px solid var(--b);
   margin-bottom: 10px;
   overflow: hidden;
+  padding: 0;
+  position: relative;
+}
+button.pdp-img-main {
+  cursor: zoom-in;
 }
 .pdp-img-main img {
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
+.pdp-img-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  background: var(--cream2);
+  color: var(--ink3);
+  font-size: 48px;
+  font-family: "Cormorant Garamond", serif;
+}
 .pdp-thumbs {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  display: flex;
   gap: 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.pdp-thumbs::-webkit-scrollbar {
+  display: none;
 }
 .pdp-thumb {
+  flex: 0 0 auto;
+  width: 80px;
+  height: 80px;
   border-radius: var(--r2);
-  height: 72px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -987,6 +1011,7 @@
   overflow: hidden;
   transition: border-color 0.15s;
   background: var(--cream2);
+  padding: 0;
 }
 .pdp-thumb img {
   width: 100%;
@@ -2110,8 +2135,9 @@
     padding: 1.25rem;
     gap: 1.5rem;
   }
-  .pdp-img-main {
-    height: 320px;
+  .pdp-thumb {
+    width: 72px;
+    height: 72px;
   }
   .rev-cards-grid {
     grid-template-columns: 1fr;
@@ -2159,6 +2185,162 @@
     grid-template-columns: 1fr;
     gap: 1rem;
   }
+}
+
+.pdp-sticky-atb {
+  display: none;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 500;
+  flex-direction: column;
+  gap: 8px;
+  background: var(--cream);
+  border-top: 0.5px solid var(--b);
+  padding: 12px 1.5rem;
+  padding-bottom: max(12px, env(safe-area-inset-bottom));
+}
+.pdp-sticky-atb-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.pdp-sticky-atb-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  color: var(--ink);
+}
+.pdp-sticky-atb-price {
+  flex-shrink: 0;
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--ink);
+}
+.pdp-sticky-atb button {
+  width: 100%;
+}
+
+/* ─── PDP mobile-only (edge-to-edge gallery + sticky add-to-bag) ───
+   Deliberately a separate breakpoint from the 900px one above, which
+   already owns the general 2-col -> 1-col collapse. This block only
+   holds the PDP-specific rules that must kick in at 767px exactly.
+   Must come AFTER the .pdp-sticky-atb base rule above — CSS resolves
+   equal-specificity rules by source order regardless of which one sits
+   inside a media query, so a later unconditional rule would otherwise
+   beat this override and the bar would never show (caught in browser
+   verification, not theoretical). */
+@media (max-width: 767px) {
+  .pdp-gallery {
+    /* Bleeds the gallery to the screen edge by counteracting exactly
+       .pdp-body's own mobile padding (1.25rem, set in the 900px block
+       above) — .pdp-wrap/.pdp-body have no other padding layers between
+       the gallery and the viewport edge at this width. */
+    margin-left: -1.25rem;
+    margin-right: -1.25rem;
+  }
+  .pdp-img-main {
+    border-radius: 0;
+  }
+  .pdp-thumbs {
+    padding: 0 1.25rem;
+  }
+  .pdp-wrap {
+    /* Keeps content clear of the fixed sticky add-to-bag bar. */
+    padding-bottom: 120px;
+  }
+  .pdp-sticky-atb {
+    display: flex;
+  }
+  .zoom-nav {
+    display: none;
+  }
+}
+
+/* ─── Image zoom modal ─── */
+.zoom-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.95);
+  opacity: 0;
+  animation: zoom-fade-in 150ms ease forwards;
+  touch-action: none;
+}
+.zoom-overlay.closing {
+  animation: zoom-fade-out 150ms ease forwards;
+}
+@keyframes zoom-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes zoom-fade-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+.zoom-img {
+  max-height: 100vh;
+  max-width: 100vw;
+  object-fit: contain;
+  touch-action: none;
+  user-select: none;
+  will-change: transform;
+}
+.zoom-close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 1001;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  color: #fff;
+  font-size: 30px;
+  line-height: 1;
+  cursor: pointer;
+}
+.zoom-nav {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 1001;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.12);
+  border: none;
+  border-radius: 50%;
+  color: #fff;
+  font-size: 22px;
+  cursor: pointer;
+}
+.zoom-nav.prev {
+  left: 16px;
+}
+.zoom-nav.next {
+  right: 16px;
 }
 
 @media (prefers-reduced-motion: reduce) {
