@@ -32,9 +32,14 @@ function CategoriesAdmin() {
   const [slugErrors, setSlugErrors] = useState<Record<string, string>>({});
 
   // Resync local draft from the server whenever fresh data arrives (after any
-  // mutation invalidates the query, or on first load).
+  // mutation invalidates the query, or on first load). useAdminCategories()
+  // fetches all rows including soft-deleted ones (for other potential
+  // consumers); deleted-item visibility is a deliberate product decision made
+  // here, in the component — soft-deleted categories are hidden from this
+  // list entirely, not shown greyed out with a restore option. The data is
+  // still preserved in the DB; restoring one is a manual SQL operation.
   useEffect(() => {
-    setCats(serverCats);
+    setCats(serverCats.filter((c) => !c.deleted_at));
   }, [serverCats]);
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ["admin-categories"] });
@@ -187,16 +192,6 @@ function CategoriesAdmin() {
     toast("Category deleted");
   };
 
-  const restore = async (id: string) => {
-    const { error } = await supabase.from("categories").update({ deleted_at: null }).eq("id", id);
-    if (error) {
-      toast(error.message);
-      return;
-    }
-    invalidate();
-    toast("Category restored");
-  };
-
   return (
     <>
       <div
@@ -242,9 +237,8 @@ function CategoriesAdmin() {
             )}
             {!isLoading &&
               cats.map((c, i) => {
-                const isDeleted = !!c.deleted_at;
                 return (
-                  <tr key={c.id} style={isDeleted ? { opacity: 0.5 } : undefined}>
+                  <tr key={c.id}>
                     <td style={{ whiteSpace: "nowrap" }}>
                       <IconGripVertical size={14} style={{ color: "var(--ink3)" }} />
                       <button
@@ -273,11 +267,6 @@ function CategoriesAdmin() {
                         onChange={(e) => onNameChange(c.id, e.target.value)}
                         onBlur={() => onNameBlur(c.id)}
                       />
-                      {isDeleted && (
-                        <div style={{ fontSize: 10, color: "var(--ink3)", marginTop: 2 }}>
-                          Deleted
-                        </div>
-                      )}
                     </td>
                     <td>
                       <input
@@ -318,15 +307,9 @@ function CategoriesAdmin() {
                     </td>
                     <td>{c.product_count}</td>
                     <td style={{ textAlign: "right" }}>
-                      {isDeleted ? (
-                        <button className="btn-text-ink" onClick={() => restore(c.id)}>
-                          Restore
-                        </button>
-                      ) : (
-                        <button className="btn-text-rust" onClick={() => remove(c.id)}>
-                          <IconTrash size={14} />
-                        </button>
-                      )}
+                      <button className="btn-text-rust" onClick={() => remove(c.id)}>
+                        <IconTrash size={14} />
+                      </button>
                     </td>
                   </tr>
                 );
