@@ -1252,7 +1252,8 @@ button.pdp-img-main {
 .incl-block {
   border: 0.5px solid var(--b);
   border-radius: var(--r2);
-  padding: 11px 14px;
+  background: var(--cream2);
+  padding: 12px 16px;
   margin-bottom: 14px;
 }
 .incl-title {

@@ -35,6 +35,38 @@ restore swatch rendering.
 
 ---
 
+## 2026-08-09 — Package includes textarea, visible on all categories
+
+### [FullL] "What's in the package" editor rewritten as a textarea; no longer unstitched-only
+
+**Problem:** The package-includes editor in the admin product form only appeared for unstitched
+Dress Material products (`showUnstitched && isUnstitched` gate), so every other category had no
+way to list what ships in the package, even though `product_includes`/the PDP display are
+category-agnostic. The editor itself was also a fiddly one-row-per-item add/remove UI for what is
+just a short list of lines.
+
+**Root Cause:** The includes section reused the same `showPieces` gate as the Pieces/dimensions
+section (which genuinely is unstitched-only), conflating two unrelated concerns under one flag.
+
+**Fix:** Removed the gate from the includes editor only (Pieces/dimensions keeps it, unchanged).
+Replaced the per-row inputs with a single textarea (one item per line); on load, existing rows are
+joined by `sort_order` into the textarea text; on save, the textarea is split by newline,
+trimmed, empty lines dropped, all existing `product_includes` rows for the product soft-deleted,
+and fresh rows inserted with `sort_order` = line index — replacing the previous index-matched
+update/insert/delete-removed logic. On the PDP (`product.$slug.tsx`), moved the includes block
+(and the unstitched callout strip, so it doesn't sit stranded between the two) to immediately
+after the description, before the colour/size selectors, and added `background: var(--cream2)`
+with tighter padding to `.incl-block` in `styles.css` to visually separate it as a preview box.
+
+**Risk:** Low — no schema change, no RLS change. The full-replace write pattern means an admin
+save while another admin's edit is in flight could clobber the other's includes list, but the
+product form is not currently used by multiple concurrent admins on the same product.
+
+**Rollback:** Revert this commit. `product_includes` rows already soft-deleted by a save made
+under the new logic remain soft-deleted (rollback is UI-only, not a data restore).
+
+---
+
 ## 2026-08-07 — Corrective fix: admin SELECT policies missing/too restrictive
 
 ### [FullL] categories_select_admin (new) + products/orders_select_admin widened — completes the soft-delete fix

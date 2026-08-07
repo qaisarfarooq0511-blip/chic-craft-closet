@@ -104,10 +104,6 @@ interface PieceRow {
   width: string;
   weight: string;
 }
-interface IncludeRow {
-  id?: string;
-  description: string;
-}
 interface VariantRow {
   id?: string;
   colourId: string;
@@ -132,7 +128,7 @@ interface FormState {
   stockCount: string;
   status: "draft" | "active";
   pieces: PieceRow[];
-  includes: IncludeRow[];
+  includes: string; // textarea raw text, one item per line
   images: ProductImageDraft[];
   variantColourIds: string[];
   variants: VariantRow[];
@@ -158,7 +154,7 @@ const emptyForm: FormState = {
   stockCount: "0",
   status: "draft",
   pieces: [{ ...BLANK_PIECE_ROW }],
-  includes: [],
+  includes: "",
   images: [],
   variantColourIds: [],
   variants: [],
@@ -241,7 +237,11 @@ export function ProductForm({ productId, onSaved, submitLabel }: Props) {
             weight: p.weight ?? "",
           }))
         : [{ ...BLANK_PIECE_ROW }],
-      includes: existing.includes.map((i) => ({ id: i.id, description: i.description })),
+      includes: existing.includes
+        .slice()
+        .sort((a, b) => a.sort_order - b.sort_order)
+        .map((i) => i.description)
+        .join("\n"),
       images: existing.images.map((i) => ({
         id: i.id,
         storage_path: i.storage_path,
@@ -305,8 +305,8 @@ export function ProductForm({ productId, onSaved, submitLabel }: Props) {
       if (checked) {
         const piecesAreBlank = f.pieces.length <= 1 && f.pieces.every(isBlankPieceRow);
         if (piecesAreBlank) next.pieces = UNSTITCHED_PIECE_DEFAULTS.map((p) => ({ ...p }));
-        if (f.includes.length === 0) {
-          next.includes = UNSTITCHED_INCLUDE_DEFAULTS.map((description) => ({ description }));
+        if (!f.includes.trim()) {
+          next.includes = UNSTITCHED_INCLUDE_DEFAULTS.join("\n");
         }
       }
       return next;
@@ -326,18 +326,6 @@ export function ProductForm({ productId, onSaved, submitLabel }: Props) {
     set(
       "pieces",
       form.pieces.filter((_, idx) => idx !== i),
-    );
-
-  const addInclude = () => set("includes", [...form.includes, { description: "" }]);
-  const updateInclude = (i: number, description: string) =>
-    set(
-      "includes",
-      form.includes.map((inc, idx) => (idx === i ? { ...inc, description } : inc)),
-    );
-  const removeInclude = (i: number) =>
-    set(
-      "includes",
-      form.includes.filter((_, idx) => idx !== i),
     );
 
   // --- variants: colour is the primary axis; size nests under a colour only when
@@ -472,22 +460,26 @@ export function ProductForm({ productId, onSaved, submitLabel }: Props) {
         else await supabase.from("product_pieces").insert({ ...row, product_id: id });
       }
 
-      // --- includes: delete removed, update existing, insert new ---
-      const keepIncludeIds = form.includes.filter((i) => i.id).map((i) => i.id as string);
-      const removedIncludeIds = (existing?.includes ?? [])
-        .map((i) => i.id)
-        .filter((iid) => !keepIncludeIds.includes(iid));
-      if (removedIncludeIds.length) {
+      // --- includes: soft-delete all existing, insert fresh from the textarea lines ---
+      const existingIncludeIds = (existing?.includes ?? []).map((i) => i.id);
+      if (existingIncludeIds.length) {
         await supabase
           .from("product_includes")
           .update({ deleted_at: new Date().toISOString() })
-          .in("id", removedIncludeIds);
+          .in("id", existingIncludeIds);
       }
-      for (const [i, inc] of form.includes.entries()) {
-        if (!inc.description.trim()) continue;
-        const row = { description: inc.description.trim(), sort_order: i };
-        if (inc.id) await supabase.from("product_includes").update(row).eq("id", inc.id);
-        else await supabase.from("product_includes").insert({ ...row, product_id: id });
+      const includeLines = form.includes
+        .split("\n")
+        .map((line) => line.trim())
+        .filter(Boolean);
+      if (includeLines.length) {
+        await supabase.from("product_includes").insert(
+          includeLines.map((description, i) => ({
+            description,
+            sort_order: i,
+            product_id: id,
+          })),
+        );
       }
 
       // --- images: delete removed, update existing (primary/order), insert new ---
@@ -1049,40 +1041,21 @@ export function ProductForm({ productId, onSaved, submitLabel }: Props) {
         </div>
       )}
 
-      {/* 7. Package includes (unstitched only) */}
-      {showPieces && (
-        <div className="admin-card">
-          <div className="cart-sum-title" style={{ marginBottom: 10 }}>
-            What's in the package
-          </div>
-          {form.includes.map((inc, i) => (
-            <div key={inc.id ?? i} style={{ display: "flex", gap: 8, marginBottom: 8 }}>
-              <input
-                className="form-input"
-                value={inc.description}
-                onChange={(e) => updateInclude(i, e.target.value)}
-                placeholder="e.g. Top fabric — 3 m × 1 m"
-              />
-              <button
-                type="button"
-                className="btn-text-rust"
-                onClick={() => removeInclude(i)}
-                aria-label="Remove item"
-              >
-                <IconTrash size={16} />
-              </button>
-            </div>
-          ))}
-          <button
-            type="button"
-            className="btn-outline"
-            onClick={addInclude}
-            style={{ display: "inline-flex", alignItems: "center", gap: 6 }}
-          >
-            <IconPlus size={14} /> Add item
-          </button>
+      {/* 7. Package includes (all categories) */}
+      <div className="admin-card">
+        <div className="cart-sum-title" style={{ marginBottom: 10 }}>
+          What's in the package
         </div>
-      )}
+        <textarea
+          className="form-input"
+          style={{ minHeight: 120, resize: "vertical" }}
+          value={form.includes}
+          onChange={(e) => set("includes", e.target.value)}
+          placeholder={
+            "One item per line, e.g.\n1 × Top fabric (3m × 1m)\n1 × Dupatta (2.5m × 0.9m)\nYaawun branded packaging\nCare instruction card"
+          }
+        />
+      </div>
 
       {/* 8. Images */}
       <div className="admin-card">

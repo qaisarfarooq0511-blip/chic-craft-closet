@@ -182,6 +182,14 @@ no longer required to create a colour. Existing rows keep their stored hex; new 
 `/admin/colours` never set one. The `ColourOption.hex_code` TypeScript type was updated to
 `string | null` to match; no code reads `hex_code` for rendering anywhere in the app.
 
+`product_includes` writes changed (no schema change — same table/columns): the admin form no
+longer index-matches individual rows to update/insert/delete. It now soft-deletes every existing
+include for the product and inserts fresh rows from a single textarea (one item per line,
+`sort_order` = line index) on every save. The "What's in the package" section was also gated
+behind `showUnstitched && isUnstitched` in the admin form (unstitched Dress Material only) — that
+gate was removed for the includes editor specifically (kept for the Pieces/dimensions section),
+so any category can now carry a package-includes list.
+
 `order_items.variant_id` + `order_items.variant_label` follow this table's existing
 snapshot-at-purchase-time principle (same as `product_name`/`product_slug`/`unit_price`) — a later
 colour/size rename or deletion must not alter historical orders.

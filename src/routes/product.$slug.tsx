@@ -303,6 +303,28 @@ function PDP() {
             </div>
             <p className="pdp-desc">{p.description}</p>
 
+            {p.includes.length > 0 && (
+              <div className="incl-block">
+                <div className="incl-title">What's in the package</div>
+                {p.includes.map((inc) => (
+                  <div key={inc.id} className="incl-item">
+                    <span className="incl-dot" />
+                    {inc.description}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {p.is_unstitched && (
+              <div className="callout-strip">
+                <IconScissors />
+                <span>
+                  This is an unstitched set. Dimensions below show fabric cut lengths — take these
+                  to your tailor for stitching.
+                </span>
+              </div>
+            )}
+
             {hasVariants && (
               <div className="pdp-variants" style={{ marginBottom: 16 }}>
                 <div style={{ marginBottom: 12 }}>
@@ -389,16 +411,6 @@ function PDP() {
               </div>
             )}
 
-            {p.is_unstitched && (
-              <div className="callout-strip">
-                <IconScissors />
-                <span>
-                  This is an unstitched set. Dimensions below show fabric cut lengths — take these
-                  to your tailor for stitching.
-                </span>
-              </div>
-            )}
-
             {(p.pieces.length > 0 || p.fabric || p.embroidery || p.care) && (
               <div className="spec-block">
                 <div className="spec-block-hd">
@@ -443,18 +455,6 @@ function PDP() {
                         <div className="dim-val">{it.weight || "—"}</div>
                       </div>
                     </div>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {p.includes.length > 0 && (
-              <div className="incl-block">
-                <div className="incl-title">What's in the package</div>
-                {p.includes.map((inc) => (
-                  <div key={inc.id} className="incl-item">
-                    <span className="incl-dot" />
-                    {inc.description}
                   </div>
                 ))}
               </div>
