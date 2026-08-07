@@ -21,6 +21,7 @@ owner before this migration was written)
 | `colour_options`     | Admin-managed colour picklist, shown as text chips (hex_code optional, unused in UI)            | ✅  | ✅          | —     |
 | `size_scales`        | Named size systems (age_infant, age_kids, age_teens, adult_clothing, free_size, dress_material) | ✅  | ✅          | —     |
 | `size_options`       | Size labels belonging to a scale (e.g. "3-4 years" under age_kids)                              | ✅  | ✅          | —     |
+| `category_sizes`     | Junction: which size_options a category offers, independent of scale                            | ✅  | ❌ hard¹¹   | —     |
 | `addresses`          | Customer shipping addresses                                                                     | ✅  | ✅          | —     |
 | `orders`             | Order records with state machine status                                                         | ✅  | ✅          | ✅    |
 | `order_items`        | Line items per order — price/name/variant snapshotted at purchase time                          | ✅  | ✅          | ✅    |
@@ -36,6 +37,11 @@ owner before this migration was written)
 ¹ `profiles` audit is scoped to `role` changes only (`profiles_role_audit` trigger, `WHEN (OLD.role
 IS DISTINCT FROM NEW.role)`) — full_name/phone self-edits are not logged. See "Admin user
 management" below.
+
+¹¹ `category_sizes` is a pure many-to-many association (which sizes a category offers) with no
+business history of its own — same reasoning as `cart_items` having no `deleted_at`. Checking a
+size in `/admin/categories` inserts a row; unchecking hard-deletes it. `ON DELETE CASCADE` on both
+FKs means deleting a category or a size_option cleans up its associations automatically.
 
 ## Categories admin fixes + adult clothing size scale (added 2026-08-07)
 
@@ -189,6 +195,22 @@ include for the product and inserts fresh rows from a single textarea (one item 
 behind `showUnstitched && isUnstitched` in the admin form (unstitched Dress Material only) — that
 gate was removed for the includes editor specifically (kept for the Pieces/dimensions section),
 so any category can now carry a package-includes list.
+
+`category_sizes` (migration `20260809000002`) replaces `categories.default_size_scale_id` as the
+source of truth for which sizes a category's product form offers — a category can now mix sizes
+across scales (e.g. a "Kids Winterwear" category could offer both `age_kids` and `free_size`
+options together) instead of being locked to exactly one scale. `default_size_scale_id` itself is
+untouched by this migration (still a valid column, still backfilled data) but is no longer read by
+the admin product form or the admin categories page — it's vestigial unless something else starts
+reading it again. Backfilled at migration time: every category with a `default_size_scale_id` got
+its scale's current `size_options` copied into `category_sizes` (Kidswear → 6, Stitched Suits → 6,
+Kashmiri Shawls → 1, Dress Material → 0 since `dress_material` has no `size_options`, Accessories →
+0 since it had no scale assigned). `admin.categories.tsx`'s per-category "Default size scale"
+dropdown was replaced with a "Manage sizes" button opening `CategorySizesModal`, which lists every
+size across every scale as a checkbox for that category — checking/unchecking writes directly to
+`category_sizes` (insert/hard-delete), no batch save step. `ProductForm.tsx`'s size axis is now
+purely data-driven: it shows if `useCategorySizes(categoryId)` returns any rows, replacing the
+hardcoded `showSizeVariants` flag in `CATEGORY_CONFIG` (removed entirely).
 
 `order_items.variant_id` + `order_items.variant_label` follow this table's existing
 snapshot-at-purchase-time principle (same as `product_name`/`product_slug`/`unit_price`) — a later

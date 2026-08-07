@@ -22,6 +22,7 @@ The `is_admin()` helper function checks `profiles.role = 'admin'` for the curren
 | colour_options     | ✅ active     | ✅ active       | ❌                       | All          | ✅                          |
 | size_scales        | ✅            | ✅              | ❌                       | All          | ✅                          |
 | size_options       | ✅            | ✅              | ❌                       | All          | ✅                          |
+| category_sizes     | ✅            | ✅              | ❌                       | All          | ✅                          |
 | addresses          | ❌            | Own only        | Own only                 | All          | ❌                          |
 | orders             | ❌            | Own only        | Own (INSERT)             | All⁶         | ✅⁶                         |
 | order_items        | ❌            | Own orders      | Own orders               | All          | ❌                          |
