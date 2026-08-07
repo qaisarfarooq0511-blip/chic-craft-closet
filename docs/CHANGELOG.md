@@ -4,6 +4,69 @@ Format: Problem / Root Cause / Fix / Risk / Rollback
 Lane: Fast Lane (FL) or Full Lane (FullL)
 ---
 
+## 2026-08-09 — Colour text chips + admin colour management
+
+### [FullL] colour_options.hex_code made nullable; hex swatches replaced with text chips
+
+**Problem:** Colours were rendered as hex-swatch circles on the PDP, admin product form, and
+cart. Every new colour required picking an arbitrary hex approximation, which added friction
+and gave no real product-selection value since customers read the colour name anyway. There
+was also no admin UI to manage the colour picklist at all — colours could only be added
+in-place from the product form.
+
+**Root Cause:** `colour_options.hex_code` was `NOT NULL` at the schema level, forcing every
+colour to carry a swatch value that the product decision no longer needed.
+
+**Fix:** Migration `20260809000001_colour_hex_optional.sql` drops the `NOT NULL` constraint
+on `hex_code`. Added `.colour-chip` pill styling (`src/styles.css`) and swapped the hex-circle
+swatch for text-label chips on the PDP colour selector and both colour spots in
+`ProductForm.tsx`; removed the redundant hex-circle in `cart.tsx` (the adjacent variant text
+already names the colour). Added `/admin/colours` — list/add/rename/activate/soft-delete for
+`colour_options`, with proper-case normalization and a case-insensitive duplicate-name check.
+`ColourOption.hex_code` TypeScript type updated to `string | null` to match the schema; no
+code reads `hex_code` for rendering anywhere in the app.
+
+**Risk:** Low — additive UI change plus a constraint relaxation (widening `NOT NULL` to
+nullable never breaks existing rows). No RLS policy changes.
+
+**Rollback:** `ALTER TABLE colour_options ALTER COLUMN hex_code SET NOT NULL;` (only safe if
+every row still has a non-null `hex_code` — check before running). Revert the UI commit to
+restore swatch rendering.
+
+---
+
+## 2026-08-09 — Package includes textarea, visible on all categories
+
+### [FullL] "What's in the package" editor rewritten as a textarea; no longer unstitched-only
+
+**Problem:** The package-includes editor in the admin product form only appeared for unstitched
+Dress Material products (`showUnstitched && isUnstitched` gate), so every other category had no
+way to list what ships in the package, even though `product_includes`/the PDP display are
+category-agnostic. The editor itself was also a fiddly one-row-per-item add/remove UI for what is
+just a short list of lines.
+
+**Root Cause:** The includes section reused the same `showPieces` gate as the Pieces/dimensions
+section (which genuinely is unstitched-only), conflating two unrelated concerns under one flag.
+
+**Fix:** Removed the gate from the includes editor only (Pieces/dimensions keeps it, unchanged).
+Replaced the per-row inputs with a single textarea (one item per line); on load, existing rows are
+joined by `sort_order` into the textarea text; on save, the textarea is split by newline,
+trimmed, empty lines dropped, all existing `product_includes` rows for the product soft-deleted,
+and fresh rows inserted with `sort_order` = line index — replacing the previous index-matched
+update/insert/delete-removed logic. On the PDP (`product.$slug.tsx`), moved the includes block
+(and the unstitched callout strip, so it doesn't sit stranded between the two) to immediately
+after the description, before the colour/size selectors, and added `background: var(--cream2)`
+with tighter padding to `.incl-block` in `styles.css` to visually separate it as a preview box.
+
+**Risk:** Low — no schema change, no RLS change. The full-replace write pattern means an admin
+save while another admin's edit is in flight could clobber the other's includes list, but the
+product form is not currently used by multiple concurrent admins on the same product.
+
+**Rollback:** Revert this commit. `product_includes` rows already soft-deleted by a save made
+under the new logic remain soft-deleted (rollback is UI-only, not a data restore).
+
+---
+
 ## 2026-08-07 — Corrective fix: admin SELECT policies missing/too restrictive
 
 ### [FullL] categories_select_admin (new) + products/orders_select_admin widened — completes the soft-delete fix

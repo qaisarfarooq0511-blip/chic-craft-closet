@@ -77,18 +77,6 @@ function CartPage() {
                           marginTop: 2,
                         }}
                       >
-                        {l.variant?.colour && (
-                          <span
-                            style={{
-                              width: 12,
-                              height: 12,
-                              borderRadius: "50%",
-                              background: l.variant.colour.hex_code,
-                              border: "1px solid var(--line)",
-                              display: "inline-block",
-                            }}
-                          />
-                        )}
                         {variantText}
                       </div>
                     )}

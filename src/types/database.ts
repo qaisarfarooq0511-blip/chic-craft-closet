@@ -45,7 +45,7 @@ export interface FabricOption {
 export interface ColourOption {
   id: string;
   name: string;
-  hex_code: string;
+  hex_code: string | null;
   sort_order: number;
   is_active: boolean;
   created_at: string;

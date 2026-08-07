@@ -303,6 +303,28 @@ function PDP() {
             </div>
             <p className="pdp-desc">{p.description}</p>
 
+            {p.includes.length > 0 && (
+              <div className="incl-block">
+                <div className="incl-title">What's in the package</div>
+                {p.includes.map((inc) => (
+                  <div key={inc.id} className="incl-item">
+                    <span className="incl-dot" />
+                    {inc.description}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {p.is_unstitched && (
+              <div className="callout-strip">
+                <IconScissors />
+                <span>
+                  This is an unstitched set. Dimensions below show fabric cut lengths — take these
+                  to your tailor for stitching.
+                </span>
+              </div>
+            )}
+
             {hasVariants && (
               <div className="pdp-variants" style={{ marginBottom: 16 }}>
                 <div style={{ marginBottom: 12 }}>
@@ -318,6 +340,7 @@ function PDP() {
                         <button
                           key={c.id}
                           type="button"
+                          className={`colour-chip${selected ? " selected" : ""}${outOfStock ? " out-of-stock" : ""}`}
                           disabled={outOfStock}
                           onClick={() => {
                             setSelectedColourId(c.id);
@@ -325,19 +348,9 @@ function PDP() {
                           }}
                           title={outOfStock ? `${c.name} — out of stock` : c.name}
                           aria-label={c.name}
-                          style={{
-                            width: 32,
-                            height: 32,
-                            borderRadius: "50%",
-                            background: c.hex_code,
-                            border: selected ? "2px solid var(--ink)" : "1px solid var(--line)",
-                            outline: selected ? "1px solid var(--gold)" : "none",
-                            outlineOffset: 2,
-                            cursor: outOfStock ? "not-allowed" : "pointer",
-                            opacity: outOfStock ? 0.35 : 1,
-                            position: "relative",
-                          }}
-                        />
+                        >
+                          {c.name}
+                        </button>
                       );
                     })}
                   </div>
@@ -398,16 +411,6 @@ function PDP() {
               </div>
             )}
 
-            {p.is_unstitched && (
-              <div className="callout-strip">
-                <IconScissors />
-                <span>
-                  This is an unstitched set. Dimensions below show fabric cut lengths — take these
-                  to your tailor for stitching.
-                </span>
-              </div>
-            )}
-
             {(p.pieces.length > 0 || p.fabric || p.embroidery || p.care) && (
               <div className="spec-block">
                 <div className="spec-block-hd">
@@ -452,18 +455,6 @@ function PDP() {
                         <div className="dim-val">{it.weight || "—"}</div>
                       </div>
                     </div>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            {p.includes.length > 0 && (
-              <div className="incl-block">
-                <div className="incl-title">What's in the package</div>
-                {p.includes.map((inc) => (
-                  <div key={inc.id} className="incl-item">
-                    <span className="incl-dot" />
-                    {inc.description}
                   </div>
                 ))}
               </div>

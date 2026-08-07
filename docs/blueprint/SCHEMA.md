@@ -18,7 +18,7 @@ owner before this migration was written)
 | `product_includes`   | "What's in the package" list items                                                              | ✅  | ✅          | —     |
 | `product_variants`   | Colour/size combinations per product — own stock + optional price override                      | ✅  | ✅          | ✅    |
 | `fabric_options`     | Admin-managed fabric picklist (Pure Pashmina, Cotton, Banarasi Silk, …)                         | ✅  | ✅          | —     |
-| `colour_options`     | Admin-managed colour picklist with hex swatch                                                   | ✅  | ✅          | —     |
+| `colour_options`     | Admin-managed colour picklist, shown as text chips (hex_code optional, unused in UI)            | ✅  | ✅          | —     |
 | `size_scales`        | Named size systems (age_infant, age_kids, age_teens, adult_clothing, free_size, dress_material) | ✅  | ✅          | —     |
 | `size_options`       | Size labels belonging to a scale (e.g. "3-4 years" under age_kids)                              | ✅  | ✅          | —     |
 | `addresses`          | Customer shipping addresses                                                                     | ✅  | ✅          | —     |
@@ -175,6 +175,20 @@ Accessories is left `NULL` (no size selector).
 `fabric` column rather than replacing it — the admin form dual-writes both (sets `fabric_id` and
 mirrors the chosen name into `fabric`) so the PDP, which still reads the text column directly,
 needs no change yet. Migrating the PDP to read via the FK join is a deferred follow-up.
+
+`colour_options.hex_code` was made nullable (migration `20260809000001`, colour/package sprint) —
+colours are shown everywhere as text-label chips (`.colour-chip`), not swatches, so a hex value is
+no longer required to create a colour. Existing rows keep their stored hex; new colours added via
+`/admin/colours` never set one. The `ColourOption.hex_code` TypeScript type was updated to
+`string | null` to match; no code reads `hex_code` for rendering anywhere in the app.
+
+`product_includes` writes changed (no schema change — same table/columns): the admin form no
+longer index-matches individual rows to update/insert/delete. It now soft-deletes every existing
+include for the product and inserts fresh rows from a single textarea (one item per line,
+`sort_order` = line index) on every save. The "What's in the package" section was also gated
+behind `showUnstitched && isUnstitched` in the admin form (unstitched Dress Material only) — that
+gate was removed for the includes editor specifically (kept for the Pieces/dimensions section),
+so any category can now carry a package-includes list.
 
 `order_items.variant_id` + `order_items.variant_label` follow this table's existing
 snapshot-at-purchase-time principle (same as `product_name`/`product_slug`/`unit_price`) — a later
