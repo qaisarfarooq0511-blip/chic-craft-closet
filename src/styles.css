@@ -1064,6 +1064,7 @@
   color: var(--ink3);
   line-height: 1.9;
   margin-bottom: 14px;
+  white-space: pre-wrap;
 }
 .pdp-stock {
   font-size: 10px;
