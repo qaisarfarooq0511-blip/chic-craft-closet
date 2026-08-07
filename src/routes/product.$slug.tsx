@@ -318,6 +318,7 @@ function PDP() {
                         <button
                           key={c.id}
                           type="button"
+                          className={`colour-chip${selected ? " selected" : ""}${outOfStock ? " out-of-stock" : ""}`}
                           disabled={outOfStock}
                           onClick={() => {
                             setSelectedColourId(c.id);
@@ -325,19 +326,9 @@ function PDP() {
                           }}
                           title={outOfStock ? `${c.name} — out of stock` : c.name}
                           aria-label={c.name}
-                          style={{
-                            width: 32,
-                            height: 32,
-                            borderRadius: "50%",
-                            background: c.hex_code,
-                            border: selected ? "2px solid var(--ink)" : "1px solid var(--line)",
-                            outline: selected ? "1px solid var(--gold)" : "none",
-                            outlineOffset: 2,
-                            cursor: outOfStock ? "not-allowed" : "pointer",
-                            opacity: outOfStock ? 0.35 : 1,
-                            position: "relative",
-                          }}
-                        />
+                        >
+                          {c.name}
+                        </button>
                       );
                     })}
                   </div>

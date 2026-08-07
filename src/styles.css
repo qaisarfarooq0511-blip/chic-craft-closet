@@ -1024,6 +1024,30 @@ button.pdp-img-main {
 .pdp-thumb.sel {
   border: 1.5px solid var(--gold);
 }
+.colour-chip {
+  padding: 6px 14px;
+  border: 0.5px solid var(--b2);
+  border-radius: 100px;
+  font-size: 12px;
+  background: none;
+  color: var(--ink);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.colour-chip.selected {
+  background: var(--ink);
+  color: var(--cream);
+  border-color: var(--ink);
+}
+.colour-chip.out-of-stock {
+  opacity: 0.35;
+  cursor: not-allowed;
+  text-decoration: line-through;
+}
+.colour-chip:hover:not(.out-of-stock):not(.selected) {
+  border-color: var(--b2);
+  background: var(--cream2);
+}
 .pdp-eyebrow {
   margin-bottom: 8px;
 }

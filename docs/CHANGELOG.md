@@ -4,6 +4,37 @@ Format: Problem / Root Cause / Fix / Risk / Rollback
 Lane: Fast Lane (FL) or Full Lane (FullL)
 ---
 
+## 2026-08-09 — Colour text chips + admin colour management
+
+### [FullL] colour_options.hex_code made nullable; hex swatches replaced with text chips
+
+**Problem:** Colours were rendered as hex-swatch circles on the PDP, admin product form, and
+cart. Every new colour required picking an arbitrary hex approximation, which added friction
+and gave no real product-selection value since customers read the colour name anyway. There
+was also no admin UI to manage the colour picklist at all — colours could only be added
+in-place from the product form.
+
+**Root Cause:** `colour_options.hex_code` was `NOT NULL` at the schema level, forcing every
+colour to carry a swatch value that the product decision no longer needed.
+
+**Fix:** Migration `20260809000001_colour_hex_optional.sql` drops the `NOT NULL` constraint
+on `hex_code`. Added `.colour-chip` pill styling (`src/styles.css`) and swapped the hex-circle
+swatch for text-label chips on the PDP colour selector and both colour spots in
+`ProductForm.tsx`; removed the redundant hex-circle in `cart.tsx` (the adjacent variant text
+already names the colour). Added `/admin/colours` — list/add/rename/activate/soft-delete for
+`colour_options`, with proper-case normalization and a case-insensitive duplicate-name check.
+`ColourOption.hex_code` TypeScript type updated to `string | null` to match the schema; no
+code reads `hex_code` for rendering anywhere in the app.
+
+**Risk:** Low — additive UI change plus a constraint relaxation (widening `NOT NULL` to
+nullable never breaks existing rows). No RLS policy changes.
+
+**Rollback:** `ALTER TABLE colour_options ALTER COLUMN hex_code SET NOT NULL;` (only safe if
+every row still has a non-null `hex_code` — check before running). Revert the UI commit to
+restore swatch rendering.
+
+---
+
 ## 2026-08-07 — Corrective fix: admin SELECT policies missing/too restrictive
 
 ### [FullL] categories_select_admin (new) + products/orders_select_admin widened — completes the soft-delete fix

@@ -799,18 +799,13 @@ export function ProductForm({ productId, onSaved, submitLabel }: Props) {
               <button
                 key={c.id}
                 type="button"
+                className="colour-chip"
                 onClick={() => addColour(c.id)}
                 title={`Add ${c.name}`}
                 aria-label={`Add ${c.name}`}
-                style={{
-                  width: 28,
-                  height: 28,
-                  borderRadius: "50%",
-                  background: c.hex_code,
-                  border: "1px solid var(--line)",
-                  cursor: "pointer",
-                }}
-              />
+              >
+                {c.name}
+              </button>
             ))}
           {colourOptions.length === 0 && (
             <span style={{ fontSize: 12, color: "var(--ink3)" }}>
@@ -850,17 +845,9 @@ export function ProductForm({ productId, onSaved, submitLabel }: Props) {
                 }}
               >
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <span
-                    style={{
-                      width: 18,
-                      height: 18,
-                      borderRadius: "50%",
-                      background: colour?.hex_code,
-                      border: "1px solid var(--line)",
-                      display: "inline-block",
-                    }}
-                  />
-                  <strong style={{ fontSize: 13 }}>{colour?.name ?? "Unknown colour"}</strong>
+                  <span className="colour-chip selected" style={{ cursor: "default" }}>
+                    {colour?.name ?? "Unknown colour"}
+                  </span>
                 </div>
                 <button
                   type="button"
