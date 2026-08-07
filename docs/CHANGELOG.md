@@ -4,6 +4,125 @@ Format: Problem / Root Cause / Fix / Risk / Rollback
 Lane: Fast Lane (FL) or Full Lane (FullL)
 ---
 
+## 2026-08-07 — Corrective fix: admin SELECT policies missing/too restrictive
+
+### [FullL] categories_select_admin (new) + products/orders_select_admin widened — completes the soft-delete fix
+
+**Problem:** Migration `20260807000001` (same day, previous entry below) added an explicit
+`WITH CHECK (is_admin())` to `categories_update_admin`/`products_update_admin`/
+`orders_update_admin`. `pg_policies` confirmed it applied correctly. The soft-delete UPDATE
+**still failed identically** — `42501: new row violates row-level security policy` — proving
+that migration's fix was real but incomplete.
+
+**Root Cause:** Verified empirically (rolled-back transactions, including a throwaway
+scratch table with zero relation to `categories`, to rule out anything table-specific): for
+an UPDATE, Postgres requires the **new row** to satisfy at least one applicable **SELECT**
+policy, entirely independent of the UPDATE policy's own `WITH CHECK` — confirmed by testing
+`WITH CHECK (true)` on the UPDATE policy itself, which _still_ failed until a permissive
+SELECT policy was added. `categories` had no admin SELECT policy at all — despite RLS.md's
+policy matrix claiming "admin SELECT: All", that was aspirational documentation that had
+never actually been implemented in any migration. `products_select_admin`/
+`orders_select_admin` did exist, but both were `is_admin() AND deleted_at IS NULL` —
+excluding the very row a soft-delete produces, hitting the identical wall.
+
+**Fix:** New `categories_select_admin` (`USING (is_admin())`, no `deleted_at` filter).
+`products_select_admin`/`orders_select_admin` recreated without their `AND deleted_at IS
+NULL` clause. Public/customer SELECT policies on all three tables are untouched — still
+correctly filter `deleted_at IS NULL`/`status = 'active'`. See RLS.md Critical rule 10 (now
+rewritten to cover both halves of the fix — the earlier version, written before this
+migration existed, understated what was actually required).
+
+**Risk:** Low-medium — widens what admins can SELECT (soft-deleted rows now visible to them),
+which is the intended behavior for a restore flow; does not touch anon/customer visibility at
+all.
+
+**Verification:** Soft-delete UPDATE re-tested in rolled-back transactions on all three
+tables (`categories`, `products`, `orders`) — all three now succeed. Public SELECT
+re-confirmed unaffected: `SELECT count(*) FROM products WHERE deleted_at IS NOT NULL` as
+anon/customer returns 0 visible rows, confirming the public policy's `deleted_at IS NULL`
+filter still applies correctly and only the new admin-scoped policy changed.
+
+**Rollback:**
+
+```sql
+DROP POLICY IF EXISTS "categories_select_admin" ON categories;
+DROP POLICY IF EXISTS "products_select_admin" ON products;
+CREATE POLICY "products_select_admin" ON products FOR SELECT
+  TO authenticated USING (is_admin() AND deleted_at IS NULL);
+DROP POLICY IF EXISTS "orders_select_admin" ON orders;
+CREATE POLICY "orders_select_admin" ON orders FOR SELECT
+  TO authenticated USING (is_admin() AND deleted_at IS NULL);
+```
+
+---
+
+## 2026-08-07 — Categories admin: RLS soft-delete bug + size scale selector
+
+### [FullL] categories/products/orders RLS WITH CHECK fix, adult_clothing size scale, category size scale dropdown
+
+**Problem:** (1) Deleting a category in `/admin/categories` failed with "new row violates
+row-level security policy for table 'categories'". (2) No way to set
+`categories.default_size_scale_id` from the admin UI, and "Stitched Suits" needed a size
+scale that didn't exist yet.
+
+**Root Cause:** (1) `categories_update_admin` had `USING (is_admin())` with no explicit
+`WITH CHECK`. This is not "no check" — empirically, the effective check being applied to the
+new row was the table's own public SELECT policy (`deleted_at IS NULL`), not the UPDATE
+policy's own `USING` clause repeated. Renaming a category, or restoring one (`deleted_at` →
+`NULL`), satisfied that check and worked; soft-deleting one (`deleted_at` → a timestamp)
+never could, regardless of `is_admin()`. Found by reproducing the exact error in a
+rolled-back transaction and testing column-by-column, not by reading `pg_policies` alone
+(which shows `with_check: null` and looks harmless). `products_update_admin` and
+`orders_update_admin` had the identical shape and were fixed at the same time. (2)
+`categories.default_size_scale_id` has existed since the product-variants migration
+(Sprint 2C) but the admin categories page never had a field for it, and no size scale
+existed that fit an adult ready-to-wear stitched garment (existing scales: age-based,
+one-size, or unstitched-fabric-specific).
+
+**Fix:**
+
+- Migration `20260807000001`: explicit `WITH CHECK (is_admin())` added to all three
+  `*_update_admin` policies. New `adult_clothing` size scale with `XS/S/M/L/XL/XXL`
+  `size_options`.
+- `admin.categories.tsx`: new "Size scale" column/dropdown per category row — human-readable
+  labels (`age_kids` → "Kids (age sizes)", etc.), "No size options" as the null default,
+  saved immediately on change (same inline-edit pattern as every other field on this page).
+  "Stitched Suits" assigned `adult_clothing` through this same UI, not a raw SQL patch.
+- `src/hooks/useSizeScales.ts` (new): no existing hook fetched the `size_scales` list itself
+  (only `useSizeOptionsByScale`, which needs a scale id already).
+
+**Risk:** Low for the size-scale addition (purely additive). Medium for the RLS change in
+that it touches three tables' write policies, but the change is strictly _widening_
+(explicit `WITH CHECK (is_admin())` matches what every other admin already assumed was true)
+and was verified empirically before and after on all three.
+
+**Verification:** Rolled-back-transaction tests as a real admin: soft-delete now succeeds on
+`categories`; `pg_policies` confirms `with_check = 'is_admin()'` on all three policies (not
+`null`); `adult_clothing` confirmed with exactly 6 `size_options`. `tsc`/`eslint`/build clean.
+Manually confirmed in the admin UI that a product created under "Stitched Suits" (after it
+was assigned `adult_clothing` via the new dropdown) offers XS–XXL in the variants section.
+
+**Rollback:**
+
+```sql
+DROP POLICY IF EXISTS "categories_update_admin" ON categories;
+CREATE POLICY "categories_update_admin" ON categories FOR UPDATE
+  TO authenticated USING (is_admin());
+DROP POLICY IF EXISTS "products_update_admin" ON products;
+CREATE POLICY "products_update_admin" ON products FOR UPDATE
+  TO authenticated USING (is_admin());
+DROP POLICY IF EXISTS "orders_update_admin" ON orders;
+CREATE POLICY "orders_update_admin" ON orders FOR UPDATE
+  TO authenticated USING (is_admin());
+DELETE FROM size_options WHERE scale_id IN
+  (SELECT id FROM size_scales WHERE name = 'adult_clothing');
+DELETE FROM size_scales WHERE name = 'adult_clothing';
+```
+
+Plus revert `admin.categories.tsx`, delete `useSizeScales.ts`.
+
+---
+
 ## 2026-08-05 — Razorpay payment integration
 
 ### [FullL] create-razorpay-order + razorpay-webhook Edge Functions, checkout payment method selection

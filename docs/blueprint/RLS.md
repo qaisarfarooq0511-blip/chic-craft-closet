@@ -1,6 +1,6 @@
 # Yaawun — RLS Policy Map
 
-Last updated: 2026-08-05
+Last updated: 2026-08-07
 
 ## Principle: Default Deny (framework §2)
 
@@ -12,8 +12,8 @@ The `is_admin()` helper function checks `profiles.role = 'admin'` for the curren
 | Table              | anon SELECT   | customer SELECT | customer WRITE           | admin SELECT | admin WRITE                 |
 | ------------------ | ------------- | --------------- | ------------------------ | ------------ | --------------------------- |
 | profiles           | ❌            | Own only        | Own (can't self-promote) | All          | Role only⁴                  |
-| categories         | ✅ active     | ✅ active       | ❌                       | All          | ✅                          |
-| products           | ✅ active     | ✅ active       | ❌                       | All          | ✅                          |
+| categories         | ✅ active     | ✅ active       | ❌                       | All⁶         | ✅⁶                         |
+| products           | ✅ active     | ✅ active       | ❌                       | All⁶         | ✅⁶                         |
 | product_pieces     | ✅            | ✅              | ❌                       | All          | ✅                          |
 | product_images     | ✅            | ✅              | ❌                       | All          | ✅                          |
 | product_includes   | ✅            | ✅              | ❌                       | All          | ✅                          |
@@ -23,7 +23,7 @@ The `is_admin()` helper function checks `profiles.role = 'admin'` for the curren
 | size_scales        | ✅            | ✅              | ❌                       | All          | ✅                          |
 | size_options       | ✅            | ✅              | ❌                       | All          | ✅                          |
 | addresses          | ❌            | Own only        | Own only                 | All          | ❌                          |
-| orders             | ❌            | Own only        | Own (INSERT)             | All          | ✅                          |
+| orders             | ❌            | Own only        | Own (INSERT)             | All⁶         | ✅⁶                         |
 | order_items        | ❌            | Own orders      | Own orders               | All          | ❌                          |
 | cart_items         | ❌            | Own only        | Own only                 | ❌           | ❌                          |
 | reviews            | ✅ approved   | Own + approved  | Own (before approval)    | All          | ✅                          |
@@ -54,6 +54,11 @@ status = 'queued' AND attempts = 0)` — the admin dashboard's retry button can 
 back into the queue, but the `WITH CHECK` shape means it cannot be used to fake a row as `sent`,
 forge an `attempts` count, or edit any other column combination. Full `FOR ALL` remains
 `service_role`-only (the worker itself).
+⁶ `categories`/`products`/`orders` admin WRITE — as of 2026-08-07 (migrations `20260807000001`
+and `20260807000002`) these three `*_update_admin` policies carry an explicit `WITH CHECK
+(is_admin())`, **and** each table now has an admin SELECT policy with no `deleted_at` filter
+(`categories_select_admin` is new; `products_select_admin`/`orders_select_admin` had their
+`AND deleted_at IS NULL` removed). Both pieces were required — see Critical rule 10.
 
 ## Critical rules
 
@@ -119,6 +124,36 @@ SKIP LOCKED` through the normal query builder, so the atomic claim step is a
    worker's claimed rows simply become eligible again once the lease expires — no separate
    sweep required. `REVOKE ... FROM PUBLIC` / `GRANT ... TO service_role` only; this must
    never be callable by `authenticated`.
+10. **A soft-delete UPDATE needs BOTH an explicit `WITH CHECK` on the UPDATE policy AND an
+    admin SELECT policy with no `deleted_at` filter — either one alone is not enough.**
+    (Found and fixed 2026-08-07 across two migrations, `20260807000001` and `20260807000002`,
+    admin categories soft-delete bug.) The symptom: an admin could rename a category, and
+    could restore one (`deleted_at` → `NULL`), but soft-_deleting_ one (`deleted_at` → a real
+    timestamp) failed with `42501: new row violates row-level security policy`, even though
+    `is_admin()` verifiably returned `true` in that exact session.
+    - **Half 1** (`20260807000001`): `categories_update_admin`, `products_update_admin`, and
+      `orders_update_admin` all had `USING (is_admin())` and no `WITH CHECK`. Adding an
+      explicit `WITH CHECK (is_admin())` looked sufficient — `pg_policies` even confirmed it
+      was applied — but the soft-delete UPDATE **still failed identically afterward**.
+    - **Half 2** (`20260807000002`, the actual complete fix): verified via rolled-back
+      transactions, including on a throwaway scratch table with no relation to `categories`,
+      that Postgres requires the **new row** to satisfy at least one applicable **SELECT**
+      policy for an UPDATE to succeed — completely independent of what the UPDATE policy's
+      own `WITH CHECK` says. This held true even with `WITH CHECK (true)` (unconditional
+      pass) on the UPDATE policy itself; only adding a permissive SELECT policy fixed it.
+      `categories` had **no admin SELECT policy at all** (RLS.md's own policy matrix claimed
+      "admin SELECT: All" for it — that was aspirational documentation, never actually
+      implemented in any migration). `products_select_admin`/`orders_select_admin` did exist,
+      but both were `is_admin() AND deleted_at IS NULL` — excluding the very row a
+      soft-delete produces. Fixed: new `categories_select_admin` (`USING (is_admin())`, no
+      `deleted_at` filter); `products_select_admin`/`orders_select_admin` had their
+      `deleted_at IS NULL` clause dropped. Public/customer SELECT policies on all three were
+      untouched and still correctly filter `deleted_at IS NULL`/`status = 'active'` — only
+      admins can now see soft-deleted rows (necessary to restore them).
+    - **Takeaway**: an UPDATE policy's `WITH CHECK` and the table's SELECT policies are two
+      independent gates that both apply to every UPDATE. Fixing one and confirming it via
+      `pg_policies` is not evidence the write actually works — re-test the real operation
+      after each change, not just the policy definition.
 
 ## Testing RLS (automated — see CI)
 

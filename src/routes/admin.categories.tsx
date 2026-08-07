@@ -4,6 +4,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { IconTrash, IconGripVertical, IconArrowUp, IconArrowDown } from "@tabler/icons-react";
 import { supabase } from "@/lib/supabase";
 import { useAdminCategories, type AdminCategoryRow } from "@/hooks/useAdminCategories";
+import { useSizeScales } from "@/hooks/useSizeScales";
 import { categorySlug } from "@/lib/types";
 import { useToast } from "@/lib/toast";
 import type { Category } from "@/types/database";
@@ -12,10 +13,21 @@ export const Route = createFileRoute("/admin/categories")({
   component: CategoriesAdmin,
 });
 
+// Falls back to the raw DB name for any scale added later without an entry here.
+const SIZE_SCALE_LABELS: Record<string, string> = {
+  age_infant: "Infant (0–24 months)",
+  age_kids: "Kids (age sizes)",
+  age_teens: "Teens (age sizes)",
+  adult_clothing: "Adult clothing (XS–XXL)",
+  free_size: "Free size",
+  dress_material: "Dress material (no sizing)",
+};
+
 function CategoriesAdmin() {
   const toast = useToast();
   const queryClient = useQueryClient();
   const { data: serverCats = [], isLoading } = useAdminCategories();
+  const { data: sizeScales = [] } = useSizeScales();
   const [cats, setCats] = useState<AdminCategoryRow[]>([]);
   const [slugErrors, setSlugErrors] = useState<Record<string, string>>({});
 
@@ -127,6 +139,12 @@ function CategoriesAdmin() {
     void persistField(id, { description: c.description });
   };
 
+  const onSizeScaleChange = (id: string, value: string) => {
+    const default_size_scale_id = value || null;
+    updateLocal(id, { default_size_scale_id });
+    void persistField(id, { default_size_scale_id });
+  };
+
   const move = async (id: string, dir: -1 | 1) => {
     const idx = cats.findIndex((c) => c.id === id);
     if (idx < 0) return;
@@ -209,6 +227,7 @@ function CategoriesAdmin() {
               <th>Name</th>
               <th>Slug (URL)</th>
               <th>Description</th>
+              <th>Size scale</th>
               <th>Products</th>
               <th></th>
             </tr>
@@ -216,7 +235,7 @@ function CategoriesAdmin() {
           <tbody>
             {isLoading && (
               <tr>
-                <td colSpan={6} style={{ textAlign: "center", padding: 40, color: "var(--ink3)" }}>
+                <td colSpan={7} style={{ textAlign: "center", padding: 40, color: "var(--ink3)" }}>
                   Loading…
                 </td>
               </tr>
@@ -283,6 +302,20 @@ function CategoriesAdmin() {
                         placeholder="Optional"
                       />
                     </td>
+                    <td>
+                      <select
+                        className="form-input"
+                        value={c.default_size_scale_id ?? ""}
+                        onChange={(e) => onSizeScaleChange(c.id, e.target.value)}
+                      >
+                        <option value="">No size options</option>
+                        {sizeScales.map((s) => (
+                          <option key={s.id} value={s.id}>
+                            {SIZE_SCALE_LABELS[s.name] ?? s.name}
+                          </option>
+                        ))}
+                      </select>
+                    </td>
                     <td>{c.product_count}</td>
                     <td style={{ textAlign: "right" }}>
                       {isDeleted ? (
@@ -300,7 +333,7 @@ function CategoriesAdmin() {
               })}
             {!isLoading && cats.length === 0 && (
               <tr>
-                <td colSpan={6} style={{ textAlign: "center", padding: 40, color: "var(--ink3)" }}>
+                <td colSpan={7} style={{ textAlign: "center", padding: 40, color: "var(--ink3)" }}>
                   No categories yet. Add the first one above.
                 </td>
               </tr>

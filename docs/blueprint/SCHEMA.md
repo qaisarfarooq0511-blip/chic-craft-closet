@@ -1,6 +1,6 @@
 # Yaawun — Database Schema Blueprint
 
-Last updated: 2026-08-05
+Last updated: 2026-08-07
 Migration count: 12 (includes 20260801100000_retire_legacy_lovable_schema.sql, which drops the
 original Lovable-scaffolded products/categories/orders/customers/addresses/reviews/coupons/
 sections/pages/wishlist/settings tables — dummy data only, confirmed disposable by the project
@@ -8,34 +8,52 @@ owner before this migration was written)
 
 ## Tables
 
-| Table                | Purpose                                                                         | RLS | Soft Delete | Audit |
-| -------------------- | ------------------------------------------------------------------------------- | --- | ----------- | ----- |
-| `profiles`           | Extends `auth.users` — customer and admin profiles                              | ✅  | ✅          | Role¹ |
-| `categories`         | Product categories (Kashmiri Shawls, Dress Material, Kidswear, Accessories)     | ✅  | ✅          | ✅    |
-| `products`           | Product catalogue — all items for sale                                          | ✅  | ✅          | ✅    |
-| `product_pieces`     | Per-piece dimension specs (length, width, weight) for 1–3 piece sets            | ✅  | ✅          | —     |
-| `product_images`     | Product photos — Supabase Storage public URLs + sort order                      | ✅  | ✅          | —     |
-| `product_includes`   | "What's in the package" list items                                              | ✅  | ✅          | —     |
-| `product_variants`   | Colour/size combinations per product — own stock + optional price override      | ✅  | ✅          | ✅    |
-| `fabric_options`     | Admin-managed fabric picklist (Pure Pashmina, Cotton, Banarasi Silk, …)         | ✅  | ✅          | —     |
-| `colour_options`     | Admin-managed colour picklist with hex swatch                                   | ✅  | ✅          | —     |
-| `size_scales`        | Named size systems (age_infant, age_kids, age_teens, free_size, dress_material) | ✅  | ✅          | —     |
-| `size_options`       | Size labels belonging to a scale (e.g. "3-4 years" under age_kids)              | ✅  | ✅          | —     |
-| `addresses`          | Customer shipping addresses                                                     | ✅  | ✅          | —     |
-| `orders`             | Order records with state machine status                                         | ✅  | ✅          | ✅    |
-| `order_items`        | Line items per order — price/name/variant snapshotted at purchase time          | ✅  | ✅          | ✅    |
-| `cart_items`         | Server-side cart (persists across devices)                                      | ✅  | —           | —     |
-| `reviews`            | Customer reviews — admin-moderated before display                               | ✅  | ✅          | ✅    |
-| `audit_logs`         | Immutable append-only log of all admin mutations                                | ✅  | ❌ NEVER    | —     |
-| `notification_queue` | Async outbox for email/SMS/WhatsApp delivery                                    | ✅  | —           | —     |
-| `redirects`          | SEO 301/302 redirect rules                                                      | ✅  | —           | —     |
-| `site_settings`      | Admin-configurable key-value store (announcement bar, thresholds)               | ✅  | —           | —     |
-| `static_pages`       | Legal/informational pages (About, Terms, Privacy, Returns, FAQs) — 5 fixed rows | ✅  | ✅          | ✅    |
-| `editorial_reviews`  | Curated showcase reviews — no auth dependency, admin-managed                    | ✅  | ✅          | —     |
+| Table                | Purpose                                                                                         | RLS | Soft Delete | Audit |
+| -------------------- | ----------------------------------------------------------------------------------------------- | --- | ----------- | ----- |
+| `profiles`           | Extends `auth.users` — customer and admin profiles                                              | ✅  | ✅          | Role¹ |
+| `categories`         | Product categories (Kashmiri Shawls, Dress Material, Kidswear, Accessories)                     | ✅  | ✅          | ✅    |
+| `products`           | Product catalogue — all items for sale                                                          | ✅  | ✅          | ✅    |
+| `product_pieces`     | Per-piece dimension specs (length, width, weight) for 1–3 piece sets                            | ✅  | ✅          | —     |
+| `product_images`     | Product photos — Supabase Storage public URLs + sort order                                      | ✅  | ✅          | —     |
+| `product_includes`   | "What's in the package" list items                                                              | ✅  | ✅          | —     |
+| `product_variants`   | Colour/size combinations per product — own stock + optional price override                      | ✅  | ✅          | ✅    |
+| `fabric_options`     | Admin-managed fabric picklist (Pure Pashmina, Cotton, Banarasi Silk, …)                         | ✅  | ✅          | —     |
+| `colour_options`     | Admin-managed colour picklist with hex swatch                                                   | ✅  | ✅          | —     |
+| `size_scales`        | Named size systems (age_infant, age_kids, age_teens, adult_clothing, free_size, dress_material) | ✅  | ✅          | —     |
+| `size_options`       | Size labels belonging to a scale (e.g. "3-4 years" under age_kids)                              | ✅  | ✅          | —     |
+| `addresses`          | Customer shipping addresses                                                                     | ✅  | ✅          | —     |
+| `orders`             | Order records with state machine status                                                         | ✅  | ✅          | ✅    |
+| `order_items`        | Line items per order — price/name/variant snapshotted at purchase time                          | ✅  | ✅          | ✅    |
+| `cart_items`         | Server-side cart (persists across devices)                                                      | ✅  | —           | —     |
+| `reviews`            | Customer reviews — admin-moderated before display                                               | ✅  | ✅          | ✅    |
+| `audit_logs`         | Immutable append-only log of all admin mutations                                                | ✅  | ❌ NEVER    | —     |
+| `notification_queue` | Async outbox for email/SMS/WhatsApp delivery                                                    | ✅  | —           | —     |
+| `redirects`          | SEO 301/302 redirect rules                                                                      | ✅  | —           | —     |
+| `site_settings`      | Admin-configurable key-value store (announcement bar, thresholds)                               | ✅  | —           | —     |
+| `static_pages`       | Legal/informational pages (About, Terms, Privacy, Returns, FAQs) — 5 fixed rows                 | ✅  | ✅          | ✅    |
+| `editorial_reviews`  | Curated showcase reviews — no auth dependency, admin-managed                                    | ✅  | ✅          | —     |
 
 ¹ `profiles` audit is scoped to `role` changes only (`profiles_role_audit` trigger, `WHEN (OLD.role
 IS DISTINCT FROM NEW.role)`) — full_name/phone self-edits are not logged. See "Admin user
 management" below.
+
+## Categories admin fixes + adult clothing size scale (added 2026-08-07)
+
+No new tables. Two independent fixes bundled into one migration since both surfaced from the
+same admin-categories bug report:
+
+- **RLS fix**: `categories_update_admin`, `products_update_admin`, `orders_update_admin` all
+  gained an explicit `WITH CHECK (is_admin())` — previously admins could not soft-delete a
+  category (and, by the same latent bug, likely not a product either) via the admin UI. See
+  RLS.md Critical rule 10 for the full root-cause writeup — the actual mechanism was more
+  surprising than "the check is missing."
+- **`adult_clothing` size scale**: a 6th `size_scales` row (`XS, S, M, L, XL, XXL` as
+  `size_options`) for ready-to-wear adult garments — the existing scales were all either
+  age-based (kids/infant/teens), one-size (`free_size`), or explicitly for unstitched fabric
+  (`dress_material`), none of which fit a fitted stitched garment for adult women.
+- `admin.categories.tsx` gained a "Default size scale" dropdown (human-readable labels, "No
+  size options" as the null default) — `categories.default_size_scale_id` itself already
+  existed (Sprint 2C, product variants migration) but had no admin UI to set it.
 
 ## Razorpay integration (added 2026-08-05)
 
