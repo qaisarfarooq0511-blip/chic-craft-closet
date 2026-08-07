@@ -16,7 +16,7 @@ import { useCategories } from "@/hooks/useCategories";
 import { useAdminProduct } from "@/hooks/useAdminProduct";
 import { useFabricOptions } from "@/hooks/useFabricOptions";
 import { useColourOptions } from "@/hooks/useColourOptions";
-import { useSizeOptionsByScale } from "@/hooks/useSizeOptionsByScale";
+import { useCategorySizes } from "@/hooks/useCategorySizes";
 import { useToast } from "@/lib/toast";
 import { slugify } from "@/lib/types";
 import { deleteProductImage } from "@/lib/product-images";
@@ -30,7 +30,6 @@ const BADGES = ["", "New in", "Bestseller", "Sale", "Limited"];
 // for a category we don't have an explicit rule for.
 interface CategoryFieldConfig {
   showUnstitched: boolean; // toggle + pieces section (pieces also require the toggle to be ON)
-  showSizeVariants: boolean; // nested per-size rows inside a colour variant
   showFabric: boolean;
   showEmbroidery: boolean;
   showCare: boolean;
@@ -39,7 +38,6 @@ interface CategoryFieldConfig {
 
 const DEFAULT_CATEGORY_CONFIG: CategoryFieldConfig = {
   showUnstitched: true,
-  showSizeVariants: true,
   showFabric: true,
   showEmbroidery: true,
   showCare: true,
@@ -49,7 +47,6 @@ const DEFAULT_CATEGORY_CONFIG: CategoryFieldConfig = {
 const CATEGORY_CONFIG: Record<string, CategoryFieldConfig> = {
   "kashmiri-shawls": {
     showUnstitched: false,
-    showSizeVariants: false,
     showFabric: true,
     showEmbroidery: true,
     showCare: true,
@@ -57,7 +54,6 @@ const CATEGORY_CONFIG: Record<string, CategoryFieldConfig> = {
   },
   "dress-material": {
     showUnstitched: true,
-    showSizeVariants: false,
     showFabric: true,
     showEmbroidery: true,
     showCare: true,
@@ -65,7 +61,6 @@ const CATEGORY_CONFIG: Record<string, CategoryFieldConfig> = {
   },
   kidswear: {
     showUnstitched: false,
-    showSizeVariants: true,
     showFabric: true,
     showEmbroidery: false,
     showCare: true,
@@ -73,7 +68,6 @@ const CATEGORY_CONFIG: Record<string, CategoryFieldConfig> = {
   },
   accessories: {
     showUnstitched: false,
-    showSizeVariants: false,
     showFabric: false,
     showEmbroidery: false,
     showCare: true,
@@ -199,9 +193,8 @@ export function ProductForm({ productId, onSaved, submitLabel }: Props) {
 
   const selectedCategory = categories.find((c) => c.id === form.categoryId);
   const categoryConfig = CATEGORY_CONFIG[selectedCategory?.slug ?? ""] ?? DEFAULT_CATEGORY_CONFIG;
-  const scaleId = selectedCategory?.default_size_scale_id ?? null;
-  const { data: sizeOptions = [] } = useSizeOptionsByScale(scaleId);
-  const showSizes = categoryConfig.showSizeVariants && sizeOptions.length > 0;
+  const { data: sizeOptions = [] } = useCategorySizes(form.categoryId || null);
+  const showSizes = sizeOptions.length > 0;
 
   const aiKey = import.meta.env.VITE_ANTHROPIC_API_KEY as string | undefined;
   const aiAssistEnabled = !!aiKey && aiKey !== AI_KEY_PLACEHOLDER;

@@ -71,6 +71,16 @@ export interface SizeOption {
   deleted_at: string | null;
 }
 
+export interface CategorySize {
+  id: string;
+  category_id: string;
+  size_option_id: string;
+  sort_order: number;
+  created_at: string;
+  // Joined
+  size_option?: SizeOption;
+}
+
 export interface ProductVariant {
   id: string;
   product_id: string;

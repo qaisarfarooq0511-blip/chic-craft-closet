@@ -67,6 +67,53 @@ under the new logic remain soft-deleted (rollback is UI-only, not a data restore
 
 ---
 
+## 2026-08-09 — Flexible category-based size management
+
+### [FullL] New category_sizes junction table replaces the one-scale-per-category model
+
+**Problem:** `categories.default_size_scale_id` locked every category to exactly one size scale.
+A category needing a custom mix of sizes (or sizes spanning more than one scale) had no way to
+express that — the admin form's size axis was entirely gated by the assigned scale plus a
+hardcoded `showSizeVariants` flag in `ProductForm.tsx`'s `CATEGORY_CONFIG`, so even adding a new
+category required a code change to make sizing show up correctly.
+
+**Root Cause:** Size scale was designed as a category-level, single-valued property from the
+start (Sprint 2C) — there was no way to assign individual sizes to a category independent of a
+scale, and the admin form layered its own hardcoded per-slug gate on top of that.
+
+**Fix:** Migration `20260809000002_category_sizes.sql` adds `category_sizes` (category_id,
+size_option_id, sort_order, `UNIQUE(category_id, size_option_id)`, `ON DELETE CASCADE` on both
+FKs) — a hard-delete junction table (no `deleted_at`; matches `cart_items`'s precedent for
+tables with no business history) with `category_sizes_select_public` (public SELECT) and
+`category_sizes_write_admin` (admin `FOR ALL`), mirroring `colour_options`/`size_options`'s
+policy shape exactly. Backfilled from every category's existing `default_size_scale_id` (that
+column is untouched, just no longer read by the app). New `useCategorySizes(categoryId)` hook
+replaces `useSizeOptionsByScale(scaleId)` in `ProductForm.tsx`; the size axis now shows purely
+based on `sizeOptions.length > 0` — `showSizeVariants` was removed from `CATEGORY_CONFIG`
+entirely, so there's no per-slug hardcoding left to maintain. New `CategorySizesModal.tsx`
+(opened via a "Manage sizes" button on `/admin/categories`) lists every size across every scale
+as a checkbox for the category; checking inserts a `category_sizes` row, unchecking hard-deletes
+it, both immediate — no batch save. `admin.categories.tsx` lost its "Default size scale" dropdown
+and `SIZE_SCALE_LABELS` constant (moved into the modal, where it's now used) in favor of the
+button plus a live size count ("6 sizes" / "No sizes").
+
+Migration filename note: the user-specified name `20260808000001_category_sizes.sql` sorts
+_before_ the already-applied `20260809000001_colour_hex_optional.sql`. Renamed to
+`20260809000002_category_sizes.sql` to keep migrations applying in chronological order.
+
+**Risk:** Medium — new table + RLS policies (Full Lane), but additive: no existing table's
+schema or policies changed, `default_size_scale_id` remains readable if ever needed again. The
+one behavior change worth flagging: categories previously excluded from sizing by
+`showSizeVariants: false` despite having a scale assigned (Kashmiri Shawls, Dress Material,
+Accessories) now show whatever sizes `category_sizes` has for them — Kashmiri Shawls' backfilled
+`free_size` option will now appear as a selectable size in the product form where it was
+previously hidden. This is the intended effect of removing the hardcoded gate, not a bug.
+
+**Rollback:** `DROP TABLE category_sizes;` — `categories.default_size_scale_id` data is
+untouched and could be wired back into the admin form/product form if this is reverted.
+
+---
+
 ## 2026-08-07 — Corrective fix: admin SELECT policies missing/too restrictive
 
 ### [FullL] categories_select_admin (new) + products/orders_select_admin widened — completes the soft-delete fix
