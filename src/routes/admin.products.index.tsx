@@ -32,6 +32,14 @@ function ProductsList() {
   const total = data?.total ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / ADMIN_PAGE_SIZE));
 
+  // Separate, unfiltered "recently deleted" section shown at the bottom —
+  // independent of the main list's own category/status/search filters, same
+  // idea as admin.categories.tsx showing deleted rows greyed out with Restore.
+  // Fine at this store's current catalog size; would need its own dedicated
+  // paginated query if deleted rows could ever fall outside the first page.
+  const { data: deletedData } = useAdminProducts({ page: 0, status: "all", includeDeleted: true });
+  const deletedRows = (deletedData?.rows ?? []).filter((p) => p.deleted_at);
+
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ["admin-products"] });
 
   const toggleStatus = async (id: string, current: string) => {
@@ -95,6 +103,19 @@ function ProductsList() {
     }
     invalidate();
     toast("Product deleted");
+  };
+
+  const restore = async (id: string) => {
+    const { error } = await supabase
+      .from("products")
+      .update({ deleted_at: null, status: "draft" })
+      .eq("id", id);
+    if (error) {
+      toast(error.message);
+      return;
+    }
+    invalidate();
+    toast("Product restored as draft. Review and publish when ready.");
   };
 
   return (
@@ -283,6 +304,44 @@ function ProductsList() {
                 </td>
               </tr>
             )}
+            {deletedRows.map((p) => {
+              const img = productImageUrl(p.images.find((i) => i.is_primary) ?? p.images[0]);
+              return (
+                <tr key={p.id} style={{ opacity: 0.5 }}>
+                  <td>
+                    <div className="admin-thumb" style={{ background: "var(--cream2)" }}>
+                      {img ? (
+                        <img src={img} alt={p.name} />
+                      ) : (
+                        <span style={{ fontSize: 9, color: "var(--ink3)" }}>No img</span>
+                      )}
+                    </div>
+                  </td>
+                  <td>
+                    <div
+                      style={{
+                        fontWeight: 500,
+                        color: "var(--ink)",
+                        textDecoration: "line-through",
+                      }}
+                    >
+                      {p.name}
+                    </div>
+                  </td>
+                  <td>{p.category?.name}</td>
+                  <td>{formatPrice(p.price)}</td>
+                  <td>—</td>
+                  <td>
+                    <span className="pill pill-off">Deleted</span>
+                  </td>
+                  <td style={{ textAlign: "right" }}>
+                    <button className="btn-text-ink" onClick={() => restore(p.id)}>
+                      Restore
+                    </button>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>

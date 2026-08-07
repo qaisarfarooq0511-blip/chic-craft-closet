@@ -15,6 +15,8 @@ export interface UseAdminProductsOptions {
   categoryId?: string;
   status?: "draft" | "active" | "archived" | "all";
   search?: string;
+  /** When true, soft-deleted rows are also returned (default false — excluded). */
+  includeDeleted?: boolean;
 }
 
 async function fetchAdminProducts(
@@ -29,9 +31,10 @@ async function fetchAdminProducts(
       "*, category:categories(*), images:product_images(*), variants:product_variants(count)",
       { count: "exact" },
     )
-    .is("deleted_at", null)
     .order("created_at", { ascending: false })
     .range(from, to);
+
+  if (!opts.includeDeleted) query = query.is("deleted_at", null);
 
   if (opts.categoryId) query = query.eq("category_id", opts.categoryId);
   if (opts.status && opts.status !== "all") query = query.eq("status", opts.status);

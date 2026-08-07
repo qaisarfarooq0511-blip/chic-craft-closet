@@ -58,6 +58,7 @@ function ReviewsAdmin() {
   };
 
   const reject = async (id: string) => {
+    if (!confirm("Reject this review? It will be hidden from customers.")) return;
     const { error } = await supabase
       .from("reviews")
       .update({ is_approved: false, deleted_at: new Date().toISOString() })
