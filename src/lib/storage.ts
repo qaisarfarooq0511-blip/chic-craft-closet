@@ -70,90 +70,12 @@ export interface FaqEntry {
   a: string;
 }
 
-export interface AppConfig {
-  tags: string[];
-  sizes: string[];
-  shippingPartners: string[];
-  cancellationReasons: string[];
-  hsnCodes: HsnCode[];
-  globalFaqs: FaqEntry[];
-}
-
-export const DEFAULT_CONFIG: AppConfig = {
-  tags: [
-    "pashmina",
-    "ivory",
-    "chikankari",
-    "cotton",
-    "earrings",
-    "kundan",
-    "festive",
-    "bridal",
-    "casual",
-  ],
-  sizes: [
-    "XS",
-    "S",
-    "M",
-    "L",
-    "XL",
-    "XXL",
-    "Free Size",
-    "0-3 Months",
-    "3-6 Months",
-    "6-12 Months",
-    "12-18 Months",
-    "2-4 yrs",
-    "4-8 yrs",
-  ],
-  shippingPartners: [
-    "Delhivery",
-    "Blue Dart",
-    "DTDC",
-    "India Post",
-    "Shiprocket",
-    "Ekart",
-    "XpressBees",
-  ],
-  cancellationReasons: [
-    "Customer requested cancellation",
-    "Out of stock",
-    "Address unreachable",
-    "Payment failed",
-    "Duplicate order",
-    "Suspected fraud",
-    "Other",
-  ],
-  hsnCodes: [
-    { code: "6214", description: "Shawls, scarves, mufflers (textile)", gstRate: 5 },
-    { code: "5208", description: "Cotton woven fabrics", gstRate: 5 },
-    { code: "6204", description: "Women's apparel (stitched)", gstRate: 12 },
-    { code: "6209", description: "Babies' / kids' garments", gstRate: 12 },
-    { code: "7117", description: "Imitation jewellery", gstRate: 18 },
-  ],
-  globalFaqs: [
-    {
-      q: "What are Yaawun's shipping timelines?",
-      a: "Orders are processed within 1–2 business days and typically delivered within 3–7 business days across India. Free shipping on orders above ₹999.",
-    },
-    {
-      q: "What is the return and exchange policy?",
-      a: "We offer a 7-day return window from the date of delivery. Items must be unused, unwashed and returned with original packaging. Free return pickup is available across most pincodes.",
-    },
-    {
-      q: "Are the prices inclusive of GST?",
-      a: "Yes, all prices on Yaawun are inclusive of GST. A detailed tax invoice is available in your account once the order is placed.",
-    },
-    {
-      q: "How do I find my size?",
-      a: "Each product page lists fabric cut lengths (for unstitched sets) or finished garment sizes. For ready-to-wear pieces, refer to the size guide linked from the size selector.",
-    },
-    {
-      q: "How should I care for my Yaawun pieces?",
-      a: "Most natural fabric pieces are best dry-cleaned; care instructions are listed on every product page. For embroidered work, avoid moisture, store folded with muslin, and iron on low heat.",
-    },
-  ],
-};
+// AppConfig/DEFAULT_CONFIG/getConfig()/saveConfig() used to live here — every
+// field (tags, sizes, shippingPartners, cancellationReasons, hsnCodes,
+// globalFaqs) has moved to site_settings rows (config_tags,
+// config_shipping_partners, config_cancellation_reasons, config_hsn_codes,
+// config_global_faqs — see admin.config.tsx). Removed rather than left as an
+// empty pass-through, since nothing calls them anymore.
 
 const isBrowser = () => typeof window !== "undefined";
 
@@ -328,35 +250,6 @@ export const getAuth = (): { email: string } | null => read(KEY.auth, null);
 export const setAuth = (a: { email: string } | null) => {
   if (a) write(KEY.auth, a);
   else if (isBrowser()) localStorage.removeItem(KEY.auth);
-};
-
-// App config (admin-managed option lists + global limits).
-export const getConfig = (): AppConfig => {
-  const stored = read<Partial<AppConfig>>(KEY.config, {});
-  return {
-    tags: stored.tags ?? DEFAULT_CONFIG.tags,
-    sizes: stored.sizes ?? DEFAULT_CONFIG.sizes,
-    shippingPartners: stored.shippingPartners ?? DEFAULT_CONFIG.shippingPartners,
-    cancellationReasons: stored.cancellationReasons ?? DEFAULT_CONFIG.cancellationReasons,
-    hsnCodes: stored.hsnCodes ?? DEFAULT_CONFIG.hsnCodes,
-    globalFaqs: stored.globalFaqs ?? DEFAULT_CONFIG.globalFaqs,
-  };
-};
-export const saveConfig = (c: AppConfig) => write(KEY.config, c);
-
-// Tax helper — prices are GST-inclusive.
-export const computeTaxBreakup = (priceInclusive: number, gstRate: number) => {
-  const base = priceInclusive / (1 + gstRate / 100);
-  const gst = priceInclusive - base;
-  return {
-    base: Math.round(base * 100) / 100,
-    gst: Math.round(gst * 100) / 100,
-    cgst: Math.round((gst / 2) * 100) / 100,
-    sgst: Math.round((gst / 2) * 100) / 100,
-    igst: Math.round(gst * 100) / 100,
-    rate: gstRate,
-    total: priceInclusive,
-  };
 };
 
 // Coupons
