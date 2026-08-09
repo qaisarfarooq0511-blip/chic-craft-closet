@@ -12,7 +12,6 @@ import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
-import { CartProvider } from "@/lib/cart-context";
 import { ToastProvider } from "@/lib/toast";
 import { Topbar, Navbar, Footer } from "@/components/storefront/Chrome";
 import { AddPhonePrompt } from "@/components/AddPhonePrompt";
@@ -191,23 +190,21 @@ function RootComponent() {
       <ThemeProvider>
         <ToastProvider>
           <UserAuthProvider>
-            <CartProvider>
-              <script
-                id="jsonld-organization"
-                type="application/ld+json"
-                suppressHydrationWarning
-                dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationLd()) }}
-              />
-              <script
-                id="jsonld-website"
-                type="application/ld+json"
-                suppressHydrationWarning
-                dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteLd()) }}
-              />
-              <Chrome>
-                <Outlet />
-              </Chrome>
-            </CartProvider>
+            <script
+              id="jsonld-organization"
+              type="application/ld+json"
+              suppressHydrationWarning
+              dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationLd()) }}
+            />
+            <script
+              id="jsonld-website"
+              type="application/ld+json"
+              suppressHydrationWarning
+              dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteLd()) }}
+            />
+            <Chrome>
+              <Outlet />
+            </Chrome>
           </UserAuthProvider>
         </ToastProvider>
       </ThemeProvider>

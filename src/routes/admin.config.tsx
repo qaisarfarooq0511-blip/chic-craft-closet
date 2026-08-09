@@ -8,13 +8,23 @@ import { useFabricOptions } from "@/hooks/useFabricOptions";
 import { useEmbroideryOptions } from "@/hooks/useEmbroideryOptions";
 import { useCareOptions } from "@/hooks/useCareOptions";
 import { useSizeScales } from "@/hooks/useSizeScales";
-import type { HsnCode, FaqEntry } from "@/lib/storage";
 import { useToast } from "@/lib/toast";
 import type { ColourOption, SizeOption } from "@/types/database";
 
 export const Route = createFileRoute("/admin/config")({
   component: ConfigAdmin,
 });
+
+interface HsnCode {
+  code: string;
+  description?: string;
+  gstRate: number; // total GST % (e.g. 5, 12, 18)
+}
+
+interface FaqEntry {
+  q: string;
+  a: string;
+}
 
 const TAGS_FALLBACK = [
   "pashmina",
