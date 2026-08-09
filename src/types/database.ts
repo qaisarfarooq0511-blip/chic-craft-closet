@@ -111,6 +111,30 @@ export interface CategorySize {
   size_option?: SizeOption;
 }
 
+export type SectionMode = "manual" | "category" | "badge";
+
+export interface Section {
+  id: string;
+  title: string;
+  subtitle: string | null;
+  mode: SectionMode;
+  rule_value: string | null;
+  max_products: number;
+  is_active: boolean;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+  deleted_at: string | null;
+}
+
+export interface SectionProduct {
+  id: string;
+  section_id: string;
+  product_id: string;
+  sort_order: number;
+  created_at: string;
+}
+
 export interface ProductVariant {
   id: string;
   product_id: string;

@@ -36,6 +36,8 @@ owner before this migration was written)
 | `site_settings`      | Admin-configurable key-value store (announcement bar, thresholds)                               | ✅  | —           | —     |
 | `static_pages`       | Legal/informational pages (About, Terms, Privacy, Returns, FAQs) — 5 fixed rows                 | ✅  | ✅          | ✅    |
 | `editorial_reviews`  | Curated showcase reviews — no auth dependency, admin-managed                                    | ✅  | ✅          | —     |
+| `sections`           | Admin-configurable homepage product strips (manual/category/badge)                              | ✅  | ✅          | —     |
+| `section_products`   | Junction: manual-mode product picks for a section                                               | ✅  | ❌ hard¹²   | —     |
 
 ¹ `profiles` audit is scoped to `role` changes only (`profiles_role_audit` trigger, `WHEN (OLD.role
 IS DISTINCT FROM NEW.role)`) — full_name/phone self-edits are not logged. See "Admin user
@@ -45,6 +47,10 @@ management" below.
 business history of its own — same reasoning as `cart_items` having no `deleted_at`. Checking a
 size in `/admin/categories` inserts a row; unchecking hard-deletes it. `ON DELETE CASCADE` on both
 FKs means deleting a category or a size_option cleans up its associations automatically.
+
+¹² `section_products` is the same pattern as `category_sizes` — a pure many-to-many association
+(which products a manual-mode section includes) with no business history, hard-deleted on
+`ON DELETE CASCADE` from either side.
 
 ## Categories admin fixes + adult clothing size scale (added 2026-08-07)
 
@@ -257,6 +263,46 @@ imported anywhere else in the app** — the real cart flow (`cart.tsx`, checkout
 the real `site_settings` value (done here) does not change live behavior, since that file's cart
 state was already dead. The real quantity cap is currently unenforced in the live cart — a gap
 worth its own follow-up.
+
+## Homepage sections (added 2026-08-10, migration `20260810000002`)
+
+Replaces the single hardcoded "Featured pieces" strip on the homepage (`products.slice(0, 8)`,
+`index.tsx`) and the fully mock/orphaned `admin.sections.tsx` editor (see CHANGELOG for the
+investigation — that page read/wrote localStorage only, with zero storefront consumers) with a
+real, admin-configurable multi-strip system.
+
+`sections.mode` is one of three resolution strategies, `rule_value` meaning depends on which:
+`manual` (rule_value unused — see `section_products`), `category` (`rule_value` = a `categories.slug`,
+resolved client-side the same way `shop.$category.tsx` already does — find the category in the
+already-fetched list, then filter products by its id), `badge` (`rule_value` = a `badge_options.name`
+value, filtered directly against `products.badge`). No new "flags" column was added — `products` has
+no `featured`/`new`/`trending` columns and none were introduced; badge-mode reuses the existing
+`badge`/`badge_options` mechanism instead, which already covers the same need (a small admin-managed
+label set on products).
+
+`section_products` (manual-mode only) mirrors `category_sizes`'s shape exactly — hard-delete
+junction, `sort_order` for display order, `UNIQUE(section_id, product_id)`.
+
+`src/hooks/useHomeSections.ts` resolves each active section's products in parallel and drops
+sections that resolve to zero products (an empty section is hidden, not shown as a blank strip).
+Its rating-fallback computation (`effectiveRatingAvg`/`effectiveRatingCount`, real rating takes
+precedence, editorial reviews fill in when `rating_count` is 0) is intentionally duplicated from
+`useProducts.ts`'s `fetchProducts()` rather than extracted into a shared export, since it's small
+and `useProducts.ts` wasn't otherwise being touched.
+
+`index.tsx` falls back to the old hardcoded "first 8 active products, titled 'Featured pieces'"
+behavior only if zero active sections resolve to any products at all — graceful degradation if an
+admin ever deletes/deactivates everything.
+
+Known gap: the homepage's "View all →" link for badge-mode sections points to `/shop?badge={value}`,
+but `shop.index.tsx` has no badge query-param filter yet (only `q` for text search) — the link is
+forward-compatible (harmless no-op today, will start working once that page adds the filter) rather
+than broken, but flagging since it doesn't yet do anything.
+
+The admin reorder UI (`admin.sections.tsx`, both the sections list and the manual-picks list) uses
+up/down arrow buttons, not drag-and-drop — matching the existing convention used everywhere else in
+this admin (`admin.categories.tsx`), rather than introducing a new interaction pattern for this one
+page.
 
 ## Static pages (added 2026-08-02, Static Pages sprint)
 

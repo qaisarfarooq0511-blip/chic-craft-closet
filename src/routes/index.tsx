@@ -5,6 +5,7 @@ import { ProductCard } from "@/components/storefront/ProductCard";
 import { useProducts, fetchProducts } from "@/hooks/useProducts";
 import { useCategories, fetchCategories } from "@/hooks/useCategories";
 import { useHeroSettings, fetchHeroSettings } from "@/hooks/useHeroSettings";
+import { useHomeSections, fetchHomeSections } from "@/hooks/useHomeSections";
 import { STORE, breadcrumbLd, abs } from "@/lib/jsonld";
 import heroMain from "@/assets/hero-main.jpg";
 import imgSozni from "@/assets/products/sozni-burgundy.jpg";
@@ -19,6 +20,7 @@ export const Route = createFileRoute("/")({
         queryKey: ["products", null],
         queryFn: () => fetchProducts({}),
       }),
+      queryClient.ensureQueryData({ queryKey: ["home-sections"], queryFn: fetchHomeSections }),
     ]);
   },
   head: () => ({
@@ -48,6 +50,7 @@ function Home() {
   const { data: hero } = useHeroSettings();
   const { data: cats = [] } = useCategories();
   const { data: products = [] } = useProducts({});
+  const { data: homeSections = [] } = useHomeSections();
 
   const counts = useMemo(
     () =>
@@ -116,23 +119,55 @@ function Home() {
         ))}
       </div>
 
-      {products.length > 0 && (
-        <section className="section">
-          <div className="section-head">
-            <div>
-              <h2 className="section-title">Featured pieces</h2>
-            </div>
-            <Link to="/shop" className="section-link">
-              View all →
-            </Link>
-          </div>
-          <div className="prod-grid">
-            {products.slice(0, 8).map((p) => (
-              <ProductCard key={p.id} p={p} />
-            ))}
-          </div>
-        </section>
-      )}
+      {homeSections.length > 0
+        ? homeSections.map(({ section, products: sectionProducts }) => (
+            <section key={section.id} className="section">
+              <div className="section-head">
+                <div>
+                  <h2 className="section-title">{section.title}</h2>
+                </div>
+                {section.mode === "badge" && section.rule_value && (
+                  <a
+                    href={`/shop?badge=${encodeURIComponent(section.rule_value)}`}
+                    className="section-link"
+                  >
+                    View all →
+                  </a>
+                )}
+                {section.mode === "category" && section.rule_value && (
+                  <Link
+                    to="/shop/$category"
+                    params={{ category: section.rule_value }}
+                    className="section-link"
+                  >
+                    View all →
+                  </Link>
+                )}
+              </div>
+              <div className="prod-grid">
+                {sectionProducts.map((p) => (
+                  <ProductCard key={p.id} p={p} />
+                ))}
+              </div>
+            </section>
+          ))
+        : products.length > 0 && (
+            <section className="section">
+              <div className="section-head">
+                <div>
+                  <h2 className="section-title">Featured pieces</h2>
+                </div>
+                <Link to="/shop" className="section-link">
+                  View all →
+                </Link>
+              </div>
+              <div className="prod-grid">
+                {products.slice(0, 8).map((p) => (
+                  <ProductCard key={p.id} p={p} />
+                ))}
+              </div>
+            </section>
+          )}
 
       <div className="trust-bar">
         <div className="trust-item">
