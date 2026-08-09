@@ -42,19 +42,6 @@ async function fetchActiveSections(): Promise<Section[]> {
   return data ?? [];
 }
 
-async function fetchProductsByBadge(badge: string, limit: number): Promise<ProductWithRelations[]> {
-  const { data, error } = await supabase
-    .from("products")
-    .select(PRODUCT_SELECT)
-    .eq("status", "active")
-    .is("deleted_at", null)
-    .eq("badge", badge)
-    .order("created_at", { ascending: false })
-    .limit(limit);
-  if (error) throw error;
-  return (data ?? []).map(withEffectiveRating);
-}
-
 async function fetchManualSectionProducts(
   sectionId: string,
   limit: number,
@@ -97,7 +84,7 @@ export async function fetchHomeSections(): Promise<HomeSection[]> {
       if (section.mode === "badge" && section.rule_value) {
         return {
           section,
-          products: await fetchProductsByBadge(section.rule_value, section.max_products),
+          products: await fetchProducts({ badge: section.rule_value, limit: section.max_products }),
         };
       }
       if (section.mode === "category" && section.rule_value) {
