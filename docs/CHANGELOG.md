@@ -4,6 +4,57 @@ Format: Problem / Root Cause / Fix / Risk / Rollback
 Lane: Fast Lane (FL) or Full Lane (FullL)
 ---
 
+## 2026-08-10 — Config remaining sections backed by site_settings; vestigial Sizes section removed
+
+### [FullL] config_tags/shipping_partners/cancellation_reasons/hsn_codes/global_faqs site_settings rows
+
+**Problem:** The last 6 sections of `admin.config.tsx` still ran on the dead localStorage-only
+`getConfig()`/`saveConfig()` path (see the 2026-08-09 admin.config.tsx entry for the underlying
+`store-sync.ts` finding — this data never actually reached a live table). Investigation found: Tags
+has zero consumers anywhere. Sizes has zero consumers and is fully superseded by the real
+`category_sizes`/`size_options` system. Shipping Partners/Cancellation Reasons are read by
+`admin.inquiries.tsx`, which is reachable (a "View inquiries" button on `admin.customers.tsx`) but
+itself operates entirely on legacy mock `Inquiry` records, not the real `orders` table. HSN
+Codes has zero consumers anywhere — not even `computeTaxBreakup()`, the one function that would
+use a GST rate, is ever called; the real `products` table has no `hsn_code` column. Global FAQs
+has zero consumers — its own UI text claims "emitted as FAQPage structured data," which is false.
+
+**Root Cause:** Same as colours/badges/fabrics/embroideries/care before them — `admin.config.tsx`
+predates the real Supabase schema and was never migrated off `getConfig()`/`saveConfig()`.
+
+**Fix:** Migration `20260810000001` adds 5 `site_settings` rows (`config_tags`,
+`config_shipping_partners`, `config_cancellation_reasons`, `config_hsn_codes`,
+`config_global_faqs`), each a JSON array, seeded verbatim from the old `DEFAULT_CONFIG` values
+(9/7/7/5/5 items respectively — verified via `jsonb_array_length` after applying). `admin.config.tsx`:
+replaced the old `ListEditor`+`LIST_FIELDS` (cfg-driven) with a new `StringListSiteSettingEditor`
+for Tags/Shipping Partners/Cancellation Reasons (same chip-with-× UI, now reading/writing
+`site_settings` directly, one row per save); `HsnEditor`/`GlobalFaqEditor` kept their existing
+table/card UI but became self-contained — add/remove persist immediately, in-place field edits
+persist on blur (matching the inline-edit-on-blur convention already used in `admin.categories.tsx`,
+rather than firing a network call per keystroke). The Sizes section was removed entirely — the only
+one of the six not kept, since a disconnected duplicate sizes list next to the real per-category
+"Manage sizes" UI would be actively confusing, not just inert.
+
+`admin.inquiries.tsx` (not in the original file list, required to keep the build compiling) had its
+two `getConfig().shippingPartners`/`.cancellationReasons` reads replaced with direct
+`site_settings` fetches, since those fields no longer exist on `AppConfig`. `storage.ts`'s
+`AppConfig`/`DEFAULT_CONFIG`/`getConfig()`/`saveConfig()` were removed entirely rather than left as
+an empty pass-through — after this change they had zero remaining fields and zero remaining
+callers anywhere in the app. `computeTaxBreakup()` was also removed (zero consumers, confirmed by
+grep, explicitly in scope for removal). `HsnCode`/`FaqEntry` interfaces are kept (still used for
+typing in `admin.config.tsx`).
+
+**Risk:** Low — no RLS change, `site_settings` already has RLS from Sprint 2B. The Sizes section
+removal is a UI-only change; the underlying `AppConfig.sizes`/`DEFAULT_CONFIG.sizes` data had zero
+consumers already, so no functionality is lost. `admin.inquiries.tsx` fix is a like-for-like data
+source swap (localStorage → `site_settings`), no behavior change to that page beyond the source.
+
+**Rollback:** `DELETE FROM site_settings WHERE key IN ('config_tags','config_shipping_partners','config_cancellation_reasons','config_hsn_codes','config_global_faqs');`
+— revert the frontend commit to restore `AppConfig`/`getConfig`/`saveConfig`, the old
+`ListEditor`/`LIST_FIELDS` (including Sizes), and `admin.inquiries.tsx`'s `getConfig()` reads.
+
+---
+
 ## 2026-08-09 — admin.config.tsx migrated to real DB (badges/embroideries/care/cart limits)
 
 ### [FullL] badge_options/embroidery_options/care_options + products FK columns + site_settings.max_qty_per_item

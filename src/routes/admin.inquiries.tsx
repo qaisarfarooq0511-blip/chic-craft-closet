@@ -1,12 +1,44 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { IconEye, IconPencil, IconBrandWhatsapp, IconX } from "@tabler/icons-react";
-import { getInquiries, updateInquiry, getConfig } from "@/lib/storage";
+import { getInquiries, updateInquiry } from "@/lib/storage";
+import { supabase } from "@/lib/supabase";
 import { normalizeMobile } from "@/lib/user-auth";
 import { fmt } from "@/components/storefront/ProductCard";
 import { useToast } from "@/lib/toast";
 import { exportRowsToXlsx } from "@/lib/xlsx-export";
 import type { Inquiry, InquiryFulfillment, InquiryCancellation } from "@/lib/types";
+
+const SHIPPING_PARTNERS_FALLBACK = [
+  "Delhivery",
+  "Blue Dart",
+  "DTDC",
+  "India Post",
+  "Shiprocket",
+  "Ekart",
+  "XpressBees",
+];
+
+const CANCELLATION_REASONS_FALLBACK = [
+  "Customer requested cancellation",
+  "Out of stock",
+  "Address unreachable",
+  "Payment failed",
+  "Duplicate order",
+  "Suspected fraud",
+  "Other",
+];
+
+async function fetchSiteSettingStringArray(key: string, fallback: string[]): Promise<string[]> {
+  const { data, error } = await supabase
+    .from("site_settings")
+    .select("value")
+    .eq("key", key)
+    .maybeSingle();
+  if (error || !Array.isArray(data?.value)) return fallback;
+  return data.value as string[];
+}
 
 export const Route = createFileRoute("/admin/inquiries")({
   validateSearch: (s: Record<string, unknown>): { phone?: string; name?: string } => ({
@@ -678,8 +710,11 @@ function FulfillModal({
   onClose: () => void;
   onSubmit: (d: InquiryFulfillment) => void;
 }) {
-  const cfg = getConfig();
-  const partners = cfg.shippingPartners;
+  const { data: partners = SHIPPING_PARTNERS_FALLBACK } = useQuery({
+    queryKey: ["site-setting", "config_shipping_partners"],
+    queryFn: () =>
+      fetchSiteSettingStringArray("config_shipping_partners", SHIPPING_PARTNERS_FALLBACK),
+  });
   const existing = inquiry.fulfillment;
   const [partner, setPartner] = useState(existing?.partner ?? partners[0] ?? "");
   const [awb, setAwb] = useState(existing?.awb ?? "");
@@ -814,8 +849,11 @@ function CancelModal({
   onClose: () => void;
   onSubmit: (d: InquiryCancellation) => void;
 }) {
-  const cfg = getConfig();
-  const reasons = cfg.cancellationReasons;
+  const { data: reasons = CANCELLATION_REASONS_FALLBACK } = useQuery({
+    queryKey: ["site-setting", "config_cancellation_reasons"],
+    queryFn: () =>
+      fetchSiteSettingStringArray("config_cancellation_reasons", CANCELLATION_REASONS_FALLBACK),
+  });
   const [reason, setReason] = useState(reasons[0] ?? "");
   const [note, setNote] = useState("");
   const [confirming, setConfirming] = useState(false);

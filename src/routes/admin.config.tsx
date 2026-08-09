@@ -7,7 +7,7 @@ import { useBadgeOptions } from "@/hooks/useBadgeOptions";
 import { useFabricOptions } from "@/hooks/useFabricOptions";
 import { useEmbroideryOptions } from "@/hooks/useEmbroideryOptions";
 import { useCareOptions } from "@/hooks/useCareOptions";
-import { getConfig, saveConfig, type AppConfig, type HsnCode } from "@/lib/storage";
+import type { HsnCode, FaqEntry } from "@/lib/storage";
 import { useToast } from "@/lib/toast";
 import type { ColourOption } from "@/types/database";
 
@@ -15,35 +15,119 @@ export const Route = createFileRoute("/admin/config")({
   component: ConfigAdmin,
 });
 
-type ListKey = "tags" | "sizes" | "shippingPartners" | "cancellationReasons";
+const TAGS_FALLBACK = [
+  "pashmina",
+  "ivory",
+  "chikankari",
+  "cotton",
+  "earrings",
+  "kundan",
+  "festive",
+  "bridal",
+  "casual",
+];
 
-const LIST_FIELDS: { key: ListKey; label: string; hint: string }[] = [
-  { key: "tags", label: "Tags", hint: "Used by rule-based homepage sections." },
-  { key: "sizes", label: "Sizes", hint: "All available size labels (XS–XL, age ranges…)." },
+const SHIPPING_PARTNERS_FALLBACK = [
+  "Delhivery",
+  "Blue Dart",
+  "DTDC",
+  "India Post",
+  "Shiprocket",
+  "Ekart",
+  "XpressBees",
+];
+
+const CANCELLATION_REASONS_FALLBACK = [
+  "Customer requested cancellation",
+  "Out of stock",
+  "Address unreachable",
+  "Payment failed",
+  "Duplicate order",
+  "Suspected fraud",
+  "Other",
+];
+
+const HSN_CODES_FALLBACK: HsnCode[] = [
+  { code: "6214", description: "Shawls, scarves, mufflers (textile)", gstRate: 5 },
+  { code: "5208", description: "Cotton woven fabrics", gstRate: 5 },
+  { code: "6204", description: "Women's apparel (stitched)", gstRate: 12 },
+  { code: "6209", description: "Babies' / kids' garments", gstRate: 12 },
+  { code: "7117", description: "Imitation jewellery", gstRate: 18 },
+];
+
+const GLOBAL_FAQS_FALLBACK: FaqEntry[] = [
   {
-    key: "shippingPartners",
-    label: "Shipping Partners",
-    hint: "Couriers selectable when marking an order fulfilled (Delhivery, Blue Dart…).",
+    q: "What are Yaawun's shipping timelines?",
+    a: "Orders are processed within 1–2 business days and typically delivered within 3–7 business days across India. Free shipping on orders above ₹999.",
   },
   {
-    key: "cancellationReasons",
-    label: "Cancellation Reasons",
-    hint: "Reasons selectable when an admin cancels an order.",
+    q: "What is the return and exchange policy?",
+    a: "We offer a 7-day return window from the date of delivery. Items must be unused, unwashed and returned with original packaging. Free return pickup is available across most pincodes.",
+  },
+  {
+    q: "Are the prices inclusive of GST?",
+    a: "Yes, all prices on Yaawun are inclusive of GST. A detailed tax invoice is available in your account once the order is placed.",
+  },
+  {
+    q: "How do I find my size?",
+    a: "Each product page lists fabric cut lengths (for unstitched sets) or finished garment sizes. For ready-to-wear pieces, refer to the size guide linked from the size selector.",
+  },
+  {
+    q: "How should I care for my Yaawun pieces?",
+    a: "Most natural fabric pieces are best dry-cleaned; care instructions are listed on every product page. For embroidered work, avoid moisture, store folded with muslin, and iron on low heat.",
   },
 ];
 
-function ListEditor({
-  label,
+async function fetchSiteSettingArray<T>(key: string): Promise<T[] | null> {
+  const { data, error } = await supabase
+    .from("site_settings")
+    .select("value")
+    .eq("key", key)
+    .maybeSingle();
+  if (error || !Array.isArray(data?.value)) return null;
+  return data.value as T[];
+}
+
+async function saveSiteSettingArray(key: string, value: unknown) {
+  const { error } = await supabase.from("site_settings").update({ value }).eq("key", key);
+  return error;
+}
+
+function useSiteSettingArray<T>(key: string, fallback: T[]) {
+  const { data, isLoading, isError } = useQuery({
+    queryKey: ["site-setting", key],
+    queryFn: () => fetchSiteSettingArray<T>(key),
+  });
+  return { values: data ?? fallback, isLoading, isError };
+}
+
+function StringListSiteSettingEditor({
+  title,
   hint,
-  values,
-  onChange,
+  settingKey,
+  fallback,
+  addPlaceholder,
 }: {
-  label: string;
+  title: string;
   hint: string;
-  values: string[];
-  onChange: (next: string[]) => void;
+  settingKey: string;
+  fallback: string[];
+  addPlaceholder: string;
 }) {
+  const toast = useToast();
+  const queryClient = useQueryClient();
+  const { values, isLoading, isError } = useSiteSettingArray<string>(settingKey, fallback);
   const [draft, setDraft] = useState("");
+
+  const persist = async (next: string[]) => {
+    const error = await saveSiteSettingArray(settingKey, next);
+    if (error) {
+      toast(error.message);
+      return;
+    }
+    queryClient.invalidateQueries({ queryKey: ["site-setting", settingKey] });
+  };
+
   const add = () => {
     const v = draft.trim();
     if (!v) return;
@@ -51,49 +135,60 @@ function ListEditor({
       setDraft("");
       return;
     }
-    onChange([...values, v]);
+    void persist([...values, v]);
     setDraft("");
   };
+
+  const remove = (v: string) => void persist(values.filter((x) => x !== v));
+
   return (
     <div className="admin-card">
       <div className="cart-sum-title" style={{ marginBottom: 4 }}>
-        {label}
+        {title}
       </div>
       <p style={{ fontSize: 11, color: "var(--ink3)", marginBottom: 12 }}>{hint}</p>
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
-        {values.length === 0 && (
+        {isLoading && <span style={{ fontSize: 12, color: "var(--ink3)" }}>Loading…</span>}
+        {isError && (
+          <span style={{ fontSize: 12, color: "#b91c1c" }}>
+            Couldn't load {title.toLowerCase()}.
+          </span>
+        )}
+        {!isLoading && !isError && values.length === 0 && (
           <span style={{ fontSize: 12, color: "var(--ink3)" }}>No values yet.</span>
         )}
-        {values.map((v) => (
-          <span
-            key={v}
-            className="btn-outline"
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 6,
-              fontSize: 11,
-              padding: "5px 8px 5px 10px",
-            }}
-          >
-            {v}
-            <button
-              type="button"
-              onClick={() => onChange(values.filter((x) => x !== v))}
-              aria-label={`Remove ${v}`}
+        {!isLoading &&
+          !isError &&
+          values.map((v) => (
+            <span
+              key={v}
+              className="btn-outline"
               style={{
-                background: "none",
-                border: "none",
-                color: "var(--rust)",
-                cursor: "pointer",
-                fontSize: 14,
-                lineHeight: 1,
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
+                fontSize: 11,
+                padding: "5px 8px 5px 10px",
               }}
             >
-              ×
-            </button>
-          </span>
-        ))}
+              {v}
+              <button
+                type="button"
+                onClick={() => remove(v)}
+                aria-label={`Remove ${v}`}
+                style={{
+                  background: "none",
+                  border: "none",
+                  color: "var(--rust)",
+                  cursor: "pointer",
+                  fontSize: 14,
+                  lineHeight: 1,
+                }}
+              >
+                ×
+              </button>
+            </span>
+          ))}
       </div>
       <div style={{ display: "flex", gap: 8 }}>
         <input
@@ -106,7 +201,7 @@ function ListEditor({
               add();
             }
           }}
-          placeholder={`Add new ${label.toLowerCase().replace(/s$/, "")}`}
+          placeholder={addPlaceholder}
           style={{ flex: 1 }}
         />
         <button type="button" className="btn-ink" onClick={add}>
@@ -462,9 +557,6 @@ function ColoursEditor() {
 }
 
 function ConfigAdmin() {
-  const [cfg, setCfg] = useState<AppConfig>(getConfig());
-  const toast = useToast();
-
   const {
     data: badgeOptions = [],
     isLoading: badgesLoading,
@@ -481,18 +573,6 @@ function ConfigAdmin() {
     isError: embroideriesError,
   } = useEmbroideryOptions();
   const { data: careOptions = [], isLoading: careLoading, isError: careError } = useCareOptions();
-
-  useEffect(() => {
-    setCfg(getConfig());
-  }, []);
-
-  const update = <K extends keyof AppConfig>(k: K, v: AppConfig[K]) =>
-    setCfg((c) => ({ ...c, [k]: v }));
-
-  const save = () => {
-    saveConfig(cfg);
-    toast("Configuration saved");
-  };
 
   return (
     <>
@@ -550,54 +630,84 @@ function ConfigAdmin() {
         addPlaceholder="Add new care instruction"
       />
 
-      {LIST_FIELDS.map((f) => (
-        <ListEditor
-          key={f.key}
-          label={f.label}
-          hint={f.hint}
-          values={cfg[f.key]}
-          onChange={(next) => update(f.key, next)}
-        />
-      ))}
+      <StringListSiteSettingEditor
+        title="Tags"
+        hint="Used by rule-based homepage sections."
+        settingKey="config_tags"
+        fallback={TAGS_FALLBACK}
+        addPlaceholder="Add new tag"
+      />
 
-      <HsnEditor values={cfg.hsnCodes} onChange={(next) => update("hsnCodes", next)} />
+      <StringListSiteSettingEditor
+        title="Shipping Partners"
+        hint="Couriers selectable when marking an order fulfilled (Delhivery, Blue Dart…)."
+        settingKey="config_shipping_partners"
+        fallback={SHIPPING_PARTNERS_FALLBACK}
+        addPlaceholder="Add new shipping partner"
+      />
 
-      <GlobalFaqEditor values={cfg.globalFaqs} onChange={(next) => update("globalFaqs", next)} />
+      <StringListSiteSettingEditor
+        title="Cancellation Reasons"
+        hint="Reasons selectable when an admin cancels an order."
+        settingKey="config_cancellation_reasons"
+        fallback={CANCELLATION_REASONS_FALLBACK}
+        addPlaceholder="Add new cancellation reason"
+      />
 
-      <div style={{ display: "flex", gap: 10, marginTop: 12 }}>
-        <button type="button" className="cta-primary" onClick={save}>
-          Save configuration
-        </button>
-      </div>
+      <HsnEditor />
+
+      <GlobalFaqEditor />
     </>
   );
 }
 
-function HsnEditor({
-  values,
-  onChange,
-}: {
-  values: HsnCode[];
-  onChange: (next: HsnCode[]) => void;
-}) {
+const HSN_SETTING_KEY = "config_hsn_codes";
+
+function HsnEditor() {
+  const toast = useToast();
+  const queryClient = useQueryClient();
+  const {
+    values: serverRows,
+    isLoading,
+    isError,
+  } = useSiteSettingArray<HsnCode>(HSN_SETTING_KEY, HSN_CODES_FALLBACK);
+  const [rows, setRows] = useState<HsnCode[]>(HSN_CODES_FALLBACK);
   const [code, setCode] = useState("");
   const [description, setDescription] = useState("");
   const [gstRate, setGstRate] = useState<number | "">("");
+
+  useEffect(() => setRows(serverRows), [serverRows]);
+
+  const persist = async (next: HsnCode[]) => {
+    const error = await saveSiteSettingArray(HSN_SETTING_KEY, next);
+    if (error) {
+      toast(error.message);
+      return;
+    }
+    queryClient.invalidateQueries({ queryKey: ["site-setting", HSN_SETTING_KEY] });
+  };
 
   const add = () => {
     const c = code.trim();
     const r = typeof gstRate === "number" ? gstRate : Number(gstRate);
     if (!c || !Number.isFinite(r) || r < 0) return;
-    if (values.some((h) => h.code.toLowerCase() === c.toLowerCase())) return;
-    onChange([...values, { code: c, description: description.trim() || undefined, gstRate: r }]);
+    if (rows.some((h) => h.code.toLowerCase() === c.toLowerCase())) return;
+    const next = [...rows, { code: c, description: description.trim() || undefined, gstRate: r }];
+    setRows(next);
+    void persist(next);
     setCode("");
     setDescription("");
     setGstRate("");
   };
 
-  const updateRow = (i: number, patch: Partial<HsnCode>) =>
-    onChange(values.map((h, idx) => (idx === i ? { ...h, ...patch } : h)));
-  const remove = (i: number) => onChange(values.filter((_, idx) => idx !== i));
+  const updateRowLocal = (i: number, patch: Partial<HsnCode>) =>
+    setRows((prev) => prev.map((h, idx) => (idx === i ? { ...h, ...patch } : h)));
+  const persistRows = () => void persist(rows);
+  const remove = (i: number) => {
+    const next = rows.filter((_, idx) => idx !== i);
+    setRows(next);
+    void persist(next);
+  };
 
   return (
     <div className="admin-card">
@@ -609,11 +719,14 @@ function HsnEditor({
         <strong>inclusive of GST</strong>, and the breakup is auto-derived from the selected HSN.
       </p>
 
-      {values.length === 0 && (
+      {isLoading && <p style={{ fontSize: 12, color: "var(--ink3)" }}>Loading…</p>}
+      {isError && <p style={{ fontSize: 12, color: "#b91c1c" }}>Couldn't load HSN codes.</p>}
+
+      {!isLoading && !isError && rows.length === 0 && (
         <p style={{ fontSize: 12, color: "var(--ink3)", marginBottom: 10 }}>No HSN codes yet.</p>
       )}
 
-      {values.length > 0 && (
+      {!isLoading && !isError && rows.length > 0 && (
         <div style={{ display: "grid", gap: 8, marginBottom: 14 }}>
           <div
             style={{
@@ -631,7 +744,7 @@ function HsnEditor({
             <span>GST %</span>
             <span></span>
           </div>
-          {values.map((h, i) => (
+          {rows.map((h, i) => (
             <div
               key={i}
               style={{
@@ -644,12 +757,14 @@ function HsnEditor({
               <input
                 className="form-input"
                 value={h.code}
-                onChange={(e) => updateRow(i, { code: e.target.value })}
+                onChange={(e) => updateRowLocal(i, { code: e.target.value })}
+                onBlur={persistRows}
               />
               <input
                 className="form-input"
                 value={h.description ?? ""}
-                onChange={(e) => updateRow(i, { description: e.target.value })}
+                onChange={(e) => updateRowLocal(i, { description: e.target.value })}
+                onBlur={persistRows}
               />
               <input
                 className="form-input"
@@ -657,7 +772,8 @@ function HsnEditor({
                 min={0}
                 step={0.5}
                 value={h.gstRate}
-                onChange={(e) => updateRow(i, { gstRate: Number(e.target.value) })}
+                onChange={(e) => updateRowLocal(i, { gstRate: Number(e.target.value) })}
+                onBlur={persistRows}
               />
               <button
                 type="button"
@@ -702,17 +818,43 @@ function HsnEditor({
   );
 }
 
-function GlobalFaqEditor({
-  values,
-  onChange,
-}: {
-  values: { q: string; a: string }[];
-  onChange: (v: { q: string; a: string }[]) => void;
-}) {
-  const update = (i: number, patch: Partial<{ q: string; a: string }>) =>
-    onChange(values.map((row, idx) => (idx === i ? { ...row, ...patch } : row)));
-  const remove = (i: number) => onChange(values.filter((_, idx) => idx !== i));
-  const add = () => onChange([...values, { q: "", a: "" }]);
+const GLOBAL_FAQS_SETTING_KEY = "config_global_faqs";
+
+function GlobalFaqEditor() {
+  const toast = useToast();
+  const queryClient = useQueryClient();
+  const {
+    values: serverRows,
+    isLoading,
+    isError,
+  } = useSiteSettingArray<FaqEntry>(GLOBAL_FAQS_SETTING_KEY, GLOBAL_FAQS_FALLBACK);
+  const [rows, setRows] = useState<FaqEntry[]>(GLOBAL_FAQS_FALLBACK);
+
+  useEffect(() => setRows(serverRows), [serverRows]);
+
+  const persist = async (next: FaqEntry[]) => {
+    const error = await saveSiteSettingArray(GLOBAL_FAQS_SETTING_KEY, next);
+    if (error) {
+      toast(error.message);
+      return;
+    }
+    queryClient.invalidateQueries({ queryKey: ["site-setting", GLOBAL_FAQS_SETTING_KEY] });
+  };
+
+  const updateLocal = (i: number, patch: Partial<FaqEntry>) =>
+    setRows((prev) => prev.map((row, idx) => (idx === i ? { ...row, ...patch } : row)));
+  const persistRows = () => void persist(rows);
+  const remove = (i: number) => {
+    const next = rows.filter((_, idx) => idx !== i);
+    setRows(next);
+    void persist(next);
+  };
+  const add = () => {
+    const next = [...rows, { q: "", a: "" }];
+    setRows(next);
+    void persist(next);
+  };
+
   return (
     <div className="admin-card">
       <div className="cart-sum-title" style={{ marginBottom: 4 }}>
@@ -722,50 +864,65 @@ function GlobalFaqEditor({
         Shown on product pages that don't have their own FAQs, and emitted as <code>FAQPage</code>{" "}
         structured data for AI search engines.
       </p>
-      <div style={{ display: "grid", gap: 10 }}>
-        {values.map((row, i) => (
-          <div
-            key={i}
-            style={{
-              border: "1px solid var(--line)",
-              borderRadius: 8,
-              padding: 12,
-              display: "grid",
-              gap: 8,
-            }}
-          >
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <span className="form-label" style={{ margin: 0 }}>
-                Q&amp;A #{i + 1}
-              </span>
-              <button
-                type="button"
-                className="btn-text-rust"
-                onClick={() => remove(i)}
-                style={{ fontSize: 12 }}
+
+      {isLoading && <p style={{ fontSize: 12, color: "var(--ink3)" }}>Loading…</p>}
+      {isError && <p style={{ fontSize: 12, color: "#b91c1c" }}>Couldn't load Global FAQs.</p>}
+
+      {!isLoading && !isError && (
+        <div style={{ display: "grid", gap: 10 }}>
+          {rows.map((row, i) => (
+            <div
+              key={i}
+              style={{
+                border: "1px solid var(--line)",
+                borderRadius: 8,
+                padding: 12,
+                display: "grid",
+                gap: 8,
+              }}
+            >
+              <div
+                style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}
               >
-                Remove
-              </button>
+                <span className="form-label" style={{ margin: 0 }}>
+                  Q&amp;A #{i + 1}
+                </span>
+                <button
+                  type="button"
+                  className="btn-text-rust"
+                  onClick={() => remove(i)}
+                  style={{ fontSize: 12 }}
+                >
+                  Remove
+                </button>
+              </div>
+              <input
+                className="form-input"
+                placeholder="Question"
+                value={row.q}
+                onChange={(e) => updateLocal(i, { q: e.target.value })}
+                onBlur={persistRows}
+              />
+              <textarea
+                className="form-textarea"
+                rows={2}
+                placeholder="Answer"
+                value={row.a}
+                onChange={(e) => updateLocal(i, { a: e.target.value })}
+                onBlur={persistRows}
+              />
             </div>
-            <input
-              className="form-input"
-              placeholder="Question"
-              value={row.q}
-              onChange={(e) => update(i, { q: e.target.value })}
-            />
-            <textarea
-              className="form-textarea"
-              rows={2}
-              placeholder="Answer"
-              value={row.a}
-              onChange={(e) => update(i, { a: e.target.value })}
-            />
-          </div>
-        ))}
-        <button type="button" className="btn-outline" onClick={add} style={{ alignSelf: "start" }}>
-          + Add FAQ
-        </button>
-      </div>
+          ))}
+          <button
+            type="button"
+            className="btn-outline"
+            onClick={add}
+            style={{ alignSelf: "start" }}
+          >
+            + Add FAQ
+          </button>
+        </div>
+      )}
     </div>
   );
 }
