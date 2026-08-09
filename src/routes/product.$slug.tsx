@@ -12,10 +12,13 @@ import {
   IconNeedleThread,
   IconBabyCarriage,
   IconSparkles,
+  IconHeart,
+  IconHeartFilled,
   type Icon,
 } from "@tabler/icons-react";
 import { useProduct, fetchProduct } from "@/hooks/useProduct";
 import { useCart } from "@/hooks/useCart";
+import { useWishlist } from "@/hooks/useWishlist";
 import { useStoreWhatsapp } from "@/hooks/useStoreWhatsapp";
 import { useToast } from "@/lib/toast";
 import { Stars } from "@/components/storefront/ProductCard";
@@ -98,6 +101,7 @@ function PDP() {
   const [selectedColourId, setSelectedColourId] = useState<string | null>(null);
   const [selectedSizeId, setSelectedSizeId] = useState<string | null>(null);
   const { add } = useCart();
+  const { isWishlisted, toggle } = useWishlist();
   const toast = useToast();
   const { whatsapp } = useStoreWhatsapp();
 
@@ -285,13 +289,22 @@ function PDP() {
                 </>
               )}
             </h1>
-            {p.effectiveRatingCount > 0 && (
-              <div className="pdp-rating-row">
-                <Stars rating={p.effectiveRatingAvg} size={14} />
-                <span className="pdp-rating-score">{p.effectiveRatingAvg.toFixed(1)}</span>
-                <span className="pdp-rating-count">{p.effectiveRatingCount} reviews</span>
-              </div>
-            )}
+            <div className="pdp-rating-row">
+              {p.effectiveRatingCount > 0 && (
+                <>
+                  <Stars rating={p.effectiveRatingAvg} size={14} />
+                  <span className="pdp-rating-score">{p.effectiveRatingAvg.toFixed(1)}</span>
+                  <span className="pdp-rating-count">{p.effectiveRatingCount} reviews</span>
+                </>
+              )}
+              <button
+                className={`pdp-rating-wishlist${isWishlisted(p.id) ? " is-saved" : ""}`}
+                aria-label={isWishlisted(p.id) ? "Remove from wishlist" : "Add to wishlist"}
+                onClick={() => toggle(p.id)}
+              >
+                {isWishlisted(p.id) ? <IconHeartFilled /> : <IconHeart />}
+              </button>
+            </div>
             <div className="pdp-price-row">
               <span className="pdp-price">{formatPrice(p.price)}</span>
               {p.compare_price && (

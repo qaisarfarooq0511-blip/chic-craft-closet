@@ -245,7 +245,8 @@
 .nav-actions svg:hover {
   color: var(--ink);
 }
-.cart-wrap {
+.cart-wrap,
+.wishlist-wrap {
   position: relative;
 }
 .cart-dot {
@@ -571,7 +572,7 @@
   color: var(--ink2);
 }
 .pc-wishlist.is-saved svg {
-  color: #c0392b;
+  color: var(--gold);
 }
 .pdp-wishlist {
   width: 40px;
@@ -1081,6 +1082,26 @@ button.pdp-img-main {
 .pdp-rating-count:hover {
   color: var(--ink);
   text-decoration: underline;
+}
+.pdp-rating-wishlist {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  margin-left: auto;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+.pdp-rating-wishlist svg {
+  width: 18px;
+  height: 18px;
+  color: var(--ink2);
+}
+.pdp-rating-wishlist.is-saved svg {
+  color: var(--gold);
 }
 .pdp-price-row {
   display: flex;

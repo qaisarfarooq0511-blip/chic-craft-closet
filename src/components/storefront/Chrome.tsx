@@ -11,6 +11,7 @@ import {
   IconBrandWhatsapp,
 } from "@tabler/icons-react";
 import { useCart } from "@/hooks/useCart";
+import { useWishlist } from "@/hooks/useWishlist";
 import { useCategories } from "@/hooks/useCategories";
 import { useProductSearch, SEARCH_MIN_LENGTH } from "@/hooks/useProductSearch";
 import { useStoreWhatsapp } from "@/hooks/useStoreWhatsapp";
@@ -30,6 +31,7 @@ export function Topbar() {
 
 export function Navbar() {
   const { count } = useCart();
+  const { items: wishlistItems } = useWishlist();
   const [open, setOpen] = useState(false);
   const { data: cats = [] } = useCategories();
 
@@ -78,8 +80,9 @@ export function Navbar() {
 
       <div className="nav-actions">
         <SearchMenu />
-        <Link to="/account/wishlist" aria-label="Wishlist">
+        <Link to="/account/wishlist" aria-label="Wishlist" className="wishlist-wrap">
           <IconHeart />
+          {wishlistItems.length > 0 && <span className="cart-dot" />}
         </Link>
         <AccountMenu />
         <Link to="/cart" className="cart-wrap" aria-label="Cart">

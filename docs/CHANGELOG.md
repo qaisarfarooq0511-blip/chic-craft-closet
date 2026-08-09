@@ -4,6 +4,58 @@ Format: Problem / Root Cause / Fix / Risk / Rollback
 Lane: Fast Lane (FL) or Full Lane (FullL)
 ---
 
+## 2026-08-10 — Wishlist, built from scratch on real data
+
+### [FullL] wishlist_items table, useWishlist hook, heart on cards/PDP/navbar
+
+**Problem:** No wishlist existed against real data. `/account/wishlist` already existed but was a
+pre-Supabase mock: `getWishlist()`/`toggleWishlist()` (localStorage, `user-auth.tsx`) joined
+against `getProducts()` (mock catalogue, `storage.ts`, numeric ids) — no connection to real
+accounts or the real `products` table. Investigation also corrected two assumptions going in: the
+navbar heart icon already linked to `/account/wishlist` (it wasn't dead), and `pc-wishlist`'s CSS
+(hover-reveal, `.is-saved` filled state) already existed in `styles.css` — fully styled but never
+rendered by any `<button>` in `ProductCard.tsx`.
+
+**Root Cause:** Same carry-over category as every other feature rebuilt this session — predates
+the real Supabase schema, never migrated off the mock store.
+
+**Fix:** New `wishlist_items` table (`customer_id`, `product_id`, `UNIQUE(customer_id,
+product_id)`, no `deleted_at`/`updated_at` — pure hard-deleted junction, same pattern as
+`category_sizes`/`section_products`). RLS: customer owns SELECT/INSERT/DELETE on their own rows
+only (`customer_id = auth.uid()`), admin SELECT-only via `is_admin()`, no anon access at all — no
+guest wishlist by design. New `src/hooks/useWishlist.ts`: fetches the customer's wishlisted
+product ids then the matching products (same `ProductWithRelations` shape as `useProducts()`, via
+a `mapProductRow()` helper extracted from `useProducts.ts` so the two can't drift on the
+rating-fallback logic); `toggle()` optimistically patches the id list before the network call,
+rolling back on error; unauthenticated `toggle()` shows a toast with a "Sign in" link rather than
+writing anywhere. Gates on `useSupabaseAuth()` specifically — not the legacy mock session
+`/account`'s layout also accepts — so a stale mock-only session can't read as a silently-empty
+wishlist instead of prompting sign-in. `account.wishlist.tsx` rewritten on top of it (real product
+grid via the existing `ProductCard`, empty state, own auth redirect to `/auth` as a backstop).
+`ProductCard.tsx` gained the actual `pc-wishlist` button (filled gold heart when saved, per spec —
+changed from the CSS's original red). `product.$slug.tsx` gained a matching heart in
+`pdp-rating-row`; that row was previously only rendered when `effectiveRatingCount > 0`, which
+would have made a 0-review product's wishlist button never appear — fixed to always render the
+row, with stars/score/count staying conditional. Navbar heart gained a `cart-dot`-style indicator
+when the wishlist is non-empty (new `.wishlist-wrap` CSS, mirrors `.cart-wrap`). `useToast()`'s
+`push()` widened from `(msg: string)` to `(msg: ReactNode)` (backward-compatible) so the sign-in
+prompt can render a real `<Link>`.
+
+**Risk:** Low. New table, RLS-scoped to the owning customer only, no changes to any existing
+table's policies. The `toast` signature widening is additive/backward-compatible — every existing
+caller passes a string, which is still a valid `ReactNode`.
+
+**Rollback:**
+
+```sql
+DROP TABLE IF EXISTS wishlist_items;
+```
+
+— revert the frontend commit to restore the old mock `account.wishlist.tsx`, the un-rendered
+`pc-wishlist` CSS, and `toast.tsx`'s string-only signature.
+
+---
+
 ## 2026-08-10 — Customers admin rebuilt as a real commerce view
 
 ### [FullL] admin_list_customers/admin_get_customer RPCs, admin.customers.tsx rewrite

@@ -339,6 +339,17 @@ export interface CartItem {
   variant?: ProductVariant;
 }
 
+// No updated_at/deleted_at — pure junction, same reasoning as CategorySize/
+// SectionProduct. Toggling the heart hard-deletes the row.
+export interface WishlistItem {
+  id: string;
+  customer_id: string;
+  product_id: string;
+  created_at: string;
+  // Joined
+  product?: Product;
+}
+
 export interface Review {
   id: string;
   product_id: string;

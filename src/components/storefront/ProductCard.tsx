@@ -1,5 +1,7 @@
 import { Link } from "@tanstack/react-router";
+import { IconHeart, IconHeartFilled } from "@tabler/icons-react";
 import { useCart } from "@/hooks/useCart";
+import { useWishlist } from "@/hooks/useWishlist";
 import { useToast } from "@/lib/toast";
 import { formatPrice } from "@/types/database";
 import { productImageUrl } from "@/lib/product-images";
@@ -25,9 +27,11 @@ export function fmt(n: number) {
 
 export function ProductCard({ p }: { p: ProductWithRelations }) {
   const { add } = useCart();
+  const { isWishlisted, toggle } = useWishlist();
   const toast = useToast();
   const primaryImage = p.images.find((i) => i.is_primary) ?? p.images[0] ?? null;
   const imageUrl = productImageUrl(primaryImage);
+  const wishlisted = isWishlisted(p.id);
 
   return (
     <Link to="/product/$slug" params={{ slug: p.slug }} className="pc">
@@ -42,6 +46,17 @@ export function ProductCard({ p }: { p: ProductWithRelations }) {
             {p.badge}
           </span>
         )}
+        <button
+          className={`pc-wishlist${wishlisted ? " is-saved" : ""}`}
+          aria-label={wishlisted ? "Remove from wishlist" : "Add to wishlist"}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            toggle(p.id);
+          }}
+        >
+          {wishlisted ? <IconHeartFilled /> : <IconHeart />}
+        </button>
       </div>
       <div className="pc-info">
         <div className="pc-cat">{p.category?.name}</div>

@@ -1,6 +1,6 @@
 # Yaawun — Database Schema Blueprint
 
-Last updated: 2026-08-07
+Last updated: 2026-08-10
 Migration count: 12 (includes 20260801100000_retire_legacy_lovable_schema.sql, which drops the
 original Lovable-scaffolded products/categories/orders/customers/addresses/reviews/coupons/
 sections/pages/wishlist/settings tables — dummy data only, confirmed disposable by the project
@@ -38,6 +38,7 @@ owner before this migration was written)
 | `editorial_reviews`  | Curated showcase reviews — no auth dependency, admin-managed                                    | ✅  | ✅          | —     |
 | `sections`           | Admin-configurable homepage product strips (manual/category/badge)                              | ✅  | ✅          | —     |
 | `section_products`   | Junction: manual-mode product picks for a section                                               | ✅  | ❌ hard¹²   | —     |
+| `wishlist_items`     | Junction: which products a customer has saved                                                   | ✅  | ❌ hard¹³   | —     |
 
 ¹ `profiles` audit is scoped to `role` changes only (`profiles_role_audit` trigger, `WHEN (OLD.role
 IS DISTINCT FROM NEW.role)`) — full_name/phone self-edits are not logged. See "Admin user
@@ -51,6 +52,15 @@ FKs means deleting a category or a size_option cleans up its associations automa
 ¹² `section_products` is the same pattern as `category_sizes` — a pure many-to-many association
 (which products a manual-mode section includes) with no business history, hard-deleted on
 `ON DELETE CASCADE` from either side.
+
+¹³ `wishlist_items` is the same pattern again — toggling the heart hard-deletes the row, no
+`deleted_at`/`updated_at`. Unlike `category_sizes`/`section_products` (admin-managed), this one is
+customer-managed: RLS is `customer_id = auth.uid()` for SELECT/INSERT/DELETE (no UPDATE policy —
+nothing about a saved row is ever edited in place, only added or removed), plus an admin SELECT
+policy (`is_admin()`) for visibility. No admin write policy — nothing in the product calls for an
+admin to edit a customer's wishlist on their behalf. No audit trigger: `log_admin_action()` covers
+admin mutations on products/orders/categories/reviews; this is a customer's own self-service
+action on their own row.
 
 ## Categories admin fixes + adult clothing size scale (added 2026-08-07)
 
@@ -185,6 +195,36 @@ required an RLS or grant change — only the function bodies.
 consumers were the old `admin.customers.tsx`). `AppUser`, `createUser()`, and `updateUserRecord()`
 were deliberately left alone — they still back the live wishlist, `/account` profile editing, and
 checkout's guest-account creation, none of which are in scope here.
+
+## Wishlist (added 2026-08-10)
+
+New table: `wishlist_items` (see Tables note ¹³ above for schema/RLS rationale). Replaces a
+pre-Supabase mock: `/account/wishlist` previously read `getWishlist()`/`toggleWishlist()`
+(localStorage, in `user-auth.tsx`) joined against `getProducts()` (mock catalogue in `storage.ts`,
+numeric ids) — zero connection to real accounts or the real `products` table. The navbar heart
+icon already linked to `/account/wishlist` (it did not "go nowhere"); what was actually missing
+was the heart button on product cards and the PDP, and a count indicator on the navbar icon.
+Deliberately no guest/localStorage wishlist — saving requires a real signed-in account, unlike
+`useCart`'s guest-cart fallback.
+
+- **`src/hooks/useWishlist.ts`** — `useWishlist()`: fetches the current customer's
+  `wishlist_items.product_id`s, then the matching products (same `ProductWithRelations` shape as
+  `useProducts()`, via a shared `mapProductRow()` helper extracted from `useProducts.ts` so the
+  rating-fallback logic can't drift between the two). `toggle(productId)` optimistically patches
+  the id list via `queryClient.setQueryData` before the network call, rolling back on error.
+  Unauthenticated `toggle()` shows a toast with a "Sign in" link instead of writing anywhere —
+  gates on `useSupabaseAuth()` specifically (not the legacy mock session `/account`'s layout also
+  accepts), so a stale mock-only session can't silently read as an empty wishlist.
+- **`pc-wishlist`** (product cards) and a new **`pdp-rating-wishlist`** (PDP, in the rating row)
+  both reuse this hook. The `pc-wishlist` CSS (hover-reveal, `.is-saved` always-visible/filled)
+  already existed in `styles.css` before this — the class was fully styled but no `<button>` ever
+  rendered it. Its filled-heart colour was `#c0392b` (red); changed to `var(--gold)` to match this
+  spec. The PDP's rating row was previously only rendered when `effectiveRatingCount > 0` — fixed
+  to always render (with just the heart, no stars) for a 0-review product, otherwise the wishlist
+  button would never appear on any product with no reviews yet.
+- **`src/lib/toast.tsx`** — `useToast()`'s `push()` widened from `(msg: string)` to
+  `(msg: ReactNode)`, backward-compatible, so the sign-in prompt can render an actual `<Link>`
+  rather than plain text.
 
 ## Editorial reviews (added 2026-08-03)
 

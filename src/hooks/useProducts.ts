@@ -14,15 +14,39 @@ interface UseProductsOptions {
   categoryId?: string | null;
 }
 
+/** The exact `select()` shape every product-list query needs to feed `mapProductRow`. */
+export const PRODUCT_WITH_RELATIONS_SELECT =
+  "*, category:categories(*), images:product_images(*), editorial_reviews:editorial_reviews(rating, is_approved, deleted_at)";
+
+/**
+ * Real rating always takes precedence; editorial only fills in when rating_count is 0.
+ * Shared by every query that feeds a `ProductWithRelations` grid (product list, PDP,
+ * wishlist) so the fallback logic can't drift between them.
+ */
+export function mapProductRow(
+  row: ProductWithRelations & {
+    editorial_reviews: { rating: number; is_approved: boolean; deleted_at: string | null }[];
+  },
+): ProductWithRelations {
+  const { editorial_reviews, ...rest } = row;
+  const approvedEditorial = (editorial_reviews ?? []).filter((e) => e.is_approved && !e.deleted_at);
+  const effectiveRatingAvg =
+    rest.rating_count > 0
+      ? rest.rating_avg
+      : approvedEditorial.length > 0
+        ? approvedEditorial.reduce((sum, e) => sum + e.rating, 0) / approvedEditorial.length
+        : 0;
+  const effectiveRatingCount = rest.rating_count > 0 ? rest.rating_count : approvedEditorial.length;
+  return { ...rest, effectiveRatingAvg, effectiveRatingCount };
+}
+
 /** Exported so route loaders can ensureQueryData() with the exact same queryFn as useProducts(). */
 export async function fetchProducts({
   categoryId,
 }: UseProductsOptions): Promise<ProductWithRelations[]> {
   let query = supabase
     .from("products")
-    .select(
-      "*, category:categories(*), images:product_images(*), editorial_reviews:editorial_reviews(rating, is_approved, deleted_at)",
-    )
+    .select(PRODUCT_WITH_RELATIONS_SELECT)
     .eq("status", "active")
     .is("deleted_at", null)
     .order("created_at", { ascending: false });
@@ -32,23 +56,9 @@ export async function fetchProducts({
   const { data, error } = await query;
   if (error) throw error;
 
-  return (data ?? []).map((row) => {
-    const { editorial_reviews, ...rest } = row as unknown as ProductWithRelations & {
-      editorial_reviews: { rating: number; is_approved: boolean; deleted_at: string | null }[];
-    };
-    const approvedEditorial = (editorial_reviews ?? []).filter(
-      (e) => e.is_approved && !e.deleted_at,
-    );
-    const effectiveRatingAvg =
-      rest.rating_count > 0
-        ? rest.rating_avg
-        : approvedEditorial.length > 0
-          ? approvedEditorial.reduce((sum, e) => sum + e.rating, 0) / approvedEditorial.length
-          : 0;
-    const effectiveRatingCount =
-      rest.rating_count > 0 ? rest.rating_count : approvedEditorial.length;
-    return { ...rest, effectiveRatingAvg, effectiveRatingCount };
-  });
+  return (data ?? []).map((row) =>
+    mapProductRow(row as unknown as Parameters<typeof mapProductRow>[0]),
+  );
 }
 
 /** Active, non-deleted products for the storefront — optionally scoped to a category. RLS mirrors this filter for anon. */

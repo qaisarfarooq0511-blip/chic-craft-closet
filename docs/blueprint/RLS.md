@@ -39,6 +39,7 @@ The `is_admin()` helper function checks `profiles.role = 'admin'` for the curren
 | editorial_reviews  | ✅ approved³  | ✅ approved³    | ❌                       | All          | ✅                          |
 | sections           | ✅ active     | ✅ active       | ❌                       | All          | ✅                          |
 | section_products   | ✅            | ✅              | ❌                       | All          | ✅                          |
+| wishlist_items     | ❌            | Own only        | Own only                 | All (SELECT) | ❌                          |
 
 ² `static_pages` — public/customer SELECT requires `is_published = true`; admins can SELECT every
 non-deleted row (including unpublished drafts) but there is no admin INSERT or DELETE policy at
