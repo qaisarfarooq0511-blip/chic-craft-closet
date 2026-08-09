@@ -2,10 +2,11 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo } from "react";
 import { IconTruck, IconShieldCheck, IconRefresh, IconBrandWhatsapp } from "@tabler/icons-react";
 import { ProductCard } from "@/components/storefront/ProductCard";
-import { useProducts, fetchProducts } from "@/hooks/useProducts";
+import { useProducts, fetchProducts, productsQueryKey } from "@/hooks/useProducts";
 import { useCategories, fetchCategories } from "@/hooks/useCategories";
 import { useHeroSettings, fetchHeroSettings } from "@/hooks/useHeroSettings";
 import { useHomeSections, fetchHomeSections } from "@/hooks/useHomeSections";
+import { useHomepageReviews, fetchHomepageReviews } from "@/hooks/useHomepageReviews";
 import { STORE, breadcrumbLd, abs } from "@/lib/jsonld";
 import heroMain from "@/assets/hero-main.jpg";
 import imgSozni from "@/assets/products/sozni-burgundy.jpg";
@@ -17,10 +18,14 @@ export const Route = createFileRoute("/")({
       queryClient.ensureQueryData({ queryKey: ["hero-settings"], queryFn: fetchHeroSettings }),
       queryClient.ensureQueryData({ queryKey: ["categories"], queryFn: fetchCategories }),
       queryClient.ensureQueryData({
-        queryKey: ["products", null],
+        queryKey: productsQueryKey({}),
         queryFn: () => fetchProducts({}),
       }),
       queryClient.ensureQueryData({ queryKey: ["home-sections"], queryFn: fetchHomeSections }),
+      queryClient.ensureQueryData({
+        queryKey: ["homepage-reviews"],
+        queryFn: fetchHomepageReviews,
+      }),
     ]);
   },
   head: () => ({
@@ -51,6 +56,10 @@ function Home() {
   const { data: cats = [] } = useCategories();
   const { data: products = [] } = useProducts({});
   const { data: homeSections = [] } = useHomeSections();
+  const { data: homepageReviews = [] } = useHomepageReviews();
+  const reviewCount = homepageReviews.length;
+  const reviewAvg =
+    reviewCount > 0 ? homepageReviews.reduce((sum, r) => sum + r.rating, 0) / reviewCount : 0;
 
   const counts = useMemo(
     () =>
@@ -192,58 +201,43 @@ function Home() {
         </div>
       </div>
 
-      <section className="reviews-dark">
-        <div className="eyebrow-light">What our customers say</div>
-        <div className="section-title" style={{ color: "#FAF7F2", marginTop: 6 }}>
-          Loved by women across India
-        </div>
-        <div className="rev-grid">
-          {[
-            {
-              stars: 5,
-              text: "The pashmina shawl exceeded all expectations. Packaging was gorgeous — felt like a luxury brand purchase.",
-              name: "Aisha Khan",
-              loc: "Delhi",
-              prod: "Pashmina Weave Shawl — Ivory & Gold",
-            },
-            {
-              stars: 5,
-              text: "Ordered the Chikankari suit for my daughter's graduation. The fabric quality is exceptional. Yaawun is now my go-to store.",
-              name: "Fatima Siddiqui",
-              loc: "Lucknow",
-              prod: "Chikankari Unstitched Suit",
-            },
-            {
-              stars: 4,
-              text: "Beautiful earrings, fast delivery and the little gift box made it feel so special. Will be gifting these to my friends too.",
-              name: "Noor Hussain",
-              loc: "Ghaziabad",
-              prod: "Kundan Drop Earrings — Antique",
-            },
-          ].map((r, i) => (
-            <div key={i} className="rev-card">
-              <div className="rev-card-stars">
-                {[1, 2, 3, 4, 5].map((s) => (
-                  <span
-                    key={s}
-                    className="star"
-                    style={{ color: s > r.stars ? "rgba(250,247,242,.2)" : undefined }}
-                  >
-                    ★
-                  </span>
-                ))}
+      {homepageReviews.length > 0 && (
+        <section className="reviews-dark">
+          <div className="eyebrow-light">What our customers say</div>
+          <div className="section-title" style={{ color: "#FAF7F2", marginTop: 6 }}>
+            Loved by women across India
+          </div>
+          <div className="rev-grid">
+            {homepageReviews.map((r) => (
+              <div key={r.id} className="rev-card">
+                <div className="rev-card-stars">
+                  {[1, 2, 3, 4, 5].map((s) => (
+                    <span
+                      key={s}
+                      className="star"
+                      style={{ color: s > r.rating ? "rgba(250,247,242,.2)" : undefined }}
+                    >
+                      ★
+                    </span>
+                  ))}
+                </div>
+                <p className="rev-text">{r.body}</p>
+                <div className="rev-name">{r.reviewer_name}</div>
+                {r.reviewer_location && <div className="rev-loc">{r.reviewer_location}</div>}
+                {r.product && (
+                  <Link to="/product/$slug" params={{ slug: r.product.slug }} className="rev-prod">
+                    {r.product.name}
+                  </Link>
+                )}
               </div>
-              <p className="rev-text">{r.text}</p>
-              <div className="rev-name">{r.name}</div>
-              <div className="rev-loc">{r.loc}</div>
-              <div className="rev-prod">{r.prod}</div>
-            </div>
-          ))}
-        </div>
-        <div className="rev-overall">
-          <span>★★★★★</span>4.7 average across 340+ verified reviews
-        </div>
-      </section>
+            ))}
+          </div>
+          <div className="rev-overall">
+            <span>★★★★★</span>
+            {reviewAvg.toFixed(1)} average across {reviewCount} review{reviewCount === 1 ? "" : "s"}
+          </div>
+        </section>
+      )}
     </>
   );
 }
