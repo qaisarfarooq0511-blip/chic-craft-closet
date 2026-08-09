@@ -3,8 +3,21 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { guestCartStore } from "@/lib/guest-cart-store";
 import { useSupabaseAuth } from "@/hooks/useSupabaseAuth";
+import { useToast } from "@/lib/toast";
 import type { ProductWithRelations } from "@/hooks/useProducts";
 import type { ColourOption, ProductVariant, SizeOption } from "@/types/database";
+
+const DEFAULT_MAX_QTY_PER_ITEM = 10;
+
+async function fetchMaxQtyPerItem(): Promise<number> {
+  const { data, error } = await supabase
+    .from("site_settings")
+    .select("value")
+    .eq("key", "max_qty_per_item")
+    .maybeSingle();
+  if (error || typeof data?.value !== "number") return DEFAULT_MAX_QTY_PER_ITEM;
+  return data.value;
+}
 
 export type CartLineVariant = ProductVariant & {
   colour: ColourOption | null;
@@ -115,6 +128,12 @@ async function upsertServerCartLine(
 export function useCart() {
   const { isAuthenticated, user } = useSupabaseAuth();
   const queryClient = useQueryClient();
+  const toast = useToast();
+  const { data: maxQtyPerItem = DEFAULT_MAX_QTY_PER_ITEM } = useQuery({
+    queryKey: ["site-setting-max-qty-per-item"],
+    queryFn: fetchMaxQtyPerItem,
+    staleTime: 5 * 60 * 1000,
+  });
   const guestLines = useSyncExternalStore(
     guestCartStore.subscribe,
     guestCartStore.getSnapshot,
@@ -167,21 +186,26 @@ export function useCart() {
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ["cart", user?.id] });
 
   const add = async (productId: string, qty = 1, variantId: string | null = null) => {
+    const existing = lines.find((l) => l.productId === productId && l.variantId === variantId);
+    const desiredQty = (existing?.quantity ?? 0) + qty;
+    const cappedQty = Math.min(desiredQty, maxQtyPerItem);
+    if (cappedQty < desiredQty) toast(`Maximum ${maxQtyPerItem} per item`);
     if (isAuthenticated && user) {
-      const existing = lines.find((l) => l.productId === productId && l.variantId === variantId);
-      await upsertServerCartLine(user.id, productId, variantId, (existing?.quantity ?? 0) + qty);
+      await upsertServerCartLine(user.id, productId, variantId, cappedQty);
       invalidate();
     } else {
-      guestCartStore.add(productId, variantId, qty);
+      guestCartStore.setQty(productId, variantId, cappedQty);
     }
   };
 
   const updateQty = async (productId: string, qty: number, variantId: string | null = null) => {
+    const cappedQty = Math.min(qty, maxQtyPerItem);
+    if (cappedQty < qty) toast(`Maximum ${maxQtyPerItem} per item`);
     if (isAuthenticated && user) {
-      await upsertServerCartLine(user.id, productId, variantId, qty);
+      await upsertServerCartLine(user.id, productId, variantId, cappedQty);
       invalidate();
     } else {
-      guestCartStore.setQty(productId, variantId, qty);
+      guestCartStore.setQty(productId, variantId, cappedQty);
     }
   };
 
