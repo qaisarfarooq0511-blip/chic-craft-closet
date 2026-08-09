@@ -151,6 +151,41 @@ worker needs. What's new:
 `products.rating_avg`/`rating_count` and every other table are untouched by this — this section is
 purely about reading/writing the `profiles.role` column safely.
 
+## Admin customer management — commerce view (added 2026-08-10)
+
+`/admin/customers` was a pre-Supabase localStorage mock (`AppUser` in `user-auth.tsx`, `Inquiry`
+records in `storage.ts`) with zero connection to real accounts or orders. Rebuilt as a real,
+commerce-focused view distinct from `/admin/users` (access control): `/admin/users` lists every
+account for role management; `/admin/customers` lists `role = 'customer'` accounts only, with
+order history and spend. No new table — two new `SECURITY DEFINER` `plpgsql` functions, same
+pattern as `admin_list_users` (function-call boundary, `auth.users` join, `is_admin()` gate,
+`REVOKE ... FROM PUBLIC` / `GRANT ... TO authenticated`):
+
+- **`admin_list_customers(p_search, p_limit, p_offset)`** — `profiles` (`role='customer'`,
+  `deleted_at IS NULL`) joined to `auth.users` (email/last_sign_in_at) and a `LEFT JOIN` aggregate
+  over `orders` (excluding `cancelled`/`refunded`, `deleted_at IS NULL`) for `order_count`,
+  `total_spent` (paise), `last_order_at`. `p_search` matches email or full_name (`ILIKE`).
+  `total_count` via `count(*) OVER()` for pagination, same as `admin_list_users`.
+- **`admin_get_customer(p_customer_id)`** — single-customer detail for the admin panel's slide-in
+  view. Returns one `jsonb` value: `{profile: {...}, stats: {total_orders, total_spent}, orders:
+[...]}`. `stats` uses the same cancelled/refunded exclusion as the list function; `orders` is the
+  last 20 orders of **any** status (order history shouldn't hide a cancelled order — the UI shows
+  its status badge instead), each with `id` (for the `/admin/orders/$id` link), `order_number`,
+  `status`, `total`, `created_at`, `item_count` (a correlated `count(*)` against `order_items`).
+
+Both functions went through 3 forward-fix migrations after the initial one, all caught during
+post-deploy verification before this branch was reviewed (see CHANGELOG for detail): an ambiguous
+`created_at` column reference inside `admin_list_customers` (plpgsql `RETURNS TABLE` implicitly
+declares OUT parameters that collided with an unqualified column in the same name), then two
+missing fields against the actual UI requirements — `orders[].id` (needed for the order-detail
+link) and `phone` on the list row (needed for the list table's Phone column). None of these
+required an RLS or grant change — only the function bodies.
+
+`user-auth.tsx`'s mock `getAllUsers()`/`deleteUserRecord()` were removed (dead code, exclusive
+consumers were the old `admin.customers.tsx`). `AppUser`, `createUser()`, and `updateUserRecord()`
+were deliberately left alone — they still back the live wishlist, `/account` profile editing, and
+checkout's guest-account creation, none of which are in scope here.
+
 ## Editorial reviews (added 2026-08-03)
 
 `editorial_reviews` exists because the 18 mock reviews in `src/lib/seed.ts`

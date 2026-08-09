@@ -270,6 +270,46 @@ export interface Order {
   customer?: Profile;
 }
 
+// admin_list_customers() RPC row — commerce-focused customer view, distinct
+// from AdminUserRow (access-control view) in useAdminUsers.ts.
+export interface CustomerListRow {
+  id: string;
+  email: string | null;
+  full_name: string | null;
+  phone: string | null;
+  created_at: string;
+  last_sign_in_at: string | null;
+  order_count: number;
+  total_spent: number; // paise
+  last_order_at: string | null;
+}
+
+export interface CustomerOrderSummary {
+  id: string;
+  order_number: string;
+  status: OrderStatus;
+  total: number; // paise
+  created_at: string;
+  item_count: number;
+}
+
+// admin_get_customer() RPC return shape (single JSONB value).
+export interface CustomerDetail {
+  profile: {
+    id: string;
+    email: string | null;
+    full_name: string | null;
+    phone: string | null;
+    created_at: string;
+    last_sign_in_at: string | null;
+  };
+  stats: {
+    total_orders: number;
+    total_spent: number; // paise
+  };
+  orders: CustomerOrderSummary[];
+}
+
 export interface OrderItem {
   id: string;
   order_id: string;

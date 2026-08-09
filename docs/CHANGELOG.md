@@ -4,6 +4,70 @@ Format: Problem / Root Cause / Fix / Risk / Rollback
 Lane: Fast Lane (FL) or Full Lane (FullL)
 ---
 
+## 2026-08-10 — Customers admin rebuilt as a real commerce view
+
+### [FullL] admin_list_customers/admin_get_customer RPCs, admin.customers.tsx rewrite
+
+**Problem:** `/admin/customers` was a pre-Supabase localStorage mock — `AppUser` records from
+`user-auth.tsx` (`getAllUsers`/`createUser`/`updateUserRecord`/`deleteUserRecord`), with a "View
+orders" button into `admin.inquiries.tsx`'s legacy `Inquiry` records (also localStorage, already
+flagged as dead in the 2026-08-10 config-cleanup entry above). None of it touched the real
+`profiles`/`orders` tables — every name, order count, and total spend on the page was fictional.
+Meanwhile `/admin/users` already listed every real account (via `admin_list_users()`, added
+2026-08-04) but only from an access-control angle — no order history, no spend.
+
+**Root Cause:** Same carry-over category as `admin.sections.tsx`/`admin.config.tsx` before it —
+`admin.customers.tsx` predates the real Supabase schema and was never migrated, just left running
+on its own disconnected data store.
+
+**Fix:** Investigated first (no code changes) and confirmed with the team: keep the page, but
+give it a distinct real purpose from `/admin/users` — a commerce lens (who's a customer, what did
+they order, how much have they spent) rather than an access-control lens. Two new `SECURITY
+DEFINER` `plpgsql` functions, same pattern as `admin_list_users`:
+`admin_list_customers(p_search, p_limit, p_offset)` — `profiles` where `role='customer'` joined to
+`auth.users` plus a `LEFT JOIN` aggregate over `orders` (excluding cancelled/refunded) for
+order_count/total_spent/last_order_at, paginated via `count(*) OVER()`; and
+`admin_get_customer(p_customer_id)` — single-customer detail as one `jsonb` blob (profile + stats
+
+- last 20 orders of any status) for a slide-in panel. New hook `useAdminCustomers.ts`
+  (`useAdminCustomers`, `useAdminCustomer`). `admin.customers.tsx` rewritten: paginated table
+  (name/email, phone, joined, order count, total spent in ₹, last order date), server-side search,
+  click-a-row slide-in panel with order history linking to `/admin/orders/$id`, no edit
+  capabilities (role management stays on `/admin/users`). Removed `user-auth.tsx`'s
+  `getAllUsers()`/`deleteUserRecord()` (dead — their only consumer was the old page); left
+  `AppUser`, `createUser()`, and `updateUserRecord()` in place since they still back the live
+  wishlist, `/account` profile editing, and checkout's guest-account creation — none of which this
+  task touched.
+
+Three bugs were caught and forward-fixed via separate migrations during post-deploy verification,
+before this branch went to review: (1) `admin_list_customers` raised `column reference "created_at"
+is ambiguous` — plpgsql's `RETURNS TABLE` implicitly declares OUT parameters with the same names
+as the returned columns, one of which collided with an unqualified `orders.created_at` inside an
+aggregate subquery; fixed by qualifying every column in that subquery with its table alias.
+(2) `admin_get_customer`'s orders array had no `id`, only `order_number` — insufficient to link to
+`/admin/orders/$id`, which takes the order's UUID; added. (3) `admin_list_customers` had no
+`phone` column despite the list table requiring one; added (required `DROP FUNCTION` before
+`CREATE OR REPLACE`, since Postgres won't let a `RETURNS TABLE` function's row type change
+in place).
+
+**Risk:** Low. No RLS policy changes — both functions are `SECURITY DEFINER` with an `is_admin()`
+gate, reading tables that already have RLS enabled (see RLS.md, "Admin read-only functions"). No
+schema/table changes. The `/account` profile-edit-writes-to-localStorage gap surfaced during
+investigation (real customers editing name/email there don't touch the real `profiles` table) is
+explicitly out of scope and was left untouched.
+
+**Rollback:**
+
+```sql
+DROP FUNCTION IF EXISTS admin_get_customer(uuid);
+DROP FUNCTION IF EXISTS admin_list_customers(text, int, int);
+```
+
+— revert the frontend commit to restore the old mock-data `admin.customers.tsx` and
+`user-auth.tsx`'s `getAllUsers()`/`deleteUserRecord()`.
+
+---
+
 ## 2026-08-10 — Real homepage sections, replacing hardcoded "Featured pieces" strip
 
 ### [FullL] sections + section_products tables, useHomeSections, admin.sections.tsx rebuilt

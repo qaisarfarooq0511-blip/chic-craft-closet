@@ -1,6 +1,6 @@
 # Yaawun — RLS Policy Map
 
-Last updated: 2026-08-07
+Last updated: 2026-08-10
 
 ## Principle: Default Deny (framework §2)
 
@@ -160,6 +160,17 @@ SKIP LOCKED` through the normal query builder, so the atomic claim step is a
       independent gates that both apply to every UPDATE. Fixing one and confirming it via
       `pg_policies` is not evidence the write actually works — re-test the real operation
       after each change, not just the policy definition.
+
+## Admin read-only functions (no RLS changes)
+
+`admin_list_users`, `admin_list_customers`, and `admin_get_customer` (added 2026-08-04 and
+2026-08-10) all read `profiles`/`auth.users`/`orders`/`order_items` through a `SECURITY DEFINER`
+function with its own `is_admin()` gate at the top, rather than through a table policy. This is
+intentional, not a gap: `auth.users` is never PostgREST-exposed regardless of policy, and the
+commerce aggregates in `admin_list_customers`/`admin_get_customer` need a cross-table join that a
+row-level policy can't express. No table's RLS policies changed to support them — `REVOKE ...
+FROM PUBLIC` / `GRANT ... TO authenticated` on the function itself is the only access control,
+same as `admin_list_users`.
 
 ## Testing RLS (automated — see CI)
 

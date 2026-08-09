@@ -12,7 +12,7 @@ export type AppUser = {
 export type Address = {
   id: string;
   userId: string;
-  label?: string;          // "Home", "Office"
+  label?: string; // "Home", "Office"
   name: string;
   phone: string;
   line1: string;
@@ -38,11 +38,14 @@ const isBrowser = () => typeof window !== "undefined";
 /** Allowed: letters, spaces, hyphens, apostrophes, periods. No digits, no other special chars. */
 export const NAME_REGEX = /^[A-Za-z][A-Za-z\s.'-]*$/;
 
-export function validateName(input: string): { ok: true; value: string } | { ok: false; error: string } {
+export function validateName(
+  input: string,
+): { ok: true; value: string } | { ok: false; error: string } {
   const trimmed = input.trim().replace(/\s+/g, " ");
   if (trimmed.length < 2) return { ok: false, error: "Please enter your full name." };
   if (trimmed.length > 60) return { ok: false, error: "Name is too long." };
-  if (!NAME_REGEX.test(trimmed)) return { ok: false, error: "Name can only contain letters, spaces, hyphens and apostrophes." };
+  if (!NAME_REGEX.test(trimmed))
+    return { ok: false, error: "Name can only contain letters, spaces, hyphens and apostrophes." };
   return { ok: true, value: capitalizeName(trimmed) };
 }
 
@@ -58,19 +61,23 @@ export function capitalizeName(input: string): string {
           seg
             .split("'")
             .map((s) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s))
-            .join("'")
+            .join("'"),
         )
-        .join("-")
+        .join("-"),
     )
     .join(" ");
 }
 
-export function validateMobile(input: string): { ok: true; value: string } | { ok: false; error: string } {
+export function validateMobile(
+  input: string,
+): { ok: true; value: string } | { ok: false; error: string } {
   const digits = input.replace(/[^\d]/g, "");
   // Accept 10-digit, 11-digit (0-prefixed), 12-digit (91-prefixed)
   if (digits.length === 10 && /^[6-9]/.test(digits)) return { ok: true, value: "+91" + digits };
-  if (digits.length === 11 && digits.startsWith("0") && /^[6-9]/.test(digits.slice(1))) return { ok: true, value: "+91" + digits.slice(1) };
-  if (digits.length === 12 && digits.startsWith("91") && /^[6-9]/.test(digits.slice(2))) return { ok: true, value: "+" + digits };
+  if (digits.length === 11 && digits.startsWith("0") && /^[6-9]/.test(digits.slice(1)))
+    return { ok: true, value: "+91" + digits.slice(1) };
+  if (digits.length === 12 && digits.startsWith("91") && /^[6-9]/.test(digits.slice(2)))
+    return { ok: true, value: "+" + digits };
   return { ok: false, error: "Enter a valid 10-digit Indian mobile number." };
 }
 
@@ -110,7 +117,10 @@ export function findUserByMobile(mobile: string): AppUser | undefined {
 export function createUser(mobile: string, name: string, email?: string): AppUser {
   const users = readUsers();
   const u: AppUser = {
-    id: (typeof crypto !== "undefined" && "randomUUID" in crypto) ? crypto.randomUUID() : String(Date.now()),
+    id:
+      typeof crypto !== "undefined" && "randomUUID" in crypto
+        ? crypto.randomUUID()
+        : String(Date.now()),
     mobile: normalizeMobile(mobile),
     name: capitalizeName(name.trim()),
     email: email?.trim() || undefined,
@@ -150,14 +160,6 @@ export function updateUserRecord(
   return updated;
 }
 
-// Admin helpers
-export function getAllUsers(): AppUser[] {
-  return [...readUsers()].sort((a, b) => b.createdAt - a.createdAt);
-}
-export function deleteUserRecord(id: string) {
-  writeUsers(readUsers().filter((u) => u.id !== id));
-}
-
 // ---------------- addresses ----------------
 
 function readAllAddresses(): Address[] {
@@ -184,7 +186,7 @@ export function deleteAddress(id: string) {
 }
 export function setDefaultAddress(userId: string, id: string) {
   const all = readAllAddresses().map((a) =>
-    a.userId === userId ? { ...a, isDefault: a.id === id } : a
+    a.userId === userId ? { ...a, isDefault: a.id === id } : a,
   );
   writeAllAddresses(all);
 }
@@ -205,7 +207,9 @@ export function getWishlist(userId: string): number[] {
 export function toggleWishlist(userId: string, productId: number): number[] {
   const m = readWishlistMap();
   const list = m[userId] ?? [];
-  const next = list.includes(productId) ? list.filter((id) => id !== productId) : [...list, productId];
+  const next = list.includes(productId)
+    ? list.filter((id) => id !== productId)
+    : [...list, productId];
   m[userId] = next;
   writeWishlistMap(m);
   return next;
@@ -223,7 +227,6 @@ type Ctx = {
 
 const UserAuthContext = createContext<Ctx | null>(null);
 
-
 export function UserAuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AppUser | null>(null);
   const [hydrated, setHydrated] = useState(false);
@@ -238,8 +241,14 @@ export function UserAuthProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener("storage", refresh);
   }, []);
 
-  const signIn = (u: AppUser) => { writeSession(u); setUser(u); };
-  const signOut = () => { writeSession(null); setUser(null); };
+  const signIn = (u: AppUser) => {
+    writeSession(u);
+    setUser(u);
+  };
+  const signOut = () => {
+    writeSession(null);
+    setUser(null);
+  };
   const updateUser = (patch: Partial<Pick<AppUser, "name" | "email">>) => {
     if (!user) return;
     const next = updateUserRecord(user.id, patch);
@@ -252,7 +261,6 @@ export function UserAuthProvider({ children }: { children: ReactNode }) {
     </UserAuthContext.Provider>
   );
 }
-
 
 export function useUserAuth() {
   const ctx = useContext(UserAuthContext);

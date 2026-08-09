@@ -1,302 +1,272 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
-
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useState } from "react";
 import {
-  getAllUsers,
-  createUser,
-  updateUserRecord,
-  deleteUserRecord,
-  validateName,
-  validateMobile,
-  normalizeMobile,
-  type AppUser,
-} from "@/lib/user-auth";
-import { getInquiries } from "@/lib/storage";
-import { fmt } from "@/components/storefront/ProductCard";
-import { useToast } from "@/lib/toast";
-import { exportRowsToXlsx } from "@/lib/xlsx-export";
+  useAdminCustomers,
+  useAdminCustomer,
+  ADMIN_CUSTOMERS_PAGE_SIZE,
+} from "@/hooks/useAdminCustomers";
+import { formatPrice } from "@/types/database";
 
 export const Route = createFileRoute("/admin/customers")({
   component: CustomersAdmin,
 });
 
+function formatDate(iso: string | null) {
+  if (!iso) return "—";
+  return new Date(iso).toLocaleDateString("en-IN", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+}
+
 function CustomersAdmin() {
-  const [, force] = useState(0);
-  const toast = useToast();
-  const navigate = useNavigate();
   const [search, setSearch] = useState("");
-  const [editing, setEditing] = useState<AppUser | null>(null);
-  const [adding, setAdding] = useState(false);
+  const [page, setPage] = useState(0);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
 
-
-  const users = useMemo(() => {
-    const all = getAllUsers();
-    if (!search.trim()) return all;
-    const q = search.toLowerCase();
-    return all.filter((u) =>
-      u.name.toLowerCase().includes(q) ||
-      u.mobile.includes(q) ||
-      (u.email ?? "").toLowerCase().includes(q),
-    );
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [search, editing, adding]);
-
-  const refresh = () => force((n) => n + 1);
-
-  const ordersFor = (u: AppUser) => {
-    const norm = normalizeMobile(u.mobile);
-    return getInquiries().filter((i) => normalizeMobile(i.customer.phone) === norm);
-  };
-
-  const isOptedIn = (u: AppUser) => u.newsletterOptIn !== false;
+  const { data, isLoading } = useAdminCustomers({ search, page });
+  const rows = data?.rows ?? [];
+  const total = data?.total ?? 0;
+  const from = total === 0 ? 0 : page * ADMIN_CUSTOMERS_PAGE_SIZE + 1;
+  const to = Math.min(total, (page + 1) * ADMIN_CUSTOMERS_PAGE_SIZE);
 
   return (
     <>
       <h1 className="admin-h1">Customers</h1>
-      <p className="admin-sub">Everyone who has signed up or checked out. Manage details, newsletter preferences, and view their orders.</p>
+      <p className="admin-sub">
+        {total} customer{total === 1 ? "" : "s"}. Real order history and lifetime spend — for access
+        control, use the Users page instead.
+      </p>
 
-      <div className="admin-card" style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+      <div className="admin-card" style={{ marginBottom: 14 }}>
         <input
           className="form-input"
-          placeholder="Search by name, mobile or email"
+          placeholder="Search by name or email"
           value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          style={{ flex: 1, minWidth: 220 }}
-        />
-        <button
-          className="btn-outline"
-          onClick={() => {
-            if (users.length === 0) { toast("Nothing to export"); return; }
-            const rows = users.map((u) => {
-              const o = ordersFor(u);
-              const totalSpend = o.reduce((s, i) => s + i.total, 0);
-              return {
-                Name: u.name,
-                Mobile: u.mobile,
-                Email: u.email ?? "",
-                "Newsletter Opt-in": isOptedIn(u) ? "Yes" : "No",
-                Joined: new Date(u.createdAt).toISOString().slice(0, 10),
-                Orders: o.length,
-                "Total Spend": totalSpend,
-              };
-            });
-            exportRowsToXlsx(rows, "Customers", "customers");
-            toast("Customers exported");
+          onChange={(e) => {
+            setSearch(e.target.value);
+            setPage(0);
           }}
-        >
-          Export Excel
-        </button>
-        <button className="btn-ink" onClick={() => setAdding(true)}>+ Add customer</button>
+          style={{ maxWidth: 320 }}
+        />
       </div>
 
-      {users.length === 0 && (
-        <div className="admin-card" style={{ textAlign: "center", padding: 40, color: "var(--ink3)" }}>
-          No customers yet.
+      <div className="admin-card" style={{ padding: 0, overflowX: "auto" }}>
+        <table className="admin-table">
+          <thead>
+            <tr>
+              <th>Name / Email</th>
+              <th>Phone</th>
+              <th>Joined</th>
+              <th>Orders</th>
+              <th>Total spent</th>
+              <th>Last order</th>
+            </tr>
+          </thead>
+          <tbody>
+            {isLoading && (
+              <tr>
+                <td colSpan={6} style={{ textAlign: "center", padding: 40, color: "var(--ink3)" }}>
+                  Loading…
+                </td>
+              </tr>
+            )}
+            {!isLoading &&
+              rows.map((c) => (
+                <tr key={c.id} onClick={() => setSelectedId(c.id)} style={{ cursor: "pointer" }}>
+                  <td>
+                    <div style={{ fontWeight: 500, color: "var(--ink)" }}>{c.full_name || "—"}</div>
+                    <div style={{ fontSize: 10, color: "var(--ink3)" }}>{c.email || "—"}</div>
+                  </td>
+                  <td>{c.phone || "—"}</td>
+                  <td>{formatDate(c.created_at)}</td>
+                  <td>{c.order_count}</td>
+                  <td>{formatPrice(c.total_spent)}</td>
+                  <td>{formatDate(c.last_order_at)}</td>
+                </tr>
+              ))}
+            {!isLoading && rows.length === 0 && (
+              <tr>
+                <td colSpan={6} style={{ textAlign: "center", padding: 40, color: "var(--ink3)" }}>
+                  No customers yet. Customers appear here once they sign up and place an order.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {total > 0 && (
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "center",
+            gap: 10,
+            marginTop: 16,
+            alignItems: "center",
+          }}
+        >
+          <button
+            className="btn-outline"
+            disabled={page === 0}
+            onClick={() => setPage((p) => Math.max(0, p - 1))}
+          >
+            Previous
+          </button>
+          <span style={{ fontSize: 12, color: "var(--ink3)" }}>
+            Showing {from}-{to} of {total} customers
+          </span>
+          <button
+            className="btn-outline"
+            disabled={to >= total}
+            onClick={() => setPage((p) => p + 1)}
+          >
+            Next
+          </button>
         </div>
       )}
 
-      {users.map((u) => {
-        const orders = ordersFor(u);
-        return (
-          <div key={u.id} className="admin-card">
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 12 }}>
-              <div>
-                <div className="serif" style={{ fontSize: 20, color: "var(--ink)" }}>{u.name}</div>
-                <div style={{ fontSize: 12, color: "var(--ink2)", marginTop: 4, lineHeight: 1.7 }}>
-                  {u.mobile}{u.email ? ` · ${u.email}` : ""}<br />
-                  Joined {new Date(u.createdAt).toLocaleDateString()} · {orders.length} order{orders.length === 1 ? "" : "s"}
-                </div>
-                <div style={{ marginTop: 8 }}>
-                  <span className={`pill pill-${isOptedIn(u) ? "approved" : "rejected"}`}>
-                    Newsletter: {isOptedIn(u) ? "Opted in" : "Opted out"}
-                  </span>
-                </div>
-              </div>
-              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                <button
-                  className="btn-outline"
-                  onClick={() => navigate({ to: "/admin/inquiries", search: { phone: u.mobile, name: u.name } })}
-                  disabled={orders.length === 0}
-                >
-                  View orders
-                </button>
-
-                <button
-                  className="btn-outline"
-                  onClick={() => {
-                    updateUserRecord(u.id, { newsletterOptIn: !isOptedIn(u) });
-                    toast(isOptedIn(u) ? "Opted out of newsletter" : "Opted in to newsletter");
-                    refresh();
-                  }}
-                >
-                  {isOptedIn(u) ? "Opt out" : "Opt in"}
-                </button>
-                <button className="btn-outline" onClick={() => setEditing(u)}>Edit</button>
-                <button
-                  className="btn-text-rust"
-                  onClick={() => {
-                    if (confirm(`Delete ${u.name}? This cannot be undone.`)) {
-                      deleteUserRecord(u.id);
-                      toast("Customer deleted");
-                      refresh();
-                    }
-                  }}
-                >
-                  Delete
-                </button>
-              </div>
-            </div>
-          </div>
-        );
-      })}
-
-      {editing && (
-        <EditModal
-          user={editing}
-          onClose={() => setEditing(null)}
-          onSaved={() => { setEditing(null); refresh(); toast("Customer updated"); }}
-        />
-      )}
-      {adding && (
-        <AddModal
-          onClose={() => setAdding(false)}
-          onAdded={() => { setAdding(false); refresh(); toast("Customer added"); }}
-        />
-      )}
+      {selectedId && <CustomerPanel customerId={selectedId} onClose={() => setSelectedId(null)} />}
     </>
   );
 }
 
+function CustomerPanel({ customerId, onClose }: { customerId: string; onClose: () => void }) {
+  const { data, isLoading } = useAdminCustomer(customerId);
 
-
-function ModalShell({ children, onClose, title }: { children: React.ReactNode; onClose: () => void; title: string }) {
   return (
     <div
       onClick={onClose}
       style={{
-        position: "fixed", inset: 0, background: "rgba(28,20,16,.55)",
-        display: "grid", placeItems: "center", padding: 16, zIndex: 100,
+        position: "fixed",
+        inset: 0,
+        background: "rgba(28,20,16,.45)",
+        zIndex: 100,
       }}
     >
       <div
         onClick={(e) => e.stopPropagation()}
         className="admin-card"
-        style={{ width: "100%", maxWidth: 520, maxHeight: "90vh", overflow: "auto", margin: 0 }}
+        style={{
+          position: "fixed",
+          top: 0,
+          right: 0,
+          bottom: 0,
+          width: "100%",
+          maxWidth: 440,
+          margin: 0,
+          borderRadius: 0,
+          overflowY: "auto",
+          animation: "customer-panel-slide-in .2s ease-out",
+        }}
       >
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
-          <div className="cart-sum-title" style={{ marginBottom: 0 }}>{title}</div>
-          <button onClick={onClose} className="btn-outline" style={{ padding: "4px 10px" }}>Close</button>
-        </div>
-        {children}
+        <style>{`
+          @keyframes customer-panel-slide-in {
+            from { transform: translateX(24px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+          }
+        `}</style>
+
+        <button
+          onClick={onClose}
+          className="btn-outline"
+          style={{ padding: "4px 10px", float: "right" }}
+        >
+          × Close
+        </button>
+
+        {isLoading && (
+          <div style={{ padding: 40, textAlign: "center", color: "var(--ink3)" }}>Loading…</div>
+        )}
+
+        {data && (
+          <>
+            <div className="serif" style={{ fontSize: 22, color: "var(--ink)", marginTop: 4 }}>
+              {data.profile.full_name || "—"}
+            </div>
+            <div style={{ fontSize: 13, color: "var(--ink2)", marginBottom: 16 }}>
+              {data.profile.email || "—"}
+            </div>
+
+            <div
+              style={{
+                display: "flex",
+                gap: 16,
+                padding: "12px 0",
+                borderTop: "0.5px solid var(--b)",
+                borderBottom: "0.5px solid var(--b)",
+                marginBottom: 16,
+                fontSize: 14,
+                color: "var(--ink)",
+              }}
+            >
+              <span>
+                <strong>{data.stats.total_orders}</strong> order
+                {data.stats.total_orders === 1 ? "" : "s"}
+              </span>
+              <span>·</span>
+              <span>
+                <strong>{formatPrice(data.stats.total_spent)}</strong> total spent
+              </span>
+            </div>
+
+            <div style={{ fontSize: 12, color: "var(--ink2)", lineHeight: 1.8, marginBottom: 20 }}>
+              {data.profile.phone && <div>Phone: {data.profile.phone}</div>}
+              <div>Joined {formatDate(data.profile.created_at)}</div>
+              <div>Last sign-in {formatDate(data.profile.last_sign_in_at)}</div>
+            </div>
+
+            <div className="cart-sum-title" style={{ marginBottom: 10 }}>
+              Order history
+            </div>
+
+            {data.orders.length === 0 && (
+              <p style={{ fontSize: 13, color: "var(--ink3)" }}>No orders yet.</p>
+            )}
+
+            {data.orders.map((o) => (
+              <Link
+                key={o.id}
+                to="/admin/orders/$id"
+                params={{ id: o.id }}
+                style={{ textDecoration: "none" }}
+              >
+                <div
+                  style={{
+                    border: "0.5px solid var(--b)",
+                    borderRadius: 8,
+                    padding: 12,
+                    marginBottom: 10,
+                    cursor: "pointer",
+                  }}
+                >
+                  <div
+                    style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}
+                  >
+                    <span style={{ fontWeight: 500, color: "var(--ink)" }}>{o.order_number}</span>
+                    <span className={`pill pill-${o.status}`}>{o.status}</span>
+                  </div>
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      fontSize: 12,
+                      color: "var(--ink2)",
+                    }}
+                  >
+                    <span>
+                      {formatDate(o.created_at)} · {o.item_count} item
+                      {o.item_count === 1 ? "" : "s"}
+                    </span>
+                    <span style={{ fontWeight: 500 }}>{formatPrice(o.total)}</span>
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </>
+        )}
       </div>
     </div>
-  );
-}
-
-function EditModal({ user, onClose, onSaved }: { user: AppUser; onClose: () => void; onSaved: () => void }) {
-  const [name, setName] = useState(user.name);
-  const [email, setEmail] = useState(user.email ?? "");
-  const [mobile, setMobile] = useState(user.mobile);
-  const [optIn, setOptIn] = useState(user.newsletterOptIn !== false);
-  const [err, setErr] = useState<string | null>(null);
-  const toast = useToast();
-
-  const save = (e: React.FormEvent) => {
-    e.preventDefault();
-    const n = validateName(name); if (!n.ok) { setErr(n.error); return; }
-    const m = validateMobile(mobile); if (!m.ok) { setErr(m.error); return; }
-    updateUserRecord(user.id, { name: n.value, email, mobile: m.value, newsletterOptIn: optIn });
-    onSaved();
-    void toast;
-  };
-
-  return (
-    <ModalShell onClose={onClose} title="Edit customer">
-      <form onSubmit={save}>
-        <div className="form-field"><label className="form-label">Name</label>
-          <input className="form-input" value={name} onChange={(e) => setName(e.target.value)} />
-        </div>
-        <div className="form-field"><label className="form-label">Mobile</label>
-          <input className="form-input" value={mobile} onChange={(e) => setMobile(e.target.value)} />
-        </div>
-        <div className="form-field"><label className="form-label">Email</label>
-          <input className="form-input" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
-        </div>
-        <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12, color: "var(--ink2)", margin: "8px 0 14px" }}>
-          <input type="checkbox" checked={optIn} onChange={(e) => setOptIn(e.target.checked)} />
-          Subscribed to newsletter
-        </label>
-        {err && <div style={{ color: "var(--rust)", fontSize: 12, marginBottom: 10 }}>{err}</div>}
-        <button type="submit" className="cta-primary">Save changes</button>
-      </form>
-    </ModalShell>
-  );
-}
-
-function AddModal({ onClose, onAdded }: { onClose: () => void; onAdded: () => void }) {
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [mobile, setMobile] = useState("");
-  const [err, setErr] = useState<string | null>(null);
-
-  const save = (e: React.FormEvent) => {
-    e.preventDefault();
-    const n = validateName(name); if (!n.ok) { setErr(n.error); return; }
-    const m = validateMobile(mobile); if (!m.ok) { setErr(m.error); return; }
-    createUser(m.value, n.value, email || undefined);
-    onAdded();
-  };
-
-  return (
-    <ModalShell onClose={onClose} title="Add customer">
-      <form onSubmit={save}>
-        <div className="form-field"><label className="form-label">Name *</label>
-          <input className="form-input" value={name} onChange={(e) => setName(e.target.value)} required />
-        </div>
-        <div className="form-field"><label className="form-label">Mobile *</label>
-          <input className="form-input" value={mobile} onChange={(e) => setMobile(e.target.value)} placeholder="10-digit mobile" required />
-        </div>
-        <div className="form-field"><label className="form-label">Email</label>
-          <input className="form-input" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
-        </div>
-        {err && <div style={{ color: "var(--rust)", fontSize: 12, marginBottom: 10 }}>{err}</div>}
-        <button type="submit" className="cta-primary">Add customer</button>
-      </form>
-    </ModalShell>
-  );
-}
-
-function OrdersModal({
-  user,
-  orders,
-  onClose,
-}: {
-  user: AppUser;
-  orders: ReturnType<typeof getInquiries>;
-  onClose: () => void;
-}) {
-  return (
-    <ModalShell onClose={onClose} title={`Orders — ${user.name}`}>
-      {orders.length === 0 && (
-        <p style={{ fontSize: 13, color: "var(--ink3)" }}>No orders for this customer.</p>
-      )}
-      {orders.map((i) => (
-        <div key={i.id} style={{ border: "0.5px solid var(--b)", borderRadius: 8, padding: 12, marginBottom: 10 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
-            <div style={{ fontSize: 11, color: "var(--ink3)" }}>{i.id} · {new Date(i.createdAt).toLocaleString()}</div>
-            <span className={`pill pill-${i.status === "new" ? "pending" : i.status === "fulfilled" ? "approved" : i.status === "cancelled" ? "rejected" : "live"}`}>{i.status}</span>
-          </div>
-          {i.lines.map((l) => (
-            <div key={l.productId} style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "var(--ink2)", padding: "2px 0" }}>
-              <span>{l.name} × {l.qty}</span>
-              <span>{fmt(l.price * l.qty)}</span>
-            </div>
-          ))}
-          <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6, paddingTop: 6, borderTop: "0.5px solid var(--b)", fontWeight: 600 }}>
-            <span>Total</span><span>{fmt(i.total)}</span>
-          </div>
-        </div>
-      ))}
-    </ModalShell>
   );
 }
