@@ -730,11 +730,16 @@
   letter-spacing: 0.5px;
 }
 .rev-prod {
+  display: block;
   font-size: 9px;
   color: rgba(250, 247, 242, 0.3);
   margin-top: 8px;
   border-top: 0.5px solid rgba(250, 247, 242, 0.07);
   padding-top: 8px;
+  text-decoration: none;
+}
+.rev-prod:hover {
+  color: rgba(250, 247, 242, 0.6);
 }
 .rev-overall {
   text-align: center;
@@ -829,6 +834,34 @@
   background: var(--cream);
   flex-wrap: wrap;
   gap: 12px;
+}
+.plp-chips {
+  padding: 0.75rem 2.5rem 0;
+  background: var(--cream);
+  display: flex;
+  gap: 8px;
+}
+.plp-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border: 0.5px solid var(--b2);
+  border-radius: var(--r);
+  background: #fff;
+  color: var(--ink2);
+  font-size: 11px;
+  text-decoration: none;
+  cursor: pointer;
+}
+.plp-chip:hover {
+  background: var(--ink);
+  color: var(--cream);
+  border-color: var(--ink);
+}
+.plp-chip span[aria-hidden] {
+  font-size: 14px;
+  line-height: 1;
 }
 .plp-title {
   font-family: "Cormorant Garamond", serif;
@@ -2184,6 +2217,9 @@ button.pdp-img-main {
   }
   .plp-header {
     padding: 1.25rem;
+  }
+  .plp-chips {
+    padding: 0.75rem 1.25rem 0;
   }
   .plp-breadcrumb {
     padding: 0.5rem 1.25rem;

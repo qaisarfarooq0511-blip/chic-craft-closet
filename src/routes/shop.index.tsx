@@ -3,14 +3,22 @@ import { IconFilter } from "@tabler/icons-react";
 import { useEffect, useMemo, useState } from "react";
 import { ProductCard } from "@/components/storefront/ProductCard";
 import { useCategories, fetchCategories } from "@/hooks/useCategories";
-import { useProducts, fetchProducts } from "@/hooks/useProducts";
+import { useProducts, fetchProducts, productsQueryKey } from "@/hooks/useProducts";
 import { breadcrumbLd, abs } from "@/lib/jsonld";
 
 type PriceFilter = "all" | "under1000" | "1000-2500" | "2500-5000" | "above5000";
 type RatingFilter = "any" | "4plus" | "3plus";
 type Sort = "featured" | "price-asc" | "price-desc" | "rating";
 
-export function PLP({ categorySlug, query }: { categorySlug: string | null; query?: string }) {
+export function PLP({
+  categorySlug,
+  query,
+  badge,
+}: {
+  categorySlug: string | null;
+  query?: string;
+  badge?: string;
+}) {
   const [price, setPrice] = useState<PriceFilter>("all");
   const [rating, setRating] = useState<RatingFilter>("any");
   const [sort, setSort] = useState<Sort>("featured");
@@ -24,6 +32,7 @@ export function PLP({ categorySlug, query }: { categorySlug: string | null; quer
   const categoryNotFound = !categoriesLoading && !!categorySlug && !activeCategory;
   const { data: products = [], isLoading: productsLoading } = useProducts({
     categoryId: activeCategory?.id,
+    badge,
   });
   const isLoading = categoriesLoading || productsLoading;
 
@@ -47,7 +56,11 @@ export function PLP({ categorySlug, query }: { categorySlug: string | null; quer
 
   const filtered = useMemo(() => {
     let list = [...products];
-    const q = (query ?? "").trim().toLowerCase();
+    // badge takes precedence over a search term — badge links (from homepage
+    // sections) never carry a query, but if both were ever present, the
+    // query text-filter is skipped rather than narrowing an already
+    // badge-scoped list in a confusing way.
+    const q = badge ? "" : (query ?? "").trim().toLowerCase();
     if (q) {
       list = list.filter((p) => {
         const hay = `${p.name} ${p.subtitle ?? ""} ${p.description ?? ""}`.toLowerCase();
@@ -68,9 +81,13 @@ export function PLP({ categorySlug, query }: { categorySlug: string | null; quer
     else if (sort === "price-desc") list = [...list].sort((a, b) => b.price - a.price);
     else if (sort === "rating") list = [...list].sort((a, b) => b.rating_avg - a.rating_avg);
     return list;
-  }, [products, price, rating, sort, query, fabrics]);
+  }, [products, price, rating, sort, query, badge, fabrics]);
 
-  const title = query ? `Results for "${query}"` : (activeCategory?.name ?? "All products");
+  const title = badge
+    ? badge
+    : query
+      ? `Results for "${query}"`
+      : (activeCategory?.name ?? "All products");
 
   if (categoryNotFound) {
     return (
@@ -126,6 +143,14 @@ export function PLP({ categorySlug, query }: { categorySlug: string | null; quer
           </select>
         </div>
       </div>
+      {badge && (
+        <div className="plp-chips">
+          <Link to="/shop" className="plp-chip">
+            Badge: {badge} <span aria-hidden="true">×</span>
+            <span className="sr-only">Clear badge filter</span>
+          </Link>
+        </div>
+      )}
       <div className="plp-body">
         <aside id="filter-panel" className={`filter-col${filterOpen ? " show" : ""}`}>
           <div className="filter-sec">
@@ -262,14 +287,17 @@ export function PLP({ categorySlug, query }: { categorySlug: string | null; quer
 }
 
 export const Route = createFileRoute("/shop/")({
-  validateSearch: (search: Record<string, unknown>): { q?: string } =>
-    typeof search.q === "string" ? { q: search.q } : {},
-  loader: async ({ context: { queryClient } }) => {
+  validateSearch: (search: Record<string, unknown>): { q?: string; badge?: string } => ({
+    q: typeof search.q === "string" ? search.q : undefined,
+    badge: typeof search.badge === "string" ? search.badge : undefined,
+  }),
+  loaderDeps: ({ search }) => ({ badge: search.badge }),
+  loader: async ({ deps: { badge }, context: { queryClient } }) => {
     await Promise.all([
       queryClient.ensureQueryData({ queryKey: ["categories"], queryFn: fetchCategories }),
       queryClient.ensureQueryData({
-        queryKey: ["products", null],
-        queryFn: () => fetchProducts({}),
+        queryKey: productsQueryKey({ badge }),
+        queryFn: () => fetchProducts({ badge }),
       }),
     ]);
   },
@@ -296,7 +324,7 @@ export const Route = createFileRoute("/shop/")({
 });
 
 function ShopAllRoute() {
-  const { q } = Route.useSearch();
+  const { q, badge } = Route.useSearch();
   return (
     <>
       <script
@@ -312,7 +340,7 @@ function ShopAllRoute() {
           ),
         }}
       />
-      <PLP categorySlug={null} query={q} />
+      <PLP categorySlug={null} query={q} badge={badge} />
     </>
   );
 }

@@ -12,7 +12,19 @@ export type ProductWithRelations = Product & {
 
 interface UseProductsOptions {
   categoryId?: string | null;
+  badge?: string | null;
+  limit?: number;
 }
+
+/** Single source of truth for the ["products", ...] query key — every SSR loader that
+ *  ensureQueryData()s a products list must build its key with this, not by hand, or a
+ *  route loader's prefetch silently misses useProducts()'s cache lookup after hydration. */
+export const productsQueryKey = (options: UseProductsOptions = {}) => [
+  "products",
+  options.categoryId ?? null,
+  options.badge ?? null,
+  options.limit ?? null,
+];
 
 /** The exact `select()` shape every product-list query needs to feed `mapProductRow`. */
 export const PRODUCT_WITH_RELATIONS_SELECT =
@@ -43,6 +55,8 @@ export function mapProductRow(
 /** Exported so route loaders can ensureQueryData() with the exact same queryFn as useProducts(). */
 export async function fetchProducts({
   categoryId,
+  badge,
+  limit,
 }: UseProductsOptions): Promise<ProductWithRelations[]> {
   let query = supabase
     .from("products")
@@ -52,6 +66,8 @@ export async function fetchProducts({
     .order("created_at", { ascending: false });
 
   if (categoryId) query = query.eq("category_id", categoryId);
+  if (badge) query = query.eq("badge", badge);
+  if (limit) query = query.limit(limit);
 
   const { data, error } = await query;
   if (error) throw error;
@@ -61,10 +77,10 @@ export async function fetchProducts({
   );
 }
 
-/** Active, non-deleted products for the storefront — optionally scoped to a category. RLS mirrors this filter for anon. */
+/** Active, non-deleted products for the storefront — optionally scoped to a category or badge. RLS mirrors this filter for anon. */
 export function useProducts(options: UseProductsOptions = {}) {
   return useQuery({
-    queryKey: ["products", options.categoryId ?? null],
+    queryKey: productsQueryKey(options),
     queryFn: () => fetchProducts(options),
     staleTime: 60 * 1000,
   });

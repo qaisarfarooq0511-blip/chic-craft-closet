@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { fetchCategories } from "@/hooks/useCategories";
-import { fetchProducts } from "@/hooks/useProducts";
+import { fetchProducts, productsQueryKey } from "@/hooks/useProducts";
 import { breadcrumbLd, abs } from "@/lib/jsonld";
 import { PLP } from "./shop.index";
 
@@ -12,7 +12,7 @@ export const Route = createFileRoute("/shop/$category")({
     });
     const category = categories.find((c) => c.slug === params.category) ?? null;
     await queryClient.ensureQueryData({
-      queryKey: ["products", category?.id ?? null],
+      queryKey: productsQueryKey({ categoryId: category?.id }),
       queryFn: () => fetchProducts({ categoryId: category?.id }),
     });
     return { category };
