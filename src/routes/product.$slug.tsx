@@ -107,6 +107,8 @@ function PDP() {
 
   const addToBagBtnRef = useRef<HTMLButtonElement>(null);
   const [mainAddToBagVisible, setMainAddToBagVisible] = useState(true);
+  const touchStartX = useRef(0);
+  const touchEndX = useRef(0);
 
   useEffect(() => {
     const el = addToBagBtnRef.current;
@@ -146,6 +148,22 @@ function PDP() {
 
   const off = p.compare_price ? discountPercent(p.price, p.compare_price) : null;
   const gallery = p.images;
+  const SWIPE_MIN = 50;
+  const handleGalleryTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+  };
+  const handleGalleryTouchMove = (e: React.TouchEvent) => {
+    touchEndX.current = e.changedTouches[0].clientX;
+  };
+  const handleGalleryTouchEnd = () => {
+    const delta = touchStartX.current - touchEndX.current;
+    if (Math.abs(delta) < SWIPE_MIN) return;
+    if (delta > 0) {
+      setThumb((t) => (t + 1) % gallery.length);
+    } else {
+      setThumb((t) => (t - 1 + gallery.length) % gallery.length);
+    }
+  };
   const distrib = [0, 0, 0, 0, 0];
   p.displayReviews.forEach((r) => {
     distrib[r.rating - 1]++;
@@ -236,6 +254,9 @@ function PDP() {
                 type="button"
                 className="pdp-img-main"
                 onClick={() => setZoomOpen(true)}
+                onTouchStart={handleGalleryTouchStart}
+                onTouchMove={handleGalleryTouchMove}
+                onTouchEnd={handleGalleryTouchEnd}
                 aria-label="View full-screen image"
               >
                 <img src={productImageUrl(gallery[thumb]) ?? undefined} alt={p.name} />

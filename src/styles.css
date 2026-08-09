@@ -486,12 +486,12 @@
 /* ─── Product card ─── */
 .prod-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   gap: 16px;
 }
 .prod-grid-4 {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   gap: 14px;
 }
 .pc {
@@ -952,7 +952,7 @@
 }
 .pdp-body {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 2fr 3fr;
   gap: 3rem;
   padding: 2rem 2.5rem;
 }
@@ -2073,6 +2073,22 @@ button.pdp-img-main {
 }
 
 /* ─── Responsive ─── */
+/* prod-grid's own tier is deliberately its own set of queries, separate from
+   the big 900px block below — it needs a 601-900px tablet step (3 columns)
+   that nothing else on the page has. */
+@media (max-width: 900px) and (min-width: 601px) {
+  .prod-grid,
+  .prod-grid-4 {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+@media (max-width: 600px) {
+  .prod-grid,
+  .prod-grid-4 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
 @media (max-width: 900px) {
   .navbar {
     padding: 0 1.25rem;
@@ -2115,10 +2131,6 @@ button.pdp-img-main {
   }
   .section {
     padding: 2rem 1.25rem;
-  }
-  .prod-grid,
-  .prod-grid-4 {
-    grid-template-columns: repeat(2, 1fr);
   }
   .trust-bar {
     grid-template-columns: repeat(2, 1fr);
