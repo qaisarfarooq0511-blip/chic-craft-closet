@@ -4,6 +4,57 @@ Format: Problem / Root Cause / Fix / Risk / Rollback
 Lane: Fast Lane (FL) or Full Lane (FullL)
 ---
 
+## 2026-08-10 — Real homepage sections, replacing hardcoded "Featured pieces" strip
+
+### [FullL] sections + section_products tables, useHomeSections, admin.sections.tsx rebuilt
+
+**Problem:** The homepage had exactly one hardcoded product strip (`products.slice(0, 8)`, titled
+"Featured pieces", no admin control) while `admin.sections.tsx` — reachable from the main admin
+sidebar — offered a fully-built multi-section manual/rule curation editor with zero connection to
+the storefront: it read/wrote `getSections()`/`saveSections()` (the dead `store-sync.ts` bridge to
+a `sections` table dropped by the legacy-schema-retirement migration), and grep confirmed no
+storefront code anywhere read that data. An admin could reasonably curate sections there believing
+it changed the homepage, and nothing would happen.
+
+**Root Cause:** `admin.sections.tsx` predates the real Supabase schema. The original mock seed data
+(`{ title: "Featured pieces", mode: "rule", rule: { type: "flag", value: "featured" } }`) suggests
+this was the intended design — the homepage's current hardcoded strip is a simplified stand-in that
+was never wired up to a real admin-configurable mechanism during the Sprint 1 migration.
+
+**Fix:** Migration `20260810000002` adds `sections` (title, subtitle, mode `manual|category|badge`,
+`rule_value`, `max_products`, `is_active`, `sort_order`, standard scale hooks) and `section_products`
+(manual-mode junction, hard-delete, same shape as `category_sizes`). Seeded one default section
+replacing today's strip: `Featured pieces / badge / Bestseller / max 8`. `badge` mode filters
+`products.badge` directly — no new "flags" column, since `badge_options`/`badge` already covers the
+same need. `category` mode resolves `rule_value` (a slug) the same way `shop.$category.tsx` already
+does (find in the fetched category list, then filter by id). New `src/hooks/useHomeSections.ts`
+resolves each active section's products in parallel via `fetchHomeSections()` (exported for the SSR
+loader's `ensureQueryData`, matching the existing hero/categories/products pattern), dropping
+sections that resolve to zero products. `index.tsx` renders one product grid per active section
+(in `sort_order`) with a mode-appropriate "View all →" link, falling back to the original hardcoded
+"first 8 active products, titled Featured pieces" behavior only if zero sections resolve to any
+products at all. `admin.sections.tsx` was fully rewritten: list view (active toggle, up/down
+reorder, edit, soft-delete-with-confirm) + an edit modal (title/subtitle/mode/rule dropdown/max
+products/active) + a manual-picks sub-panel reusing the existing `useProductSearch` hook (debounced
+name search) with its own add/remove/reorder against `section_products`. Reordering uses up/down
+arrows throughout, not drag-and-drop, matching `admin.categories.tsx`'s existing convention rather
+than introducing a new interaction pattern for one page.
+
+**Known gap:** the badge-mode "View all →" link points to `/shop?badge={value}`, but `shop.index.tsx`
+has no badge filter yet (only `q` text search) — the link is a harmless no-op today, not broken,
+and will start filtering once that page adds the param. Out of scope for this change.
+
+**Risk:** Medium — two new tables + RLS (Full Lane), but additive: no existing table's schema
+changed. Verified live on the real dev server before commit: homepage renders the seeded "Featured
+pieces" section with real Bestseller-badged products, no console errors; `/admin/sections` loads
+cleanly through to the auth redirect.
+
+**Rollback:** `DROP TABLE section_products; DROP TABLE sections;` — revert the frontend commit to
+restore the hardcoded homepage strip and the mock `admin.sections.tsx` editor (still non-functional
+against the storefront either way).
+
+---
+
 ## 2026-08-10 — Config remaining sections backed by site_settings; vestigial Sizes section removed
 
 ### [FullL] config_tags/shipping_partners/cancellation_reasons/hsn_codes/global_faqs site_settings rows
