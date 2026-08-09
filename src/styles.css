@@ -2284,7 +2284,7 @@ button.pdp-img-main {
   width: 100%;
 }
 
-/* ─── PDP mobile-only (edge-to-edge gallery + sticky add-to-bag) ───
+/* ─── PDP mobile-only (sticky add-to-bag) ───
    Deliberately a separate breakpoint from the 900px one above, which
    already owns the general 2-col -> 1-col collapse. This block only
    holds the PDP-specific rules that must kick in at 767px exactly.
@@ -2292,22 +2292,17 @@ button.pdp-img-main {
    equal-specificity rules by source order regardless of which one sits
    inside a media query, so a later unconditional rule would otherwise
    beat this override and the bar would never show (caught in browser
-   verification, not theoretical). */
+   verification, not theoretical).
+   The gallery used to bleed edge-to-edge here (negative margin on
+   .pdp-gallery, canceling .pdp-body's 1.25rem padding, with the image's
+   border-radius zeroed and .pdp-thumbs given its own compensating
+   padding to stay readable). Removed by request — the image now sits
+   inside .pdp-body's normal padding, flush with the product name/price/
+   description like everything else, so the two rules that only existed
+   to compensate for that bleed (.pdp-img-main's radius, .pdp-thumbs'
+   padding) are gone too; keeping either would have doubled the padding
+   or left square corners on what's now an inset card. */
 @media (max-width: 767px) {
-  .pdp-gallery {
-    /* Bleeds the gallery to the screen edge by counteracting exactly
-       .pdp-body's own mobile padding (1.25rem, set in the 900px block
-       above) — .pdp-wrap/.pdp-body have no other padding layers between
-       the gallery and the viewport edge at this width. */
-    margin-left: -1.25rem;
-    margin-right: -1.25rem;
-  }
-  .pdp-img-main {
-    border-radius: 0;
-  }
-  .pdp-thumbs {
-    padding: 0 1.25rem;
-  }
   .pdp-wrap {
     /* Keeps content clear of the fixed sticky add-to-bag bar. */
     padding-bottom: 120px;
