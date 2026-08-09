@@ -7,9 +7,10 @@ import { useBadgeOptions } from "@/hooks/useBadgeOptions";
 import { useFabricOptions } from "@/hooks/useFabricOptions";
 import { useEmbroideryOptions } from "@/hooks/useEmbroideryOptions";
 import { useCareOptions } from "@/hooks/useCareOptions";
+import { useSizeScales } from "@/hooks/useSizeScales";
 import type { HsnCode, FaqEntry } from "@/lib/storage";
 import { useToast } from "@/lib/toast";
-import type { ColourOption } from "@/types/database";
+import type { ColourOption, SizeOption } from "@/types/database";
 
 export const Route = createFileRoute("/admin/config")({
   component: ConfigAdmin,
@@ -556,6 +557,259 @@ function ColoursEditor() {
   );
 }
 
+const SIZE_SCALE_LABELS: Record<string, string> = {
+  adult_clothing: "Adult Clothing",
+  age_infant: "Infant Sizes",
+  age_kids: "Kids Sizes",
+  age_teens: "Teen Sizes",
+  dress_material: "Dress Material",
+  free_size: "Free Size",
+};
+
+async function fetchAllSizeOptionsForConfig(): Promise<SizeOption[]> {
+  const { data, error } = await supabase
+    .from("size_options")
+    .select("*")
+    .is("deleted_at", null)
+    .order("sort_order", { ascending: true });
+  if (error) throw error;
+  return data ?? [];
+}
+
+function SizesEditor() {
+  const toast = useToast();
+  const queryClient = useQueryClient();
+  const { data: scales = [], isLoading: scalesLoading, isError: scalesError } = useSizeScales();
+  const {
+    data: allSizes = [],
+    isLoading: sizesLoading,
+    isError: sizesError,
+  } = useQuery({
+    queryKey: ["all-size-options"],
+    queryFn: fetchAllSizeOptionsForConfig,
+  });
+  const [drafts, setDrafts] = useState<Record<string, string>>({});
+  const [newScaleName, setNewScaleName] = useState("");
+
+  const isLoading = scalesLoading || sizesLoading;
+  const isError = scalesError || sizesError;
+
+  const invalidate = () => {
+    queryClient.invalidateQueries({ queryKey: ["size-scales"] });
+    queryClient.invalidateQueries({ queryKey: ["all-size-options"] });
+  };
+
+  const addSize = async (scaleId: string) => {
+    const label = (drafts[scaleId] ?? "").trim();
+    if (!label) return;
+    const scaleSizes = allSizes.filter((s) => s.scale_id === scaleId);
+    if (scaleSizes.some((s) => s.label.toLowerCase() === label.toLowerCase())) {
+      toast("This size already exists");
+      return;
+    }
+    const nextSortOrder =
+      scaleSizes.length === 0 ? 1 : Math.max(...scaleSizes.map((s) => s.sort_order)) + 1;
+    const { error } = await supabase
+      .from("size_options")
+      .insert({ scale_id: scaleId, label, sort_order: nextSortOrder });
+    if (error) {
+      toast(error.message);
+      return;
+    }
+    setDrafts((d) => ({ ...d, [scaleId]: "" }));
+    invalidate();
+    toast("Size added");
+  };
+
+  const removeSize = async (id: string, label: string) => {
+    if (
+      !confirm(
+        `Remove ${label}? Products using this size will not be affected but it won't be available for new variants.`,
+      )
+    )
+      return;
+    const { error } = await supabase
+      .from("size_options")
+      .update({ deleted_at: new Date().toISOString() })
+      .eq("id", id);
+    if (error) {
+      toast(error.message);
+      return;
+    }
+    invalidate();
+    toast("Size removed");
+  };
+
+  const addScale = async () => {
+    const name = newScaleName.trim();
+    if (!name) return;
+    if (scales.some((s) => s.name.toLowerCase() === name.toLowerCase())) {
+      toast("This size group already exists");
+      return;
+    }
+    const { error } = await supabase.from("size_scales").insert({ name });
+    if (error) {
+      toast(error.message);
+      return;
+    }
+    setNewScaleName("");
+    invalidate();
+    toast("Size group added");
+  };
+
+  const removeScale = async (id: string) => {
+    if (!confirm("Remove this size group?")) return;
+    const { error } = await supabase
+      .from("size_scales")
+      .update({ deleted_at: new Date().toISOString() })
+      .eq("id", id);
+    if (error) {
+      toast(error.message);
+      return;
+    }
+    invalidate();
+    toast("Size group removed");
+  };
+
+  return (
+    <div className="admin-card">
+      <div className="cart-sum-title" style={{ marginBottom: 4 }}>
+        Sizes
+      </div>
+      <p style={{ fontSize: 11, color: "var(--ink3)", marginBottom: 12 }}>
+        Manage available sizes. Add new sizes to any group, then assign them to categories from the
+        Categories page.
+      </p>
+
+      {isLoading && <p style={{ fontSize: 12, color: "var(--ink3)" }}>Loading…</p>}
+      {isError && <p style={{ fontSize: 12, color: "#b91c1c" }}>Couldn't load sizes.</p>}
+
+      {!isLoading &&
+        !isError &&
+        scales.map((scale) => {
+          const scaleSizes = allSizes
+            .filter((s) => s.scale_id === scale.id)
+            .sort((a, b) => a.sort_order - b.sort_order);
+          const canRemoveScale = scaleSizes.length === 0;
+          return (
+            <div
+              key={scale.id}
+              style={{
+                marginBottom: 18,
+                paddingBottom: 18,
+                borderBottom: "0.5px solid var(--b)",
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  marginBottom: 8,
+                }}
+              >
+                <div style={{ fontSize: 12, fontWeight: 600, color: "var(--ink2)" }}>
+                  {SIZE_SCALE_LABELS[scale.name] ?? scale.name}
+                </div>
+                <button
+                  type="button"
+                  className="btn-text-rust"
+                  disabled={!canRemoveScale}
+                  title={canRemoveScale ? undefined : "Remove all sizes first"}
+                  onClick={() => removeScale(scale.id)}
+                  style={{
+                    fontSize: 11,
+                    opacity: canRemoveScale ? 1 : 0.4,
+                    cursor: canRemoveScale ? "pointer" : "not-allowed",
+                  }}
+                >
+                  Remove group
+                </button>
+              </div>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 10 }}>
+                {scaleSizes.length === 0 && (
+                  <span style={{ fontSize: 12, color: "var(--ink3)" }}>No sizes yet.</span>
+                )}
+                {scaleSizes.map((s) => (
+                  <span
+                    key={s.id}
+                    className="btn-outline"
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 6,
+                      fontSize: 11,
+                      padding: "5px 8px 5px 10px",
+                    }}
+                  >
+                    {s.label}
+                    <button
+                      type="button"
+                      onClick={() => removeSize(s.id, s.label)}
+                      aria-label={`Remove ${s.label}`}
+                      style={{
+                        background: "none",
+                        border: "none",
+                        color: "var(--rust)",
+                        cursor: "pointer",
+                        fontSize: 14,
+                        lineHeight: 1,
+                      }}
+                    >
+                      ×
+                    </button>
+                  </span>
+                ))}
+              </div>
+              <div style={{ display: "flex", gap: 8 }}>
+                <input
+                  className="form-input"
+                  value={drafts[scale.id] ?? ""}
+                  onChange={(e) => setDrafts((d) => ({ ...d, [scale.id]: e.target.value }))}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      void addSize(scale.id);
+                    }
+                  }}
+                  placeholder="Add new size"
+                  style={{ flex: 1 }}
+                />
+                <button type="button" className="btn-ink" onClick={() => addSize(scale.id)}>
+                  Add
+                </button>
+              </div>
+            </div>
+          );
+        })}
+
+      <div>
+        <div style={{ fontSize: 12, fontWeight: 600, color: "var(--ink2)", marginBottom: 8 }}>
+          Add new size group
+        </div>
+        <div style={{ display: "flex", gap: 8 }}>
+          <input
+            className="form-input"
+            value={newScaleName}
+            onChange={(e) => setNewScaleName(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                void addScale();
+              }
+            }}
+            placeholder="New size group name"
+            style={{ flex: 1 }}
+          />
+          <button type="button" className="btn-ink" onClick={addScale}>
+            Add
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function ConfigAdmin() {
   const {
     data: badgeOptions = [],
@@ -583,8 +837,6 @@ function ConfigAdmin() {
       </p>
 
       <ColoursEditor />
-
-      <CartLimitsEditor />
 
       <TableChipEditor
         title="Corner Badges"
@@ -629,6 +881,10 @@ function ConfigAdmin() {
         isError={careError}
         addPlaceholder="Add new care instruction"
       />
+
+      <SizesEditor />
+
+      <CartLimitsEditor />
 
       <StringListSiteSettingEditor
         title="Tags"
