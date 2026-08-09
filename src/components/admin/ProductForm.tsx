@@ -17,12 +17,13 @@ import { useAdminProduct } from "@/hooks/useAdminProduct";
 import { useFabricOptions } from "@/hooks/useFabricOptions";
 import { useColourOptions } from "@/hooks/useColourOptions";
 import { useCategorySizes } from "@/hooks/useCategorySizes";
+import { useBadgeOptions } from "@/hooks/useBadgeOptions";
+import { useEmbroideryOptions } from "@/hooks/useEmbroideryOptions";
+import { useCareOptions } from "@/hooks/useCareOptions";
 import { useToast } from "@/lib/toast";
 import { slugify } from "@/lib/types";
 import { deleteProductImage } from "@/lib/product-images";
 import { ProductImageUploader, type ProductImageDraft } from "./ProductImageUploader";
-
-const BADGES = ["", "New in", "Bestseller", "Sale", "Limited"];
 
 // Per-category field visibility + smart defaults for the admin product form.
 // Keyed by category slug. Unknown/unselected categories fall back to
@@ -113,11 +114,11 @@ interface FormState {
   categoryId: string;
   price: string; // rupees, as typed
   comparePrice: string;
-  badge: string;
+  badgeId: string; // '' = none selected
   description: string;
   fabricId: string; // '' = none selected
-  embroidery: string;
-  care: string;
+  embroideryId: string; // '' = none selected
+  careId: string; // '' = none selected
   isUnstitched: boolean;
   stockCount: string;
   status: "draft" | "active";
@@ -139,11 +140,11 @@ const emptyForm: FormState = {
   categoryId: "",
   price: "",
   comparePrice: "",
-  badge: "",
+  badgeId: "",
   description: "",
   fabricId: "",
-  embroidery: "",
-  care: "",
+  embroideryId: "",
+  careId: "",
   isUnstitched: false,
   stockCount: "0",
   status: "draft",
@@ -186,6 +187,9 @@ export function ProductForm({ productId, onSaved, submitLabel }: Props) {
   const { data: existing, isLoading: loadingExisting } = useAdminProduct(productId);
   const { data: fabricOptions = [] } = useFabricOptions();
   const { data: colourOptions = [] } = useColourOptions();
+  const { data: badgeOptions = [] } = useBadgeOptions();
+  const { data: embroideryOptions = [] } = useEmbroideryOptions();
+  const { data: careOptions = [] } = useCareOptions();
   const [form, setForm] = useState<FormState>(emptyForm);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -206,6 +210,20 @@ export function ProductForm({ productId, onSaved, submitLabel }: Props) {
       fabricOptions.find((f) => f.name.toLowerCase() === (existing.fabric ?? "").toLowerCase())
         ?.id ??
       "";
+    const matchedBadgeId =
+      existing.badge_id ??
+      badgeOptions.find((b) => b.name.toLowerCase() === (existing.badge ?? "").toLowerCase())?.id ??
+      "";
+    const matchedEmbroideryId =
+      existing.embroidery_id ??
+      embroideryOptions.find(
+        (e) => e.name.toLowerCase() === (existing.embroidery ?? "").toLowerCase(),
+      )?.id ??
+      "";
+    const matchedCareId =
+      existing.care_id ??
+      careOptions.find((c) => c.name.toLowerCase() === (existing.care ?? "").toLowerCase())?.id ??
+      "";
     setForm({
       name: existing.name,
       subtitle: existing.subtitle ?? "",
@@ -213,11 +231,11 @@ export function ProductForm({ productId, onSaved, submitLabel }: Props) {
       categoryId: existing.category_id,
       price: String(existing.price / 100),
       comparePrice: existing.compare_price ? String(existing.compare_price / 100) : "",
-      badge: existing.badge ?? "",
+      badgeId: matchedBadgeId,
       description: existing.description ?? "",
       fabricId: matchedFabricId,
-      embroidery: existing.embroidery ?? "",
-      care: existing.care ?? "",
+      embroideryId: matchedEmbroideryId,
+      careId: matchedCareId,
       isUnstitched: existing.is_unstitched,
       stockCount: String(existing.stock_count),
       status: existing.status === "archived" ? "draft" : existing.status,
@@ -256,7 +274,7 @@ export function ProductForm({ productId, onSaved, submitLabel }: Props) {
       metaTitle: existing.meta_title ?? "",
       metaDescription: existing.meta_description ?? "",
     });
-  }, [existing, fabricOptions]);
+  }, [existing, fabricOptions, badgeOptions, embroideryOptions, careOptions]);
 
   const set = <K extends keyof FormState>(key: K, value: FormState[K]) =>
     setForm((f) => ({ ...f, [key]: value }));
@@ -282,8 +300,11 @@ export function ProductForm({ productId, onSaved, submitLabel }: Props) {
         );
         if (match) next.fabricId = match.id;
       }
-      if (config.defaults.care && !f.care.trim()) {
-        next.care = config.defaults.care;
+      if (config.defaults.care && !f.careId) {
+        const match = careOptions.find(
+          (co) => co.name.toLowerCase() === config.defaults.care!.toLowerCase(),
+        );
+        if (match) next.careId = match.id;
       }
       return next;
     });
@@ -389,11 +410,21 @@ export function ProductForm({ productId, onSaved, submitLabel }: Props) {
 
     setSaving(true);
     try {
-      // Dual-write: fabric_id is the new FK; fabric (free text) is mirrored from the
-      // selected option's name so the PDP, which still reads the text column directly,
-      // needs no change yet (deferred to a later stage).
+      // Dual-write: badge_id/fabric_id/embroidery_id/care_id are the FKs; the matching
+      // free-text columns are mirrored from the selected option's name so the PDP,
+      // which still reads the text columns directly, needs no change yet (deferred to
+      // a later stage).
       const fabricName = form.fabricId
         ? (fabricOptions.find((f) => f.id === form.fabricId)?.name ?? null)
+        : null;
+      const badgeName = form.badgeId
+        ? (badgeOptions.find((b) => b.id === form.badgeId)?.name ?? null)
+        : null;
+      const embroideryName = form.embroideryId
+        ? (embroideryOptions.find((e) => e.id === form.embroideryId)?.name ?? null)
+        : null;
+      const careName = form.careId
+        ? (careOptions.find((c) => c.id === form.careId)?.name ?? null)
         : null;
       const payload = {
         name: form.name.trim(),
@@ -401,12 +432,15 @@ export function ProductForm({ productId, onSaved, submitLabel }: Props) {
         category_id: form.categoryId,
         price: priceNum,
         compare_price: comparePriceNum,
-        badge: form.badge || null,
+        badge_id: form.badgeId || null,
+        badge: badgeName,
         description: form.description.trim() || null,
         fabric_id: form.fabricId || null,
         fabric: fabricName,
-        embroidery: form.embroidery.trim() || null,
-        care: form.care.trim() || null,
+        embroidery_id: form.embroideryId || null,
+        embroidery: embroideryName,
+        care_id: form.careId || null,
+        care: careName,
         is_unstitched: form.isUnstitched,
         stock_count: parseInt(form.stockCount, 10) || 0,
         status: form.status,
@@ -636,12 +670,13 @@ export function ProductForm({ productId, onSaved, submitLabel }: Props) {
             <label className="form-label">Badge</label>
             <select
               className="form-input"
-              value={form.badge}
-              onChange={(e) => set("badge", e.target.value)}
+              value={form.badgeId}
+              onChange={(e) => set("badgeId", e.target.value)}
             >
-              {BADGES.map((b) => (
-                <option key={b} value={b}>
-                  {b || "None"}
+              <option value="">No badge</option>
+              {badgeOptions.map((b) => (
+                <option key={b.id} value={b.id}>
+                  {b.name}
                 </option>
               ))}
             </select>
@@ -727,21 +762,35 @@ export function ProductForm({ productId, onSaved, submitLabel }: Props) {
             {categoryConfig.showEmbroidery && (
               <div className="form-field" style={{ margin: 0 }}>
                 <label className="form-label">Embroidery</label>
-                <input
+                <select
                   className="form-input"
-                  value={form.embroidery}
-                  onChange={(e) => set("embroidery", e.target.value)}
-                />
+                  value={form.embroideryId}
+                  onChange={(e) => set("embroideryId", e.target.value)}
+                >
+                  <option value="">—</option>
+                  {embroideryOptions.map((eo) => (
+                    <option key={eo.id} value={eo.id}>
+                      {eo.name}
+                    </option>
+                  ))}
+                </select>
               </div>
             )}
             {categoryConfig.showCare && (
               <div className="form-field" style={{ margin: 0 }}>
                 <label className="form-label">Care</label>
-                <input
+                <select
                   className="form-input"
-                  value={form.care}
-                  onChange={(e) => set("care", e.target.value)}
-                />
+                  value={form.careId}
+                  onChange={(e) => set("careId", e.target.value)}
+                >
+                  <option value="">—</option>
+                  {careOptions.map((co) => (
+                    <option key={co.id} value={co.id}>
+                      {co.name}
+                    </option>
+                  ))}
+                </select>
               </div>
             )}
           </div>

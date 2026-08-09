@@ -1,8 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { useColourOptions } from "@/hooks/useColourOptions";
+import { useBadgeOptions } from "@/hooks/useBadgeOptions";
+import { useFabricOptions } from "@/hooks/useFabricOptions";
+import { useEmbroideryOptions } from "@/hooks/useEmbroideryOptions";
+import { useCareOptions } from "@/hooks/useCareOptions";
 import { getConfig, saveConfig, type AppConfig, type HsnCode } from "@/lib/storage";
 import { useToast } from "@/lib/toast";
 import type { ColourOption } from "@/types/database";
@@ -11,25 +15,9 @@ export const Route = createFileRoute("/admin/config")({
   component: ConfigAdmin,
 });
 
-type ListKey =
-  | "badges"
-  | "fabrics"
-  | "embroideries"
-  | "careOptions"
-  | "tags"
-  | "sizes"
-  | "shippingPartners"
-  | "cancellationReasons";
+type ListKey = "tags" | "sizes" | "shippingPartners" | "cancellationReasons";
 
 const LIST_FIELDS: { key: ListKey; label: string; hint: string }[] = [
-  {
-    key: "badges",
-    label: "Corner Badges",
-    hint: "Shown on product cards (e.g. New in, Bestseller).",
-  },
-  { key: "fabrics", label: "Fabrics", hint: "Available fabric options (Cotton, Silk, Linen…)." },
-  { key: "embroideries", label: "Embroideries", hint: "Embroidery styles (Sozni, Chikankari…)." },
-  { key: "careOptions", label: "Care Instructions", hint: "Care label options (Dry clean only…)." },
   { key: "tags", label: "Tags", hint: "Used by rule-based homepage sections." },
   { key: "sizes", label: "Sizes", hint: "All available size labels (XS–XL, age ranges…)." },
   {
@@ -136,6 +124,212 @@ function properCase(raw: string): string {
     .filter(Boolean)
     .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
     .join(" ");
+}
+
+type OptionRow = { id: string; name: string; sort_order: number };
+type OptionsTable = "badge_options" | "fabric_options" | "embroidery_options" | "care_options";
+
+function TableChipEditor({
+  title,
+  hint,
+  table,
+  queryKey,
+  options,
+  isLoading,
+  isError,
+  addPlaceholder,
+}: {
+  title: string;
+  hint: string;
+  table: OptionsTable;
+  queryKey: string;
+  options: OptionRow[];
+  isLoading: boolean;
+  isError: boolean;
+  addPlaceholder: string;
+}) {
+  const toast = useToast();
+  const queryClient = useQueryClient();
+  const [draft, setDraft] = useState("");
+  const [draftError, setDraftError] = useState("");
+
+  const invalidate = () => queryClient.invalidateQueries({ queryKey: [queryKey] });
+  const singular = title.toLowerCase().replace(/s$/, "");
+
+  const add = async () => {
+    const name = properCase(draft);
+    if (!name) return;
+    if (options.some((o) => o.name.toLowerCase() === name.toLowerCase())) {
+      setDraftError(`This ${singular} already exists`);
+      return;
+    }
+    const nextSortOrder =
+      options.length === 0 ? 0 : Math.max(...options.map((o) => o.sort_order)) + 1;
+    const { error } = await supabase
+      .from(table)
+      .insert({ name, sort_order: nextSortOrder, is_active: true });
+    if (error) {
+      toast(error.message);
+      return;
+    }
+    setDraft("");
+    setDraftError("");
+    invalidate();
+    toast(`${title.replace(/s$/, "")} added`);
+  };
+
+  const remove = async (id: string, name: string) => {
+    if (!confirm(`Delete "${name}"? Existing products keep their stored value.`)) return;
+    const { error } = await supabase
+      .from(table)
+      .update({ deleted_at: new Date().toISOString() })
+      .eq("id", id);
+    if (error) {
+      toast(error.message);
+      return;
+    }
+    invalidate();
+    toast(`${title.replace(/s$/, "")} deleted`);
+  };
+
+  return (
+    <div className="admin-card">
+      <div className="cart-sum-title" style={{ marginBottom: 4 }}>
+        {title}
+      </div>
+      <p style={{ fontSize: 11, color: "var(--ink3)", marginBottom: 12 }}>{hint}</p>
+
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
+        {isLoading && <span style={{ fontSize: 12, color: "var(--ink3)" }}>Loading…</span>}
+        {isError && (
+          <span style={{ fontSize: 12, color: "#b91c1c" }}>
+            Couldn't load {title.toLowerCase()}.
+          </span>
+        )}
+        {!isLoading && !isError && options.length === 0 && (
+          <span style={{ fontSize: 12, color: "var(--ink3)" }}>No values yet.</span>
+        )}
+        {!isLoading &&
+          !isError &&
+          options.map((o) => (
+            <span
+              key={o.id}
+              className="btn-outline"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
+                fontSize: 11,
+                padding: "5px 8px 5px 10px",
+              }}
+            >
+              {o.name}
+              <button
+                type="button"
+                onClick={() => remove(o.id, o.name)}
+                aria-label={`Remove ${o.name}`}
+                style={{
+                  background: "none",
+                  border: "none",
+                  color: "var(--rust)",
+                  cursor: "pointer",
+                  fontSize: 14,
+                  lineHeight: 1,
+                }}
+              >
+                ×
+              </button>
+            </span>
+          ))}
+      </div>
+      <div style={{ display: "flex", gap: 8 }}>
+        <div style={{ flex: 1 }}>
+          <input
+            className="form-input"
+            value={draft}
+            onChange={(e) => {
+              setDraft(e.target.value);
+              setDraftError("");
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                void add();
+              }
+            }}
+            placeholder={addPlaceholder}
+          />
+          {draftError && (
+            <div style={{ color: "#b91c1c", fontSize: 11, marginTop: 4 }}>{draftError}</div>
+          )}
+        </div>
+        <button type="button" className="btn-ink" onClick={add}>
+          Add
+        </button>
+      </div>
+    </div>
+  );
+}
+
+async function fetchMaxQtyPerItem(): Promise<number> {
+  const { data, error } = await supabase
+    .from("site_settings")
+    .select("value")
+    .eq("key", "max_qty_per_item")
+    .maybeSingle();
+  if (error) throw error;
+  return typeof data?.value === "number" ? data.value : 10;
+}
+
+function CartLimitsEditor() {
+  const toast = useToast();
+  const queryClient = useQueryClient();
+  const { data: maxQty = 10, isLoading } = useQuery({
+    queryKey: ["site-setting-max-qty-per-item"],
+    queryFn: fetchMaxQtyPerItem,
+  });
+  const [draft, setDraft] = useState(String(maxQty));
+
+  useEffect(() => setDraft(String(maxQty)), [maxQty]);
+
+  const save = async () => {
+    const value = Math.max(1, Math.floor(Number(draft) || 1));
+    const { error } = await supabase
+      .from("site_settings")
+      .update({ value })
+      .eq("key", "max_qty_per_item");
+    if (error) {
+      toast(error.message);
+      return;
+    }
+    queryClient.invalidateQueries({ queryKey: ["site-setting-max-qty-per-item"] });
+    toast("Cart limit saved");
+  };
+
+  return (
+    <div className="admin-card">
+      <div className="cart-sum-title" style={{ marginBottom: 14 }}>
+        Cart limits
+      </div>
+      <div className="form-field" style={{ maxWidth: 240 }}>
+        <label className="form-label">Max quantity per item</label>
+        <input
+          className="form-input"
+          type="number"
+          min={1}
+          value={isLoading ? "" : draft}
+          disabled={isLoading}
+          onChange={(e) => setDraft(e.target.value)}
+        />
+        <p style={{ fontSize: 11, color: "var(--ink3)", marginTop: 4 }}>
+          A customer cannot add more than this many of a single product to their bag.
+        </p>
+      </div>
+      <button type="button" className="btn-ink" onClick={save} style={{ marginTop: 10 }}>
+        Save
+      </button>
+    </div>
+  );
 }
 
 function ColoursEditor() {
@@ -271,6 +465,23 @@ function ConfigAdmin() {
   const [cfg, setCfg] = useState<AppConfig>(getConfig());
   const toast = useToast();
 
+  const {
+    data: badgeOptions = [],
+    isLoading: badgesLoading,
+    isError: badgesError,
+  } = useBadgeOptions();
+  const {
+    data: fabricOptions = [],
+    isLoading: fabricsLoading,
+    isError: fabricsError,
+  } = useFabricOptions();
+  const {
+    data: embroideryOptions = [],
+    isLoading: embroideriesLoading,
+    isError: embroideriesError,
+  } = useEmbroideryOptions();
+  const { data: careOptions = [], isLoading: careLoading, isError: careError } = useCareOptions();
+
   useEffect(() => {
     setCfg(getConfig());
   }, []);
@@ -279,10 +490,7 @@ function ConfigAdmin() {
     setCfg((c) => ({ ...c, [k]: v }));
 
   const save = () => {
-    const max = Math.max(1, Math.floor(cfg.maxQtyPerItem || 1));
-    const next = { ...cfg, maxQtyPerItem: max };
-    saveConfig(next);
-    setCfg(next);
+    saveConfig(cfg);
     toast("Configuration saved");
   };
 
@@ -296,24 +504,51 @@ function ConfigAdmin() {
 
       <ColoursEditor />
 
-      <div className="admin-card">
-        <div className="cart-sum-title" style={{ marginBottom: 14 }}>
-          Cart limits
-        </div>
-        <div className="form-field" style={{ maxWidth: 240 }}>
-          <label className="form-label">Max quantity per item</label>
-          <input
-            className="form-input"
-            type="number"
-            min={1}
-            value={cfg.maxQtyPerItem}
-            onChange={(e) => update("maxQtyPerItem", Number(e.target.value))}
-          />
-          <p style={{ fontSize: 11, color: "var(--ink3)", marginTop: 4 }}>
-            A customer cannot add more than this many of a single product to their bag.
-          </p>
-        </div>
-      </div>
+      <CartLimitsEditor />
+
+      <TableChipEditor
+        title="Corner Badges"
+        hint="Shown on product cards (e.g. New in, Bestseller)."
+        table="badge_options"
+        queryKey="badge-options"
+        options={badgeOptions}
+        isLoading={badgesLoading}
+        isError={badgesError}
+        addPlaceholder="Add new badge"
+      />
+
+      <TableChipEditor
+        title="Fabrics"
+        hint="Available fabric options (Cotton, Silk, Linen…)."
+        table="fabric_options"
+        queryKey="fabric-options"
+        options={fabricOptions}
+        isLoading={fabricsLoading}
+        isError={fabricsError}
+        addPlaceholder="Add new fabric"
+      />
+
+      <TableChipEditor
+        title="Embroideries"
+        hint="Embroidery styles (Sozni, Chikankari…)."
+        table="embroidery_options"
+        queryKey="embroidery-options"
+        options={embroideryOptions}
+        isLoading={embroideriesLoading}
+        isError={embroideriesError}
+        addPlaceholder="Add new embroidery"
+      />
+
+      <TableChipEditor
+        title="Care Instructions"
+        hint="Care label options (Dry clean only…)."
+        table="care_options"
+        queryKey="care-options"
+        options={careOptions}
+        isLoading={careLoading}
+        isError={careError}
+        addPlaceholder="Add new care instruction"
+      />
 
       {LIST_FIELDS.map((f) => (
         <ListEditor

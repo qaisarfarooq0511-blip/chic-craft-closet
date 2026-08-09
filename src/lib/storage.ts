@@ -1,5 +1,21 @@
-import type { Product, Review, Inquiry, CartLine, HeroContent, CategoryRow, SectionRow, StaticPage } from "./types";
-import { seedProducts, seedReviews, seedCategories, seedHero, seedSections, seedPages } from "./seed";
+import type {
+  Product,
+  Review,
+  Inquiry,
+  CartLine,
+  HeroContent,
+  CategoryRow,
+  SectionRow,
+  StaticPage,
+} from "./types";
+import {
+  seedProducts,
+  seedReviews,
+  seedCategories,
+  seedHero,
+  seedSections,
+  seedPages,
+} from "./seed";
 import { K, readLocal, writeLocal, removeLocal } from "./store-sync";
 
 const KEY = {
@@ -23,26 +39,25 @@ export type PaymentMode = "cod" | "upi" | "card" | "netbanking" | "wallet";
 
 export interface Coupon {
   id: string;
-  code: string;                       // stored uppercase
+  code: string; // stored uppercase
   description?: string;
   discountType: CouponDiscountType;
-  amount: number;                     // percent (1-100) or flat (₹)
-  maxDiscountCap?: number | null;     // only for percent
+  amount: number; // percent (1-100) or flat (₹)
+  maxDiscountCap?: number | null; // only for percent
   minOrderValue?: number | null;
-  globalUsageLimit?: number | null;   // total uses across all users
+  globalUsageLimit?: number | null; // total uses across all users
   perUserLimit?: number | null;
   usedCount: number;
-  includedCategories: string[];       // empty = all
+  includedCategories: string[]; // empty = all
   excludedCategories: string[];
-  includedProductIds: number[];       // empty = all
+  includedProductIds: number[]; // empty = all
   excludedProductIds: number[];
-  paymentModes: PaymentMode[];        // empty = all
-  startsAt: number;                   // epoch ms
-  expiresAt: number;                  // epoch ms
+  paymentModes: PaymentMode[]; // empty = all
+  startsAt: number; // epoch ms
+  expiresAt: number; // epoch ms
   active: boolean;
   createdAt: number;
 }
-
 
 export interface HsnCode {
   code: string;
@@ -50,32 +65,65 @@ export interface HsnCode {
   gstRate: number; // total GST % (e.g. 5, 12, 18)
 }
 
-export interface FaqEntry { q: string; a: string }
+export interface FaqEntry {
+  q: string;
+  a: string;
+}
 
 export interface AppConfig {
-  badges: string[];
-  fabrics: string[];
-  embroideries: string[];
-  careOptions: string[];
   tags: string[];
   sizes: string[];
   shippingPartners: string[];
   cancellationReasons: string[];
-  maxQtyPerItem: number;
   hsnCodes: HsnCode[];
   globalFaqs: FaqEntry[];
 }
 
 export const DEFAULT_CONFIG: AppConfig = {
-  badges: ["New in", "Bestseller", "Sale", "Limited"],
-  fabrics: ["Pure Pashmina", "Pure cotton", "Soft cotton", "Silk", "Linen", "Wool", "Brass base"],
-  embroideries: ["Sozni hand-done", "Hand chikankari", "Kundan setting", "Machine floral", "Zardozi", "Aari"],
-  careOptions: ["Dry clean only", "Hand wash cold", "Machine wash 30°C", "Avoid moisture", "Iron on low"],
-  tags: ["pashmina", "ivory", "chikankari", "cotton", "earrings", "kundan", "festive", "bridal", "casual"],
-  sizes: ["XS", "S", "M", "L", "XL", "XXL", "Free Size", "0-3 Months", "3-6 Months", "6-12 Months", "12-18 Months", "2-4 yrs", "4-8 yrs"],
-  shippingPartners: ["Delhivery", "Blue Dart", "DTDC", "India Post", "Shiprocket", "Ekart", "XpressBees"],
-  cancellationReasons: ["Customer requested cancellation", "Out of stock", "Address unreachable", "Payment failed", "Duplicate order", "Suspected fraud", "Other"],
-  maxQtyPerItem: 10,
+  tags: [
+    "pashmina",
+    "ivory",
+    "chikankari",
+    "cotton",
+    "earrings",
+    "kundan",
+    "festive",
+    "bridal",
+    "casual",
+  ],
+  sizes: [
+    "XS",
+    "S",
+    "M",
+    "L",
+    "XL",
+    "XXL",
+    "Free Size",
+    "0-3 Months",
+    "3-6 Months",
+    "6-12 Months",
+    "12-18 Months",
+    "2-4 yrs",
+    "4-8 yrs",
+  ],
+  shippingPartners: [
+    "Delhivery",
+    "Blue Dart",
+    "DTDC",
+    "India Post",
+    "Shiprocket",
+    "Ekart",
+    "XpressBees",
+  ],
+  cancellationReasons: [
+    "Customer requested cancellation",
+    "Out of stock",
+    "Address unreachable",
+    "Payment failed",
+    "Duplicate order",
+    "Suspected fraud",
+    "Other",
+  ],
   hsnCodes: [
     { code: "6214", description: "Shawls, scarves, mufflers (textile)", gstRate: 5 },
     { code: "5208", description: "Cotton woven fabrics", gstRate: 5 },
@@ -84,15 +132,28 @@ export const DEFAULT_CONFIG: AppConfig = {
     { code: "7117", description: "Imitation jewellery", gstRate: 18 },
   ],
   globalFaqs: [
-    { q: "What are Yaawun's shipping timelines?", a: "Orders are processed within 1–2 business days and typically delivered within 3–7 business days across India. Free shipping on orders above ₹999." },
-    { q: "What is the return and exchange policy?", a: "We offer a 7-day return window from the date of delivery. Items must be unused, unwashed and returned with original packaging. Free return pickup is available across most pincodes." },
-    { q: "Are the prices inclusive of GST?", a: "Yes, all prices on Yaawun are inclusive of GST. A detailed tax invoice is available in your account once the order is placed." },
-    { q: "How do I find my size?", a: "Each product page lists fabric cut lengths (for unstitched sets) or finished garment sizes. For ready-to-wear pieces, refer to the size guide linked from the size selector." },
-    { q: "How should I care for my Yaawun pieces?", a: "Most natural fabric pieces are best dry-cleaned; care instructions are listed on every product page. For embroidered work, avoid moisture, store folded with muslin, and iron on low heat." },
+    {
+      q: "What are Yaawun's shipping timelines?",
+      a: "Orders are processed within 1–2 business days and typically delivered within 3–7 business days across India. Free shipping on orders above ₹999.",
+    },
+    {
+      q: "What is the return and exchange policy?",
+      a: "We offer a 7-day return window from the date of delivery. Items must be unused, unwashed and returned with original packaging. Free return pickup is available across most pincodes.",
+    },
+    {
+      q: "Are the prices inclusive of GST?",
+      a: "Yes, all prices on Yaawun are inclusive of GST. A detailed tax invoice is available in your account once the order is placed.",
+    },
+    {
+      q: "How do I find my size?",
+      a: "Each product page lists fabric cut lengths (for unstitched sets) or finished garment sizes. For ready-to-wear pieces, refer to the size guide linked from the size selector.",
+    },
+    {
+      q: "How should I care for my Yaawun pieces?",
+      a: "Most natural fabric pieces are best dry-cleaned; care instructions are listed on every product page. For embroidered work, avoid moisture, store folded with muslin, and iron on low heat.",
+    },
   ],
 };
-
-
 
 const isBrowser = () => typeof window !== "undefined";
 
@@ -118,7 +179,6 @@ export function ensureSeeded() {
   write(KEY.pages, seedPages);
   localStorage.setItem(KEY.seeded, "1");
 }
-
 
 // Products
 export const getProducts = (): Product[] => {
@@ -147,7 +207,9 @@ export const getReviews = (): Review[] => {
 };
 export const saveReviews = (reviews: Review[]) => write(KEY.reviews, reviews);
 export const getReviewsFor = (productId: number, onlyApproved = true): Review[] =>
-  getReviews().filter((r) => r.productId === productId && (!onlyApproved || r.status === "approved"));
+  getReviews().filter(
+    (r) => r.productId === productId && (!onlyApproved || r.status === "approved"),
+  );
 export const addReview = (r: Review) => saveReviews([r, ...getReviews()]);
 export const updateReview = (r: Review) =>
   saveReviews(getReviews().map((x) => (x.id === r.id ? r : x)));
@@ -181,10 +243,12 @@ export const saveCategories = (cats: CategoryRow[]) => write(KEY.categories, cat
 export const upsertCategory = (c: CategoryRow) => {
   const all = getCategoriesStore();
   const i = all.findIndex((x) => x.id === c.id);
-  if (i >= 0) all[i] = c; else all.push(c);
+  if (i >= 0) all[i] = c;
+  else all.push(c);
   saveCategories(all);
 };
-export const deleteCategory = (id: string) => saveCategories(getCategoriesStore().filter((c) => c.id !== id));
+export const deleteCategory = (id: string) =>
+  saveCategories(getCategoriesStore().filter((c) => c.id !== id));
 
 // Sections
 export const getSections = (): SectionRow[] => {
@@ -196,7 +260,8 @@ export const saveSections = (s: SectionRow[]) => write(KEY.sections, s);
 export const upsertSection = (s: SectionRow) => {
   const all = getSections();
   const i = all.findIndex((x) => x.id === s.id);
-  if (i >= 0) all[i] = s; else all.push(s);
+  if (i >= 0) all[i] = s;
+  else all.push(s);
   saveSections(all);
 };
 export const deleteSection = (id: string) => saveSections(getSections().filter((s) => s.id !== id));
@@ -207,13 +272,17 @@ export const resolveSectionProducts = (s: SectionRow, products: Product[]): Prod
   const listed = products.filter((p) => p.listed);
   if (s.mode === "manual") {
     const ids = s.productIds ?? [];
-    return ids.map((id) => listed.find((p) => p.id === id)).filter(Boolean).slice(0, limit) as Product[];
+    return ids
+      .map((id) => listed.find((p) => p.id === id))
+      .filter(Boolean)
+      .slice(0, limit) as Product[];
   }
   if (!s.rule) return listed.slice(0, limit);
   const { type, value } = s.rule;
   let matches: Product[] = [];
   if (type === "category") matches = listed.filter((p) => p.category === value);
-  else if (type === "flag") matches = listed.filter((p) => p.flags?.includes(value as "new" | "trending" | "featured"));
+  else if (type === "flag")
+    matches = listed.filter((p) => p.flags?.includes(value as "new" | "trending" | "featured"));
   else if (type === "tag") matches = listed.filter((p) => p.tags?.includes(value));
   return matches.slice(0, limit);
 };
@@ -246,11 +315,11 @@ export const savePages = (pages: StaticPage[]) => write(KEY.pages, pages);
 export const upsertPage = (p: StaticPage) => {
   const all = getPages();
   const i = all.findIndex((x) => x.slug === p.slug);
-  if (i >= 0) all[i] = p; else all.push(p);
+  if (i >= 0) all[i] = p;
+  else all.push(p);
   savePages(all);
 };
-export const deletePage = (slug: string) =>
-  savePages(getPages().filter((p) => p.slug !== slug));
+export const deletePage = (slug: string) => savePages(getPages().filter((p) => p.slug !== slug));
 
 // Auth (placeholder, local only)
 export const ADMIN_EMAIL = "amiga.qaisar@gmail.com";
@@ -265,15 +334,10 @@ export const setAuth = (a: { email: string } | null) => {
 export const getConfig = (): AppConfig => {
   const stored = read<Partial<AppConfig>>(KEY.config, {});
   return {
-    badges: stored.badges ?? DEFAULT_CONFIG.badges,
-    fabrics: stored.fabrics ?? DEFAULT_CONFIG.fabrics,
-    embroideries: stored.embroideries ?? DEFAULT_CONFIG.embroideries,
-    careOptions: stored.careOptions ?? DEFAULT_CONFIG.careOptions,
     tags: stored.tags ?? DEFAULT_CONFIG.tags,
     sizes: stored.sizes ?? DEFAULT_CONFIG.sizes,
     shippingPartners: stored.shippingPartners ?? DEFAULT_CONFIG.shippingPartners,
     cancellationReasons: stored.cancellationReasons ?? DEFAULT_CONFIG.cancellationReasons,
-    maxQtyPerItem: stored.maxQtyPerItem ?? DEFAULT_CONFIG.maxQtyPerItem,
     hsnCodes: stored.hsnCodes ?? DEFAULT_CONFIG.hsnCodes,
     globalFaqs: stored.globalFaqs ?? DEFAULT_CONFIG.globalFaqs,
   };
@@ -295,17 +359,14 @@ export const computeTaxBreakup = (priceInclusive: number, gstRate: number) => {
   };
 };
 
-
-
 // Coupons
 export const getCoupons = (): Coupon[] => read<Coupon[]>(KEY.coupons, []);
 export const saveCoupons = (list: Coupon[]) => write(KEY.coupons, list);
 export const upsertCoupon = (c: Coupon) => {
   const all = getCoupons();
   const i = all.findIndex((x) => x.id === c.id);
-  if (i >= 0) all[i] = c; else all.unshift(c);
+  if (i >= 0) all[i] = c;
+  else all.unshift(c);
   saveCoupons(all);
 };
 export const deleteCoupon = (id: string) => saveCoupons(getCoupons().filter((c) => c.id !== id));
-
-

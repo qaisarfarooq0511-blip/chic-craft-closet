@@ -1,6 +1,17 @@
-import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import type { CartLine } from "./types";
-import { getCart, saveCart, getProducts, getConfig } from "./storage";
+import { getCart, saveCart, getProducts } from "./storage";
+import { supabase } from "./supabase";
+
+const DEFAULT_MAX_QTY_PER_ITEM = 10;
 
 interface CartContextValue {
   lines: CartLine[];
@@ -15,9 +26,22 @@ const CartContext = createContext<CartContextValue | null>(null);
 
 export function CartProvider({ children }: { children: ReactNode }) {
   const [lines, setLines] = useState<CartLine[]>([]);
+  const maxQtyRef = useRef(DEFAULT_MAX_QTY_PER_ITEM);
 
   useEffect(() => {
     setLines(getCart());
+  }, []);
+
+  useEffect(() => {
+    supabase
+      .from("site_settings")
+      .select("value")
+      .eq("key", "max_qty_per_item")
+      .maybeSingle()
+      .then(({ data, error }) => {
+        if (error || typeof data?.value !== "number") return;
+        maxQtyRef.current = data.value;
+      });
   }, []);
 
   useEffect(() => {
@@ -25,19 +49,24 @@ export function CartProvider({ children }: { children: ReactNode }) {
   }, [lines]);
 
   const add = useCallback((productId: number, qty = 1) => {
-    const max = getConfig().maxQtyPerItem;
+    const max = maxQtyRef.current;
     setLines((prev) => {
       const existing = prev.find((l) => l.productId === productId);
-      if (existing) return prev.map((l) => (l.productId === productId ? { ...l, qty: Math.min(max, l.qty + qty) } : l));
+      if (existing)
+        return prev.map((l) =>
+          l.productId === productId ? { ...l, qty: Math.min(max, l.qty + qty) } : l,
+        );
       return [...prev, { productId, qty: Math.min(max, qty) }];
     });
   }, []);
 
   const update = useCallback((productId: number, qty: number) => {
-    const max = getConfig().maxQtyPerItem;
+    const max = maxQtyRef.current;
     setLines((prev) =>
       prev
-        .map((l) => (l.productId === productId ? { ...l, qty: Math.min(max, Math.max(1, qty)) } : l))
+        .map((l) =>
+          l.productId === productId ? { ...l, qty: Math.min(max, Math.max(1, qty)) } : l,
+        )
         .filter((l) => l.qty > 0),
     );
   }, []);
