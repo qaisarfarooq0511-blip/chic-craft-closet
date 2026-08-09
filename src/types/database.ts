@@ -71,6 +71,36 @@ export interface SizeOption {
   deleted_at: string | null;
 }
 
+export interface BadgeOption {
+  id: string;
+  name: string;
+  sort_order: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  deleted_at: string | null;
+}
+
+export interface EmbroideryOption {
+  id: string;
+  name: string;
+  sort_order: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  deleted_at: string | null;
+}
+
+export interface CareOption {
+  id: string;
+  name: string;
+  sort_order: number;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  deleted_at: string | null;
+}
+
 export interface CategorySize {
   id: string;
   category_id: string;
@@ -107,13 +137,16 @@ export interface Product {
   description: string | null;
   price: number; // paise
   compare_price: number | null; // paise
-  badge: string | null;
+  badge: string | null; // free-text bridge column — mirrored from badge_id's name at save time
+  badge_id: string | null;
   status: ProductStatus;
   is_unstitched: boolean;
   fabric: string | null; // free-text bridge column — mirrored from fabric_id's name at save time
   fabric_id: string | null;
-  embroidery: string | null;
-  care: string | null;
+  embroidery: string | null; // free-text bridge column — mirrored from embroidery_id's name at save time
+  embroidery_id: string | null;
+  care: string | null; // free-text bridge column — mirrored from care_id's name at save time
+  care_id: string | null;
   stock_count: number;
   rating_avg: number;
   rating_count: number;
@@ -128,6 +161,9 @@ export interface Product {
   pieces?: ProductPiece[];
   includes?: ProductInclude[];
   fabric_option?: FabricOption;
+  badge_option?: BadgeOption;
+  embroidery_option?: EmbroideryOption;
+  care_option?: CareOption;
   variants?: ProductVariant[];
 }
 

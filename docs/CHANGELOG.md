@@ -4,6 +4,65 @@ Format: Problem / Root Cause / Fix / Risk / Rollback
 Lane: Fast Lane (FL) or Full Lane (FullL)
 ---
 
+## 2026-08-09 — admin.config.tsx migrated to real DB (badges/embroideries/care/cart limits)
+
+### [FullL] badge_options/embroidery_options/care_options + products FK columns + site_settings.max_qty_per_item
+
+**Problem:** `admin.config.tsx`'s Corner Badges, Fabrics, Embroideries, Care Instructions, and Cart
+limits sections all appeared to be functioning admin UIs but weren't. Investigation found:
+(1) `getConfig()`/`saveConfig()` sync through `src/lib/store-sync.ts` to a `settings` table that was
+dropped by `20260801100000_retire_legacy_lovable_schema.sql` — every push/pull for the `config` key
+has been silently failing (caught, `console.warn`'d) ever since, so this data only ever lived in
+each admin's own browser localStorage, never synced. (2) Corner Badges was disconnected even from
+that: `ProductForm.tsx`'s badge `<select>` read a hardcoded local `BADGES` array, not `cfg.badges`.
+(3) Fabrics was equally dead: `ProductForm.tsx`'s fabric dropdown already used the real
+`fabric_options` table, ignoring `cfg.fabrics` entirely. (4) Embroidery/Care were bare free-text
+`<input>`s in the product form with no picklist backing at all.
+
+**Root Cause:** `admin.config.tsx` and its supporting `getConfig()`/`saveConfig()` layer predate the
+real Supabase schema and were never migrated when `fabric_options`/`colour_options` were introduced
+for their respective fields — badges/embroideries/care were left on the old mock/localStorage path,
+and the badge dropdown in `ProductForm.tsx` was hardcoded separately at some earlier point, silently
+diverging from the config screen that appeared to control it.
+
+**Fix:** Three migrations. `20260809000003`: new `badge_options`/`embroidery_options`/`care_options`
+tables (same shape as `fabric_options`/`colour_options`, same RLS pair), seeded with the union of
+the previous config defaults and every distinct value already live on non-deleted products (badges
+4, embroideries 11, care 8 — see SCHEMA.md for the exact reconciliation). `20260809000004`: added
+`products.badge_id`/`embroidery_id`/`care_id` FK columns (`ON DELETE SET NULL`), backfilled from the
+existing free-text columns via case-insensitive match; verified zero orphaned products before
+proceeding. The free-text `badge`/`embroidery`/`care` columns are kept — `ProductForm.tsx` now
+dual-writes the FK and a mirrored text value on every save, matching the existing `fabric_id`/
+`fabric` pattern, so the PDP needs no change and the FK columns can be dropped later with zero data
+loss. `20260809000005`: added `site_settings.max_qty_per_item` (seeded at 10). `admin.config.tsx`'s
+four dead sections were replaced with a generic `TableChipEditor` (same chip-with-× pattern as
+`ColoursEditor`) reading/writing the new tables directly; Cart limits now reads/writes
+`site_settings` via its own save button, matching `admin.settings.tsx`'s established per-section
+pattern. `cart-context.tsx` now reads `max_qty_per_item` from `site_settings` on mount (falls back
+to 10 on missing key or fetch failure) instead of `getConfig().maxQtyPerItem`.
+
+**Separately discovered, flagged, not fixed here:** `cart-context.tsx`'s `CartProvider`/`useCart()`
+is mounted in `__root.tsx` but its `useCart()` export is never imported anywhere else — the real
+cart flow (`cart.tsx`, checkout) uses the unrelated `src/hooks/useCart.ts`, which has no quantity
+cap at all. Migrating `cart-context.tsx` (done here) does not change live behavior since that file's
+cart state was already dead code. **The live cart currently enforces no per-item quantity limit** —
+a real gap, worth a follow-up task against `src/hooks/useCart.ts` if this limit matters in practice.
+
+**Risk:** Medium — two new FK columns on `products` (nullable, `ON DELETE SET NULL`, additive) plus
+three new tables with RLS. The dual-write pattern means no existing read path (PDP, admin lists)
+changes behavior. `ProductForm.tsx`'s badge/embroidery/care fields go from hardcoded-array/free-text
+to table-backed selects — an admin editing a product whose current value isn't in the seeded list
+(shouldn't happen given the union-seed approach, verified zero orphans) would see it revert to
+"none" on next save.
+
+**Rollback:** `ALTER TABLE products DROP COLUMN badge_id, DROP COLUMN embroidery_id, DROP COLUMN care_id;`
+then `DROP TABLE badge_options, embroidery_options, care_options;` then
+`DELETE FROM site_settings WHERE key = 'max_qty_per_item';` — free-text `badge`/`embroidery`/`care`
+columns are untouched throughout, so no data loss. Revert the frontend commit to restore the old
+localStorage-backed config sections and free-text product fields.
+
+---
+
 ## 2026-08-09 — Colour text chips + admin colour management
 
 ### [FullL] colour_options.hex_code made nullable; hex swatches replaced with text chips

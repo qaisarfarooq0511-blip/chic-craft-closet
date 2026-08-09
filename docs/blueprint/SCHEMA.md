@@ -18,6 +18,9 @@ owner before this migration was written)
 | `product_includes`   | "What's in the package" list items                                                              | ✅  | ✅          | —     |
 | `product_variants`   | Colour/size combinations per product — own stock + optional price override                      | ✅  | ✅          | ✅    |
 | `fabric_options`     | Admin-managed fabric picklist (Pure Pashmina, Cotton, Banarasi Silk, …)                         | ✅  | ✅          | —     |
+| `badge_options`      | Admin-managed corner badge picklist (New in, Bestseller, Sale, Limited)                         | ✅  | ✅          | —     |
+| `embroidery_options` | Admin-managed embroidery picklist                                                               | ✅  | ✅          | —     |
+| `care_options`       | Admin-managed care instruction picklist                                                         | ✅  | ✅          | —     |
 | `colour_options`     | Admin-managed colour picklist, shown as text chips (hex_code optional, unused in UI)            | ✅  | ✅          | —     |
 | `size_scales`        | Named size systems (age_infant, age_kids, age_teens, adult_clothing, free_size, dress_material) | ✅  | ✅          | —     |
 | `size_options`       | Size labels belonging to a scale (e.g. "3-4 years" under age_kids)                              | ✅  | ✅          | —     |
@@ -215,6 +218,45 @@ hardcoded `showSizeVariants` flag in `CATEGORY_CONFIG` (removed entirely).
 `order_items.variant_id` + `order_items.variant_label` follow this table's existing
 snapshot-at-purchase-time principle (same as `product_name`/`product_slug`/`unit_price`) — a later
 colour/size rename or deletion must not alter historical orders.
+
+## admin.config.tsx → real DB migration (badges/embroideries/care/cart limits, migrations `20260809000003`–`5`)
+
+`admin.config.tsx`'s Corner Badges/Fabrics/Embroideries/Care Instructions/Cart limits sections were
+never actually real — `getConfig()`/`saveConfig()` route through `src/lib/store-sync.ts`, which
+pushes to a table called `settings` that was dropped by `20260801100000_retire_legacy_lovable_schema.sql`
+along with `customers`/`coupons`/`sections`/`pages`/`wishlist` (all still referenced in that file's
+`SPECS` map). Every push/pull for the `config` key has been silently failing into a caught
+`console.warn` ever since — this data has only ever lived in each admin's own browser localStorage,
+never synced anywhere. Worse, the Corner Badges section was **fully disconnected even from
+localStorage**: `ProductForm.tsx`'s badge `<select>` read a hardcoded local `BADGES` array, not
+`cfg.badges`. The Fabrics section was also dead — `ProductForm.tsx`'s fabric dropdown already used
+the real `fabric_options` table via `useFabricOptions()`, ignoring `cfg.fabrics` entirely.
+
+New tables `badge_options`/`embroidery_options`/`care_options` (same shape as `fabric_options`/
+`colour_options`) replace the dead lists. Seeded with the union of the config defaults and every
+distinct value already live on non-deleted products, so no existing product's badge/embroidery/care
+value would be missing from the new picklist (e.g. embroidery had 9 distinct live values against
+only 6 in the config defaults — `Zardozi`/`Aari` were config-only, `Hand-wrapped`/`Zari weaving`/
+`Sozni needle embroidery`/`Floral Embroidery`/`Gold trim` were live-only).
+
+`products` gained `badge_id`/`embroidery_id`/`care_id` FK columns (migration `20260809000004`),
+backfilled from the existing free-text columns via case-insensitive match, verified zero orphaned
+rows before proceeding. The free-text `badge`/`embroidery`/`care` columns are **kept, not dropped**
+— `ProductForm.tsx` dual-writes both the FK and a mirrored text value on every save (same pattern
+`fabric_id`/`fabric` already established), so the PDP (which still reads the text columns directly)
+needs no change, and rolling back the FK columns loses no data. All three fields became `<select>`
+dropdowns sourced from their option tables — embroidery/care were previously bare free-text
+`<input>`s with no picklist at all.
+
+`site_settings` gained a `max_qty_per_item` key (migration `20260809000005`), read by
+`cart-context.tsx` on mount (falls back to 10 if the fetch fails or the key is missing) instead of
+`getConfig().maxQtyPerItem`. Separately discovered and worth flagging: `cart-context.tsx`'s
+`CartProvider`/`useCart()` export is mounted in `__root.tsx` but **its own `useCart()` hook is never
+imported anywhere else in the app** — the real cart flow (`cart.tsx`, checkout) uses the unrelated
+`src/hooks/useCart.ts`, which enforces no quantity cap at all. Migrating `cart-context.tsx` to read
+the real `site_settings` value (done here) does not change live behavior, since that file's cart
+state was already dead. The real quantity cap is currently unenforced in the live cart — a gap
+worth its own follow-up.
 
 ## Static pages (added 2026-08-02, Static Pages sprint)
 

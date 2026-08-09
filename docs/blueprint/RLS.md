@@ -19,6 +19,9 @@ The `is_admin()` helper function checks `profiles.role = 'admin'` for the curren
 | product_includes   | ✅            | ✅              | ❌                       | All          | ✅                          |
 | product_variants   | ✅ active¹    | ✅ active¹      | ❌                       | All          | ✅                          |
 | fabric_options     | ✅ active     | ✅ active       | ❌                       | All          | ✅                          |
+| badge_options      | ✅ active     | ✅ active       | ❌                       | All          | ✅                          |
+| embroidery_options | ✅ active     | ✅ active       | ❌                       | All          | ✅                          |
+| care_options       | ✅ active     | ✅ active       | ❌                       | All          | ✅                          |
 | colour_options     | ✅ active     | ✅ active       | ❌                       | All          | ✅                          |
 | size_scales        | ✅            | ✅              | ❌                       | All          | ✅                          |
 | size_options       | ✅            | ✅              | ❌                       | All          | ✅                          |
